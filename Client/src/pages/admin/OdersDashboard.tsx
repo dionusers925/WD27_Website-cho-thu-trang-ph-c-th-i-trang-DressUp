@@ -1,145 +1,84 @@
-import { Card, Col, Row, Table, Tag, Button } from "antd";
-import {
-  ShoppingCartOutlined,
-  SyncOutlined,
-  CarOutlined,
-  DollarOutlined,
-} from "@ant-design/icons";
-import FooterMenu from "../../layouts/admin/components/FooterMenu";
-
-const orders = [
-  {
-    key: "1",
-    id: 1,
-    customer: "Nguyễn Văn A",
-    status: "pending",
-    date: "2026-01-26",
-    amount: 450000,
-    price: 150000,
-  },
-  {
-    key: "2",
-    id: 2,
-    customer: "Nguyễn Văn A",
-    status: "pending",
-    date: "2026-01-26",
-    amount: 450000,
-    price: 150000,
-  },
-  {
-    key: "3",
-    id: 3,
-    customer: "Trần Thị B",
-    status: "paid",
-    date: "2026-01-27",
-    amount: 350000,
-    price: 350000,
-  },
-];
-
-const statusColor: Record<string, string> = {
-  pending: "blue",
-  paid: "green",
-  shipped: "orange",
-  completed: "green",
-  cancelled: "red",
-};
-
-const columns = [
-  {
-    title: " ID",
-    dataIndex: "id",
-    render: (_: any, __: any, index: number) => index + 1,
-  },
-  {
-    title: "Customer",
-    dataIndex: "customer",
-  },
-  {
-    title: "Status",
-    dataIndex: "status",
-    render: (status: string) => (
-      <Tag color={statusColor[status]}>{status.toUpperCase()}</Tag>
-    ),
-  },
-  {
-    title: "Date",
-    dataIndex: "date",
-  },
-  {
-    title: "Amount",
-    dataIndex: "amount",
-    render: (amount: number) => amount.toLocaleString("vi-VN") + " ₫",
-  },
-  {
-    title: "Price",
-    dataIndex: "price",
-    render: (price: number) => price.toLocaleString("vi-VN") + " ₫",
-  },
-  {
-    title: "Phone",
-    dataIndex: "phone",
-  },
-  {
-    title: "Action",
-    render: () => <Button type="primary">View</Button>,
-  },
-];
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
 const OrdersDashboard = () => {
-  const summaryData = [
-    {
-      title: "New Orders",
-      value: orders.filter((o) => o.status === "pending").length,
-      icon: <ShoppingCartOutlined />,
-    },
-    {
-      title: "Completed Orders",
-      value: orders.filter((o) => o.status === "completed").length,
-      icon: <CarOutlined />,
-    },
-    {
-      title: "Cancelled Orders",
-      value: orders.filter((o) => o.status === "cancelled").length,
-      icon: <DollarOutlined />,
-    },
-    {
-      title: "Paid",
-      value: orders.filter((o) => o.status === "paid").length,
-      icon: <DollarOutlined />,
-    },
-  ];
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/orders");
+        setOrders(res.data);
+      } catch (err) {
+        console.error("Lỗi lấy dữ liệu:", err);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  // Hàm xử lý màu sắc cho trạng thái
+  const getStatusBadge = (status: string) => {
+    const styles: any = {
+      completed: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      cancelled: "bg-red-100 text-red-800",
+    };
+    return styles[status] || "bg-gray-100 text-gray-800";
+  };
 
   return (
-    <>
-      <div style={{ padding: 24 }}>
-        <Row gutter={16}>
-          {summaryData.map((item) => (
-            <Col span={6} key={item.title}>
-              <Card>
-                <Row align="middle" justify="space-between">
-                  <div>
-                    <h4 style={{ marginBottom: 4 }}>{item.title}</h4>
-                    <h2 style={{ margin: 0 }}>{item.value}</h2>
-                  </div>
-                  <div style={{ fontSize: 28, color: "#1677ff" }}>
-                    {item.icon}
-                  </div>
-                </Row>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-
-        <Card title="Recent Orders" style={{ marginTop: 24 }}>
-          <Table columns={columns} dataSource={orders} pagination={false} />
-        </Card>
+    <div className="p-8 bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Quản lý đơn hàng DressUp</h1>
+        <span className="bg-blue-600 text-white px-4 py-1 rounded-lg text-sm">
+          Tổng số: {orders.length}
+        </span>
       </div>
 
-      <div>
-        <FooterMenu />
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+        <table className="w-full text-left border-collapse">
+          <thead className="bg-gray-100 border-b border-gray-200">
+            <tr>
+              <th className="p-4 text-sm font-semibold text-gray-600">Mã đơn hàng</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Khách hàng</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Tổng tiền</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Thanh toán</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Trạng thái</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Hành động</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {orders.map((order: any) => (
+              <tr key={order._id} className="hover:bg-gray-50 transition">
+                <td className="p-4 font-mono text-sm text-blue-600">{order.orderNumber}</td>
+                <td className="p-4 text-sm text-gray-700">
+                  {order.userId?.name || "Khách vãng lai"}
+                </td>
+                <td className="p-4 text-sm font-bold text-gray-900">
+                  {order.total?.toLocaleString()}đ
+                </td>
+                <td className="p-4 text-sm text-gray-600 uppercase font-medium">
+                  {order.paymentMethod}
+                </td>
+                <td className="p-4">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(order.status)}`}>
+                    {order.status}
+                  </span>
+                </td>
+                <td className="p-4">
+                  <button className="text-gray-400 hover:text-blue-600 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </>
+    </div>
   );
 };
 
