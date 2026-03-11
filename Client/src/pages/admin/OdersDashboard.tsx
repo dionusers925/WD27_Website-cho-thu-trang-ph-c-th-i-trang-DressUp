@@ -15,15 +15,15 @@ interface Product {
     days: number;
     price: number;
   }[];
-  depositDefault: number; // Thêm tiền cọc vào interface
+  depositDefault: number; 
   variants: Variant[];
 }
 
 interface OrderItem {
   productId: string;
   name: string;
-  price: number; // Giá thuê 1 ngày
-  deposit: number; // Tiền cọc của món đồ
+  price: number; 
+  deposit: number; 
   size: string;
   color: string;
 }
@@ -73,7 +73,7 @@ const OrdersDashboard = () => {
     return diffDays > 0 ? diffDays : 1;
   };
 
-  // --- LOGIC TÍNH TỔNG TIỀN: (GIÁ THUÊ * NGÀY) + TIỀN CỌC ---
+ 
   useEffect(() => {
     const days = calculateDays(newOrder.startDate, newOrder.endDate);
     
@@ -91,7 +91,7 @@ const OrdersDashboard = () => {
       return alert("Vui lòng chọn đầy đủ Sản phẩm, Size và Màu!");
     }
     
-    // Lấy giá thuê từ rentalTiers và tiền cọc từ depositDefault
+   
     const itemPrice = Number(currentProduct.rentalTiers?.[0]?.price) || 0;
     const itemDeposit = Number(currentProduct.depositDefault) || 0;
 

@@ -16,10 +16,10 @@ orderRouter.get("/", async (req, res) => {
   }
 });
 
-// Tạo đơn hàng trực tiếp tại quầy
+
 orderRouter.post("/", async (req, res) => {
   try {
-    // Thêm items, startDate, endDate vào phần nhận dữ liệu
+    
     const { userId, total, paymentMethod, items, startDate, endDate } = req.body;
 
     const newOrder = new Order({
@@ -28,11 +28,11 @@ orderRouter.post("/", async (req, res) => {
       paymentMethod: paymentMethod || "cash",
       // Tạo mã đơn hàng ngẫu nhiên
       orderNumber: `DU${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`,
-      status: "pending", // Đặt mặc định là pending cho giống logic Dashboard
+      status: "pending", 
       startDate: startDate ? new Date(startDate) : new Date(),
       endDate: endDate ? new Date(endDate) : null,
-      items: items || [], // Lưu danh sách sản phẩm đã chọn
-      shippingAddress: { address: "Tại quầy", city: "Tại quầy" } // Tránh gán total vào đây
+      items: items || [],
+      shippingAddress: { address: "Tại quầy", city: "Tại quầy" } 
     });
 
     await newOrder.save();

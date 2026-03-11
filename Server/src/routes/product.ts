@@ -1,5 +1,5 @@
 import express from "express";
-import Product from "../models/Product"; // Đường dẫn tới model Product của bạn
+import Product from "../models/Product"; 
 
 const productRouter = express.Router();
 
