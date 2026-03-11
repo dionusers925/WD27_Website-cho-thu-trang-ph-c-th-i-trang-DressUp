@@ -5,7 +5,10 @@ const productSchema = new mongoose.Schema(
     name: String,
     price: Number,
     deposit: Number,
-    size: [String],
+   variants: [{
+    size: String,
+    color: String
+  }],
     images: [String],
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,

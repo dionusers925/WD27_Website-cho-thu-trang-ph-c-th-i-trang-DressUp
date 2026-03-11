@@ -4,4 +4,6 @@ export interface ICostume {
   price: number;
   image: string;
   status: string;
+  size: string[];
+  colors: string[];
 }

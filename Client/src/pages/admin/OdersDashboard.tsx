@@ -1,22 +1,141 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
+interface Variant {
+  size: string;
+  color: string;
+  _id?: string;
+}
+
+interface Product {
+  _id: string;
+  name: string;
+  rentalTiers: {
+    label: string;
+    days: number;
+    price: number;
+  }[];
+  depositDefault: number; // Thêm tiền cọc vào interface
+  variants: Variant[];
+}
+
+interface OrderItem {
+  productId: string;
+  name: string;
+  price: number; // Giá thuê 1 ngày
+  deposit: number; // Tiền cọc của món đồ
+  size: string;
+  color: string;
+}
+
 const OrdersDashboard = () => {
   const [orders, setOrders] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+  const [currentSize, setCurrentSize] = useState("");
+  const [currentColor, setCurrentColor] = useState("");
+
+  const [newOrder, setNewOrder] = useState({
+    userId: "",
+    total: 0,
+    paymentMethod: "Tiền mặt",
+    startDate: new Date().toISOString().split('T')[0], 
+    endDate: new Date().toISOString().split('T')[0], 
+    items: [] as OrderItem[],
+  });
+
+  const fetchData = async () => {
+    try {
+      const [ordersRes, productsRes] = await Promise.all([
+        axios.get("http://localhost:3000/orders"),
+        axios.get("http://localhost:3000/products")
+      ]);
+      setOrders(ordersRes.data);
+      setProducts(productsRes.data);
+    } catch (err) {
+      console.error("Lỗi lấy dữ liệu:", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await axios.get("http://localhost:3000/orders");
-        setOrders(res.data);
-      } catch (err) {
-        console.error("Lỗi lấy dữ liệu:", err);
-      }
-    };
-    fetchOrders();
+    fetchData();
   }, []);
 
-  // Hàm xử lý màu sắc cho trạng thái
+  const calculateDays = (start: string, end: string) => {
+    if (!start || !end) return 1;
+    const s = new Date(start);
+    const e = new Date(end);
+    const diffTime = e.getTime() - s.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays > 0 ? diffDays : 1;
+  };
+
+  // --- LOGIC TÍNH TỔNG TIỀN: (GIÁ THUÊ * NGÀY) + TIỀN CỌC ---
+  useEffect(() => {
+    const days = calculateDays(newOrder.startDate, newOrder.endDate);
+    
+    const finalTotal = newOrder.items.reduce((sum, item) => {
+      const rentalPrice = (Number(item.price) || 0) * days;
+      const depositPrice = Number(item.deposit) || 0;
+      return sum + rentalPrice + depositPrice;
+    }, 0);
+    
+    setNewOrder(prev => ({ ...prev, total: finalTotal }));
+  }, [newOrder.items, newOrder.startDate, newOrder.endDate]);
+
+  const addItemToOrder = () => {
+    if (!currentProduct || !currentSize || !currentColor) {
+      return alert("Vui lòng chọn đầy đủ Sản phẩm, Size và Màu!");
+    }
+    
+    // Lấy giá thuê từ rentalTiers và tiền cọc từ depositDefault
+    const itemPrice = Number(currentProduct.rentalTiers?.[0]?.price) || 0;
+    const itemDeposit = Number(currentProduct.depositDefault) || 0;
+
+    const newItem: OrderItem = {
+      productId: currentProduct._id,
+      name: currentProduct.name,
+      price: itemPrice,
+      deposit: itemDeposit,
+      size: currentSize,
+      color: currentColor
+    };
+
+    setNewOrder(prev => ({ 
+      ...prev, 
+      items: [...prev.items, newItem] 
+    }));
+    
+    setCurrentProduct(null);
+    setCurrentSize("");
+    setCurrentColor("");
+  };
+
+  const removeItemFromOrder = (indexToRemove: number) => {
+    const updatedItems = newOrder.items.filter((_, index) => index !== indexToRemove);
+    setNewOrder(prev => ({ ...prev, items: updatedItems }));
+  };
+
+  const handleCreateOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newOrder.items.length === 0) return alert("Vui lòng thêm ít nhất 1 sản phẩm!");
+    setLoading(true);
+    try {
+      await axios.post("http://localhost:3000/orders", newOrder);
+      alert("✅ Tạo đơn hàng thành công!");
+      setShowModal(false);
+      fetchData(); 
+      setNewOrder({ userId: "", total: 0, paymentMethod: "Tiền mặt", startDate: new Date().toISOString().split('T')[0], endDate: new Date().toISOString().split('T')[0], items: [] }); 
+    } catch (err) {
+      alert("❌ Lỗi hệ thống.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: any = {
       completed: "bg-green-100 text-green-800",
@@ -27,57 +146,138 @@ const OrdersDashboard = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
+    <div className="p-8 bg-gray-50 min-h-screen font-sans">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Quản lý đơn hàng DressUp</h1>
-        <span className="bg-blue-600 text-white px-4 py-1 rounded-lg text-sm">
-          Tổng số: {orders.length}
-        </span>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Quản lý đơn hàng DressUp</h1>
+        </div>
+        <div className="flex items-center gap-4">
+          <button onClick={() => setShowModal(true)} style={{ backgroundColor: '#1e3a8a' }} className="text-white px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-lg transition-all active:scale-95">
+            <span className="text-xl">+</span> Tạo đơn trực tiếp
+          </button>
+          <span className="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-lg text-sm font-bold border border-blue-200">
+            Tổng số: {orders.length}
+          </span>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left">
           <thead className="bg-gray-100 border-b border-gray-200">
             <tr>
-              <th className="p-4 text-sm font-semibold text-gray-600">Mã đơn hàng</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Mã đơn</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Khách hàng</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Tổng tiền</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Thanh toán</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Trạng thái</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Hành động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {orders.map((order: any) => (
               <tr key={order._id} className="hover:bg-gray-50 transition">
-                <td className="p-4 font-mono text-sm text-blue-600">{order.orderNumber}</td>
-                <td className="p-4 text-sm text-gray-700">
-                  {order.userId?.name || "Khách vãng lai"}
-                </td>
-                <td className="p-4 text-sm font-bold text-gray-900">
-                  {order.total?.toLocaleString()}đ
-                </td>
-                <td className="p-4 text-sm text-gray-600 uppercase font-medium">
-                  {order.paymentMethod}
-                </td>
+                <td className="p-4 font-mono text-sm text-blue-600 font-bold">{order._id?.slice(-6).toUpperCase()}</td>
+                <td className="p-4 text-sm font-medium">{order.userId?.name || "Khách tại quầy"}</td>
+                <td className="p-4 text-sm font-bold">{(order.total ?? 0).toLocaleString()}đ</td>
                 <td className="p-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(order.status)}`}>
-                    {order.status}
+                    {order.status || 'pending'}
                   </span>
-                </td>
-                <td className="p-4">
-                  <button className="text-gray-400 hover:text-blue-600 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl overflow-y-auto max-h-[95vh]">
+            <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Đơn thuê tại quầy</h2>
+            
+            <form onSubmit={handleCreateOrder} className="space-y-4 text-sm">
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">ID Khách hàng</label>
+                <input type="text" required placeholder="Dán ID khách..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.userId} onChange={(e) => setNewOrder({...newOrder, userId: e.target.value})} />
+              </div>
+
+              <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                <label className="block text-xs font-bold text-blue-800 mb-2 uppercase">Chọn đồ thuê</label>
+                
+                <select 
+                  className="w-full p-2.5 bg-white border border-gray-200 rounded-lg mb-3 outline-none focus:ring-2 focus:ring-blue-500"
+                  value={currentProduct?._id || ""}
+                  onChange={(e) => {
+                    const prod = products.find(p => p._id === e.target.value) as Product;
+                    if (prod) {
+                      setCurrentProduct(prod);
+                      const sizes = Array.from(new Set(prod.variants.map(v => v.size)));
+                      setCurrentSize(sizes[0] || "");
+                      const colorsForSize = prod.variants.filter(v => v.size === sizes[0]);
+                      setCurrentColor(colorsForSize[0]?.color || "");
+                    }
+                  }}
+                >
+                  <option value="">-- Click chọn sản phẩm --</option>
+                  {products.map(p => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} (Thuê: {p.rentalTiers?.[0]?.price.toLocaleString()}đ - Cọc: {p.depositDefault.toLocaleString()}đ)
+                    </option>
+                  ))}
+                </select>
+
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                   <div>
+                     <label className="text-[10px] text-gray-400 font-bold uppercase italic">Size</label>
+                     <select className="w-full p-2 bg-white border rounded-lg text-xs outline-none" value={currentSize} onChange={(e) => setCurrentSize(e.target.value)} disabled={!currentProduct}>
+                       {currentProduct && Array.from(new Set(currentProduct.variants.map(v => v.size))).map(s => <option key={s} value={s}>{s}</option>)}
+                     </select>
+                   </div>
+                   <div>
+                     <label className="text-[10px] text-gray-400 font-bold uppercase italic">Màu</label>
+                     <select className="w-full p-2 bg-white border rounded-lg text-xs outline-none" value={currentColor} onChange={(e) => setCurrentColor(e.target.value)} disabled={!currentProduct}>
+                       {currentProduct?.variants.filter(v => v.size === currentSize).map((v, i) => <option key={i} value={v.color}>{v.color}</option>)}
+                     </select>
+                   </div>
+                </div>
+
+                <button type="button" onClick={addItemToOrder} style={{ backgroundColor: '#1e3a8a' }} className="w-full py-2 text-white rounded-lg font-bold shadow-sm">
+                  + Thêm vào danh sách
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-32 overflow-y-auto">
+                {newOrder.items.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-gray-200">
+                    <div>
+                      <p className="font-bold text-gray-800">{item.name}</p>
+                      <p className="text-[10px] text-blue-600 font-bold uppercase italic">Cọc: {item.deposit.toLocaleString()}đ | Thuê: {item.price.toLocaleString()}đ/ngày</p>
+                    </div>
+                    <button type="button" onClick={() => removeItemFromOrder(index)} className="text-red-500 font-bold">✕</button>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <input type="date" required className="w-full p-2 bg-gray-50 border rounded-xl" value={newOrder.startDate} onChange={(e) => setNewOrder({...newOrder, startDate: e.target.value})} />
+                <input type="date" required className="w-full p-2 bg-gray-50 border rounded-xl" value={newOrder.endDate} onChange={(e) => setNewOrder({...newOrder, endDate: e.target.value})} />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Tổng cộng (Đã gồm tiền cọc)</label>
+                <div className="w-full p-3 bg-gray-100 border rounded-xl font-bold text-lg text-blue-900 text-center">
+                  {newOrder.total.toLocaleString()} đ
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 text-gray-400 font-semibold">Hủy</button>
+                <button type="submit" disabled={loading} style={{ backgroundColor: '#1e3a8a' }} className="px-8 py-2 text-white rounded-xl font-semibold shadow-lg">
+                  {loading ? "Đang xử lý..." : "Xác nhận tạo đơn"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
