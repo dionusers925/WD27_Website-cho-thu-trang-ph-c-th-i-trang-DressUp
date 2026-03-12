@@ -1,10 +1,25 @@
-import express from "express";
+﻿import express from "express";
 import Attribute from "../models/attribute.model";
-import { createAttributeSchema, updateAttributeSchema } from "../validations/attribute.validate";
+import {
+  createAttributeSchema,
+  updateAttributeSchema,
+} from "../validations/attribute.validate";
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const findAttributeByName = async (name: string, excludeId?: string) => {
+  const regex = new RegExp(`^${escapeRegExp(name)}$`, "i");
+  const query: any = { name: regex };
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
+  return Attribute.findOne(query);
+};
+
+router.get("/", async (_req, res) => {
   try {
     const attributes = await Attribute.find().sort({ createdAt: -1 });
     res.json(attributes);
@@ -35,13 +50,24 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    const exist = await Attribute.findOne({ slug: req.body.slug });
+    const name = String(req.body.name ?? "").trim();
+    const slug = String(req.body.slug ?? "").trim();
 
-    if (exist) {
+    const existName = await findAttributeByName(name);
+    if (existName) {
+      return res.status(400).json({ message: "Tên đã tồn tại" });
+    }
+
+    const existSlug = await Attribute.findOne({ slug });
+    if (existSlug) {
       return res.status(400).json({ message: "Slug đã tồn tại" });
     }
 
-    const attribute = await Attribute.create(req.body);
+    const attribute = await Attribute.create({
+      ...req.body,
+      name,
+      slug,
+    });
 
     res.json(attribute);
   } catch (error) {
@@ -57,9 +83,32 @@ router.put("/:id", async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
+    const updateData: any = { ...req.body };
+
+    if (typeof req.body.name === "string") {
+      const name = req.body.name.trim();
+      const existName = await findAttributeByName(name, req.params.id);
+      if (existName) {
+        return res.status(400).json({ message: "Tên đã tồn tại" });
+      }
+      updateData.name = name;
+    }
+
+    if (typeof req.body.slug === "string") {
+      const slug = req.body.slug.trim();
+      const existSlug = await Attribute.findOne({
+        slug,
+        _id: { $ne: req.params.id },
+      });
+      if (existSlug) {
+        return res.status(400).json({ message: "Slug đã tồn tại" });
+      }
+      updateData.slug = slug;
+    }
+
     const attribute = await Attribute.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       { returnDocument: "after" }
     );
 
