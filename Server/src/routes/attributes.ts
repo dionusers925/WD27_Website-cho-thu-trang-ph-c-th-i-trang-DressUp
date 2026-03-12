@@ -1,0 +1,90 @@
+import express from "express";
+import Attribute from "../models/attribute.model";
+import { createAttributeSchema, updateAttributeSchema } from "../validations/attribute.validate";
+
+const router = express.Router();
+
+router.get("/", async (req, res) => {
+  try {
+    const attributes = await Attribute.find().sort({ createdAt: -1 });
+    res.json(attributes);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const attribute = await Attribute.findById(req.params.id);
+
+    if (!attribute) {
+      return res.status(404).json({ message: "Không tìm thấy thuộc tính" });
+    }
+
+    res.json(attribute);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+router.post("/", async (req, res) => {
+  try {
+    const { error } = createAttributeSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const exist = await Attribute.findOne({ slug: req.body.slug });
+
+    if (exist) {
+      return res.status(400).json({ message: "Slug đã tồn tại" });
+    }
+
+    const attribute = await Attribute.create(req.body);
+
+    res.json(attribute);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+router.put("/:id", async (req, res) => {
+  try {
+    const { error } = updateAttributeSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const attribute = await Attribute.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!attribute) {
+      return res.status(404).json({ message: "Không tìm thấy thuộc tính" });
+    }
+
+    res.json(attribute);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  try {
+    const attribute = await Attribute.findByIdAndDelete(req.params.id);
+
+    if (!attribute) {
+      return res.status(404).json({ message: "Không tìm thấy thuộc tính" });
+    }
+
+    res.json({ message: "Xóa thành công" });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+export default router;

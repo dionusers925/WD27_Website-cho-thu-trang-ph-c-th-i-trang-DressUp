@@ -1,4 +1,8 @@
-import { DashboardOutlined, ProductOutlined } from "@ant-design/icons";
+import {
+  DashboardOutlined,
+  ProductOutlined,
+  TagsOutlined,
+} from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Menu } from "antd";
 import { useNavigate } from "react-router-dom";
@@ -7,7 +11,11 @@ type MenuItem = Required<MenuProps>["items"][number];
 
 const SidebarMenu = () => {
   const items: MenuItem[] = [
-    { key: "dashboard", icon: <DashboardOutlined />, label: "Dashboard" },
+    {
+      key: "dashboard",
+      icon: <DashboardOutlined />,
+      label: "Dashboard",
+    },
     {
       key: "order",
       label: "Quản lý đơn hàng",
@@ -18,17 +26,22 @@ const SidebarMenu = () => {
       label: "Quản lý danh mục",
       icon: <ProductOutlined />,
     },
+    {
+      key: "attributes",
+      label: "Quản lý thuộc tính",
+      icon: <TagsOutlined />,
+    },
   ];
+
   const navigate = useNavigate();
+
   const handleClick = ({ key }: any) => {
-    console.log(key);
     navigate(`/admin/${key}`);
   };
 
   return (
     <Menu
-      defaultSelectedKeys={["1"]}
-      defaultOpenKeys={["sub1"]}
+      defaultSelectedKeys={["dashboard"]}
       mode="inline"
       theme="dark"
       items={items}

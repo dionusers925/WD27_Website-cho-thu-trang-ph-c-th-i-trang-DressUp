@@ -6,7 +6,7 @@ import OrdersDashboard from "./pages/admin/OdersDashboard";
 import ListCategory from "./pages/admin/category/ListCategory";
 import AddCategory from "./pages/admin/category/AddCategory";
 import EditCategory from "./pages/admin/category/EditCategory";
-
+import AttributeDashboard from "./pages/admin/attribute/AttributeDashboard";
 function App() {
   const router = useRoutes([
     {
@@ -18,6 +18,7 @@ function App() {
         { path: "categories", Component: ListCategory },
         { path: "categories/add", Component: AddCategory },
         { path: "categories/:id", Component: EditCategory },
+        { path: "attributes", Component: AttributeDashboard },
       ],
     },
   ]);

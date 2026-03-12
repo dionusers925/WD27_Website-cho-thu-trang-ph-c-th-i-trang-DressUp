@@ -2,11 +2,13 @@ import mongoose from "mongoose";
 
 export const connectDB = async () => {
   try {
-    console.log("MONGODB_URI:", process.env.MONGO_URI); // kiểm tra biến môi trường
+    const uri = process.env.MONGODB_URI;
+    console.log("MONGODB_URI:", uri);
 
-    await mongoose.connect(process.env.MONGODB_URI as string);
-    console.log("✅ Kết nối MongoDB thành công");
+    await mongoose.connect(uri as string);
+
+    console.log("✅ MongoDB connected");
   } catch (error) {
-    console.log("❌ Kết nối MongoDB thất bại", error);
+    console.error("❌ Kết nối MongoDB thất bại", error);
   }
 };
