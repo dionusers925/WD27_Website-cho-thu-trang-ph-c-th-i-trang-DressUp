@@ -29,7 +29,7 @@ export const updateAttribute = async (req: Request, res: Response) => {
   const attribute = await Attribute.findByIdAndUpdate(
     req.params.id,
     req.body,
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!attribute) return res.status(404).json({ message: "Attribute not found" });

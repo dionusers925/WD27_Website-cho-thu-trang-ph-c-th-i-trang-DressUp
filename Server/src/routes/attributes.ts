@@ -60,7 +60,7 @@ router.put("/:id", async (req, res) => {
     const attribute = await Attribute.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!attribute) {

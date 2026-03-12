@@ -1,7 +1,9 @@
 import axios from "axios";
 import { Attribute } from "../types/attribute";
 
-const API = "http://localhost:3000/attributes";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+const API = `${API_BASE_URL}/attributes`;
 
 export const getAttributes = () => axios.get<Attribute[]>(API);
 
