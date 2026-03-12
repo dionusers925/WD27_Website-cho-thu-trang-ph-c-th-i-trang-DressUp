@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { Button, Layout, theme } from "antd";
-import SidebarMenu from "./components/SidebarMenu";
+import SidebarMenu from "../../components/admin/SidebarMenu";
 import { Outlet } from "react-router-dom";
 
 const { Header, Sider, Content } = Layout;
