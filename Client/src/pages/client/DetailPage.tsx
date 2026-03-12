@@ -14,10 +14,10 @@ function DetailPage() {
   // State quản lý ngày thuê và xác nhận chính sách
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState("");
-  const [isAgreed, setIsAgreed] = useState(false); // Thêm state đồng ý chính sách
+  const [isAgreed, setIsAgreed] = useState(false); 
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/costumes/${id}`)
+    axios.get(`http://localhost:3000/products/${id}`)
       .then(res => {
         const data = res.data;
         setProduct(data);
@@ -86,7 +86,6 @@ function DetailPage() {
 
             {/* CHỌN BIẾN THỂ (SIZE & COLOR) */}
             <div className="space-y-6">
-              {/* PHẦN CHỌN MÀU SẮC (MỚI THÊM) */}
               <div className="space-y-3">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">Color</h4>
                 <div className="flex items-center gap-3">
