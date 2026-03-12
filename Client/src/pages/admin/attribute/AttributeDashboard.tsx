@@ -33,6 +33,9 @@ const slugify = (text: string) =>
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
+const normalizeName = (value?: string) =>
+  (value ?? "").trim().toLowerCase();
+
 const AttributeDashboard = () => {
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [open, setOpen] = useState(false);
@@ -50,6 +53,16 @@ const AttributeDashboard = () => {
     fetchAttributes();
   }, []);
 
+  const isDuplicateName = (value?: string) => {
+    const normalized = normalizeName(value);
+    if (!normalized) return false;
+    return attributes.some(
+      (attr) =>
+        attr._id !== editing?._id &&
+        normalizeName(attr.name) === normalized
+    );
+  };
+
   const handleValuesChange = (changed: any) => {
     if (changed?.name && !slugLocked) {
       form.setFieldsValue({ slug: slugify(changed.name) });
@@ -57,26 +70,34 @@ const AttributeDashboard = () => {
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
+    try {
+      const values = await form.validateFields();
 
-    const payload = {
-      ...values,
-      values: values.values.split(",").map((v: string) => v.trim()),
-    };
+      const payload = {
+        ...values,
+        values: values.values.split(",").map((v: string) => v.trim()),
+      };
 
-    if (editing) {
-      await updateAttribute(editing._id, payload);
-      message.success("Đã cập nhật");
-    } else {
-      await createAttribute(payload);
-      message.success("Đã tạo");
+      if (editing) {
+        await updateAttribute(editing._id, payload);
+        message.success("Đã cập nhật");
+      } else {
+        await createAttribute(payload);
+        message.success("Đã tạo");
+      }
+
+      setOpen(false);
+      setEditing(null);
+      setSlugLocked(false);
+      form.resetFields();
+      fetchAttributes();
+    } catch (error: any) {
+      const apiMessage =
+        error?.response?.data?.message || error?.response?.data?.error || "";
+      if (apiMessage) {
+        message.error(apiMessage);
+      }
     }
-
-    setOpen(false);
-    setEditing(null);
-    setSlugLocked(false);
-    form.resetFields();
-    fetchAttributes();
   };
 
   const handleEdit = (record: Attribute) => {
@@ -98,9 +119,15 @@ const AttributeDashboard = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteAttribute(id);
-    message.success("Đã xóa");
-    fetchAttributes();
+    try {
+      await deleteAttribute(id);
+      message.success("Đã xóa");
+      fetchAttributes();
+    } catch (error: any) {
+      const apiMessage =
+        error?.response?.data?.message || error?.response?.data?.error || "";
+      message.error(apiMessage || "Xóa thất bại");
+    }
   };
 
   const columns = [
@@ -226,7 +253,15 @@ const AttributeDashboard = () => {
           <Form.Item
             name="name"
             label="Tên"
-            rules={[{ required: true, message: "Tên bắt buộc" }]}
+            rules={[
+              { required: true, message: "Tên bắt buộc" },
+              {
+                validator: (_, value) =>
+                  isDuplicateName(value)
+                    ? Promise.reject(new Error("Tên đã tồn tại"))
+                    : Promise.resolve(),
+              },
+            ]}
           >
             <Input />
           </Form.Item>
