@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import {
   Card,
   Col,
@@ -20,11 +20,24 @@ import {
   deleteAttribute,
 } from "../../../services/attribute.service";
 import { Attribute } from "../../../types/attribute";
+import "../products/product.css";
+
+const slugify = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/đ/g, "d")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 
 const AttributeDashboard = () => {
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Attribute | null>(null);
+  const [slugLocked, setSlugLocked] = useState(false);
 
   const [form] = Form.useForm();
 
@@ -37,6 +50,12 @@ const AttributeDashboard = () => {
     fetchAttributes();
   }, []);
 
+  const handleValuesChange = (changed: any) => {
+    if (changed?.name && !slugLocked) {
+      form.setFieldsValue({ slug: slugify(changed.name) });
+    }
+  };
+
   const handleSubmit = async () => {
     const values = await form.validateFields();
 
@@ -47,20 +66,22 @@ const AttributeDashboard = () => {
 
     if (editing) {
       await updateAttribute(editing._id, payload);
-      message.success("Updated");
+      message.success("Đã cập nhật");
     } else {
       await createAttribute(payload);
-      message.success("Created");
+      message.success("Đã tạo");
     }
 
     setOpen(false);
     setEditing(null);
+    setSlugLocked(false);
     form.resetFields();
     fetchAttributes();
   };
 
   const handleEdit = (record: Attribute) => {
     setEditing(record);
+    setSlugLocked(false);
     setOpen(true);
 
     form.setFieldsValue({
@@ -69,9 +90,16 @@ const AttributeDashboard = () => {
     });
   };
 
+  const handleCreate = () => {
+    setEditing(null);
+    setSlugLocked(false);
+    form.resetFields();
+    setOpen(true);
+  };
+
   const handleDelete = async (id: string) => {
     await deleteAttribute(id);
-    message.success("Deleted");
+    message.success("Đã xóa");
     fetchAttributes();
   };
 
@@ -81,7 +109,7 @@ const AttributeDashboard = () => {
       render: (_: any, __: any, index: number) => index + 1,
     },
     {
-      title: "Name",
+      title: "Tên",
       dataIndex: "name",
     },
     {
@@ -89,7 +117,7 @@ const AttributeDashboard = () => {
       dataIndex: "slug",
     },
     {
-      title: "Values",
+      title: "Giá trị",
       dataIndex: "values",
       render: (values: string[]) => (
         <>
@@ -102,7 +130,7 @@ const AttributeDashboard = () => {
       ),
     },
     {
-      title: "Action",
+      title: "Thao tác",
       render: (record: Attribute) => (
         <>
           <Button
@@ -110,11 +138,11 @@ const AttributeDashboard = () => {
             style={{ marginRight: 8 }}
             onClick={() => handleEdit(record)}
           >
-            Edit
+            Sửa
           </Button>
 
           <Button danger onClick={() => handleDelete(record._id)}>
-            Delete
+            Xóa
           </Button>
         </>
       ),
@@ -123,12 +151,12 @@ const AttributeDashboard = () => {
 
   const summary = [
     {
-      title: "Total Attributes",
+      title: "Tổng thuộc tính",
       value: attributes.length,
       icon: <AppstoreOutlined />,
     },
     {
-      title: "Total Values",
+      title: "Tổng giá trị",
       value: attributes.reduce((acc, cur) => acc + cur.values.length, 0),
       icon: <AppstoreOutlined />,
     },
@@ -136,11 +164,20 @@ const AttributeDashboard = () => {
 
   return (
     <>
-      <div style={{ padding: 24 }}>
+      <div className="product-page attribute-page">
+        <div className="product-page-header">
+          <div>
+            <div className="product-title">Quản lý thuộc tính</div>
+            <div className="product-subtitle">
+              {attributes.length} thuộc tính
+            </div>
+          </div>
+        </div>
+
         <Row gutter={16}>
           {summary.map((item) => (
             <Col span={6} key={item.title}>
-              <Card>
+              <Card className="product-card">
                 <Row justify="space-between" align="middle">
                   <div>
                     <h4>{item.title}</h4>
@@ -157,15 +194,16 @@ const AttributeDashboard = () => {
         </Row>
 
         <Card
-          title="Attributes"
+          title="Thuộc tính"
+          className="product-card product-table-card"
           style={{ marginTop: 24 }}
           extra={
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              onClick={() => setOpen(true)}
+              onClick={handleCreate}
             >
-              Add Attribute
+              Thêm thuộc tính
             </Button>
           }
         >
@@ -174,20 +212,21 @@ const AttributeDashboard = () => {
       </div>
 
       <Modal
-        title={editing ? "Edit Attribute" : "Add Attribute"}
+        title={editing ? "Sửa thuộc tính" : "Thêm thuộc tính"}
         open={open}
         onCancel={() => {
           setOpen(false);
           setEditing(null);
+          setSlugLocked(false);
           form.resetFields();
         }}
         onOk={handleSubmit}
       >
-        <Form layout="vertical" form={form}>
+        <Form layout="vertical" form={form} onValuesChange={handleValuesChange}>
           <Form.Item
             name="name"
-            label="Name"
-            rules={[{ required: true, message: "Name required" }]}
+            label="Tên"
+            rules={[{ required: true, message: "Tên bắt buộc" }]}
           >
             <Input />
           </Form.Item>
@@ -195,15 +234,19 @@ const AttributeDashboard = () => {
           <Form.Item
             name="slug"
             label="Slug"
-            rules={[{ required: true, message: "Slug required" }]}
+            getValueFromEvent={(e) => {
+              setSlugLocked(true);
+              return (e?.target?.value ?? "").toLowerCase();
+            }}
+            rules={[{ required: true, message: "Slug bắt buộc" }]}
           >
             <Input />
           </Form.Item>
 
           <Form.Item
             name="values"
-            label="Values (comma separated)"
-            rules={[{ required: true, message: "Values required" }]}
+            label="Giá trị (phân tách bằng dấu phẩy)"
+            rules={[{ required: true, message: "Giá trị bắt buộc" }]}
           >
             <Input placeholder="S, M, L, XL" />
           </Form.Item>

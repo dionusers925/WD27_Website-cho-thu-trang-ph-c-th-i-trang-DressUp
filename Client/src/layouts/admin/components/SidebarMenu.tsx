@@ -1,4 +1,4 @@
-import {
+﻿import {
   DashboardOutlined,
   ProductOutlined,
   TagsOutlined,
@@ -30,6 +30,11 @@ const SidebarMenu = () => {
       key: "attributes",
       label: "Quản lý thuộc tính",
       icon: <TagsOutlined />,
+    },
+    {
+      key: "products",
+      label: "Quản lý sản phẩm",
+      icon: <ProductOutlined />,
     },
   ];
 
