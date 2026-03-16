@@ -40,6 +40,65 @@ const OrdersDashboard = () => {
   const [currentSize, setCurrentSize] = useState("");
   const [currentColor, setCurrentColor] = useState("");
 
+  const normalizeProduct = (p: any): Product => {
+    const rentalTiers = Array.isArray(p?.rentalTiers)
+      ? p.rentalTiers
+      : Array.isArray(p?.rentalPrices)
+      ? p.rentalPrices.map((rp: any) => ({
+          label: `${Number(rp?.days ?? 0) || 0} ngày`,
+          days: Number(rp?.days ?? 0) || 0,
+          price: Number(rp?.price ?? 0) || 0
+        }))
+      : [];
+
+    const depositDefault =
+      Number(p?.depositDefault ?? p?.depositPrice ?? 0) || 0;
+
+    return {
+      _id: String(p?._id ?? ""),
+      name: String(p?.name ?? ""),
+      rentalTiers,
+      depositDefault,
+      variants: Array.isArray(p?.variants)
+        ? p.variants.map((v: any) => ({
+            size: String(v?.size ?? ""),
+            color: String(v?.color ?? ""),
+            _id: v?._id
+          }))
+        : []
+    };
+  };
+
+  const normalizeVariants = (variants: any[]): Variant[] =>
+    variants
+      .map((v: any) => {
+        const attrs = Array.isArray(v?.attributes) ? v.attributes : [];
+        const nameOf = (a: any) =>
+          String(a?.attributeName ?? "")
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+
+        const isSizeAttr = (a: any) => {
+          const n = nameOf(a);
+          return n.includes("size") || n.includes("kich") || n.includes("co");
+        };
+
+        const isColorAttr = (a: any) => {
+          const n = nameOf(a);
+          return n.includes("color") || n.includes("mau");
+        };
+
+        const attrSize = attrs.find(isSizeAttr)?.value;
+        const attrColor = attrs.find(isColorAttr)?.value;
+
+        const size = String(v?.size ?? attrSize ?? "").trim();
+        const color = String(v?.color ?? attrColor ?? "").trim();
+
+        return { size, color, _id: v?._id };
+      })
+      .filter((v: Variant) => v.size && v.color);
+
   const [newOrder, setNewOrder] = useState({
     userId: "",
     total: 0,
@@ -62,11 +121,13 @@ const OrdersDashboard = () => {
       const productData = productsRes.data as any;
       const normalizedProducts = Array.isArray(productData)
         ? productData
+        : Array.isArray(productData?.data?.products)
+        ? productData.data.products
         : Array.isArray(productData?.products)
         ? productData.products
         : [];
 
-      setProducts(normalizedProducts);
+      setProducts(normalizedProducts.map(normalizeProduct).filter((p: Product) => p._id));
     } catch (err) {
       console.error("Lỗi lấy dữ liệu:", err);
       setProducts([]);
@@ -240,21 +301,58 @@ const OrdersDashboard = () => {
                 <select
                   className="w-full p-2.5 bg-white border border-gray-200 rounded-lg mb-3 outline-none focus:ring-2 focus:ring-blue-500"
                   value={currentProduct?._id || ""}
-                  onChange={(e) => {
-                    const prod = products.find(p => p._id === e.target.value) as Product;
-                    if (prod) {
-                      setCurrentProduct(prod);
-                      const sizes = Array.from(new Set(prod.variants.map(v => v.size)));
+                  onChange={async (e) => {
+                    const id = e.target.value;
+                    const prod = products.find(p => p._id === id) as Product | undefined;
+                    if (!id || !prod) {
+                      setCurrentProduct(null);
+                      setCurrentSize("");
+                      setCurrentColor("");
+                      return;
+                    }
+
+                    try {
+                      const detailRes = await axios.get(`http://localhost:3000/api/products/${id}`);
+                      const detail = detailRes.data as any;
+                      const rawVariants = Array.isArray(detail?.data?.variants) && detail.data.variants.length > 0
+                        ? detail.data.variants
+                        : Array.isArray(detail?.data?.product?.variants) && detail.data.product.variants.length > 0
+                        ? detail.data.product.variants
+                        : Array.isArray(detail?.variants) && detail.variants.length > 0
+                        ? detail.variants
+                        : [];
+
+                      const mappedVariants = normalizeVariants(rawVariants);
+
+                      const merged: Product = {
+                        ...prod,
+                        variants: mappedVariants
+                      };
+
+                      setCurrentProduct(merged);
+                      if (mappedVariants.length === 0) {
+                        setCurrentSize("");
+                        setCurrentColor("");
+                        alert("Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.");
+                        return;
+                      }
+                      const sizes = Array.from(new Set(merged.variants.map(v => v.size)));
                       setCurrentSize(sizes[0] || "");
-                      const colorsForSize = prod.variants.filter(v => v.size === sizes[0]);
+                      const colorsForSize = merged.variants.filter(v => v.size === sizes[0]);
                       setCurrentColor(colorsForSize[0]?.color || "");
+                    } catch (err) {
+                      console.error("Lỗi lấy chi tiết sản phẩm:", err);
+                      alert("Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.");
+                      setCurrentProduct(null);
+                      setCurrentSize("");
+                      setCurrentColor("");
                     }
                   }}
                 >
                   <option value="">-- Click chọn sản phẩm --</option>
                   {products.map(p => (
                     <option key={p._id} value={p._id}>
-                      {p.name} (Thuê: {p.rentalTiers?.[0]?.price.toLocaleString()}đ - Cọc: {p.depositDefault.toLocaleString()}đ)
+                      {p.name} (Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ)
                     </option>
                   ))}
                 </select>
