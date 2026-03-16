@@ -12,7 +12,7 @@ import {
   message,
 } from "antd";
 import { PlusOutlined, AppstoreOutlined } from "@ant-design/icons";
-import FooterMenu from "../../../layouts/admin/components/FooterMenu";
+import FooterMenu from "../../../components/admin/FooterMenu";
 import {
   getAttributes,
   createAttribute,

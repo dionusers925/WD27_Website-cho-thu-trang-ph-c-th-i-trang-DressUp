@@ -4,6 +4,8 @@ import axios from "axios";
 import { addToCart } from "../../api/cartService";
 import Header from "../../layouts/client/Header";
 import Footer from "../../layouts/client/Footer";
+import ReviewForm from "../../components/reviews/ReviewForm";
+import ReviewList from "../../components/reviews/ReviewList";
 
 function DetailPage() {
   const { id } = useParams();
@@ -300,7 +302,15 @@ function DetailPage() {
           </div>
         </div>
       </div>
+      <ReviewList productId={id!} />
+
+<ReviewForm
+  productId={id!}
+  onSuccess={() => window.location.reload()}
+/>
     </div>
+
+    
   );
 }
 
