@@ -11,18 +11,28 @@ import DetailPage from "./pages/client/DetailPage";
 import PolicyPage from "./pages/client/PolicyPage";
 import CartPage from "./pages/client/CartPage";
 import LayoutClient from "./layouts/client/LayoutClient";
+import AuthLayout from "./layouts/AuthLayout";
+import RegisterPage from "./layouts/RegisterPage";
+import LoginPage from "./layouts/LoginPage";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 function App() {
   const router = useRoutes([
     {
       path: "/admin",
-      Component: Adminlayout,
+      Component: ProtectedRoute, // bọc bảo vệ
       children: [
-        { path: "", Component: Dashboard },
-        { path: "order", Component: OrdersDashboard },
-        { path: "categories", Component: ListCategory },
-        { path: "categories/add", Component: AddCategory },
-        { path: "categories/:id", Component: EditCategory },
+        {
+          path: "",
+          Component: Adminlayout,
+          children: [
+            { path: "", Component: Dashboard },
+            { path: "order", Component: OrdersDashboard },
+            { path: "categories", Component: ListCategory },
+            { path: "categories/add", Component: AddCategory },
+            { path: "categories/:id", Component: EditCategory },
+          ],
+        },
       ],
     },
     {
@@ -33,6 +43,14 @@ function App() {
         { path: "detail/:id", Component: DetailPage },
         { path: "policy", Component: PolicyPage },
         { path: "cart", Component: CartPage },
+      ],
+    },
+    {
+      path: "/auth",
+      Component: AuthLayout,
+      children: [
+        { path: "register", Component: RegisterPage },
+        { path: "login", Component: LoginPage },
       ],
     },
   ]);

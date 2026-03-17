@@ -72,7 +72,13 @@ function DetailPage() {
 
   const handleConfirmRental = async () => {
     try {
-      await addToCart(product._id, 1, diffDays);
+      await addToCart(
+        product._id,
+        1,
+        diffDays,
+        selectedVariant.size,
+        selectedVariant.color,
+      );
 
       navigate("/cart");
     } catch (error) {
@@ -83,7 +89,6 @@ function DetailPage() {
     <div className="bg-white min-h-screen selection:bg-black selection:text-white">
       <div className="max-w-7xl mx-auto px-6 py-32">
         <div className="flex flex-col md:flex-row gap-20">
-          {/* PHẦN ẢNH */}
           <div className="w-full md:w-1/2">
             <div className="aspect-[3/4] overflow-hidden bg-[#F9F7F5] mb-6">
               <img
@@ -104,7 +109,6 @@ function DetailPage() {
             </div>
           </div>
 
-          {/* PHẦN THÔNG TIN */}
           <div className="w-full md:w-1/2 space-y-10">
             <div>
               <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400 font-bold">
@@ -115,7 +119,6 @@ function DetailPage() {
               </h1>
             </div>
 
-            {/* CHỌN BIẾN THỂ (SIZE & COLOR) */}
             <div className="space-y-6">
               <div className="space-y-3">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
@@ -165,7 +168,6 @@ function DetailPage() {
               </div>
             </div>
 
-            {/* CHỌN NGÀY THUÊ & SHORTCUTS */}
             <div className="space-y-10">
               <div className="flex justify-between items-center">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
@@ -217,7 +219,6 @@ function DetailPage() {
               </div>
             </div>
 
-            {/* TỔNG KẾT CHI PHÍ */}
             <div className="bg-[#F9F7F5] p-8 space-y-5">
               <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
                 <span>Security Deposit (Tiền cọc)</span>
@@ -246,7 +247,6 @@ function DetailPage() {
               </div>
             </div>
 
-            {/* ĐỒNG Ý CHÍNH SÁCH & NÚT THUÊ */}
             <div className="space-y-6">
               <div
                 className="flex items-start gap-3 cursor-pointer group"
