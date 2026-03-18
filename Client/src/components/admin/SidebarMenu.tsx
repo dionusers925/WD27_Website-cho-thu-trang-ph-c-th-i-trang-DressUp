@@ -2,6 +2,7 @@
   DashboardOutlined,
   ProductOutlined,
   TagsOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Menu } from "antd";
@@ -35,6 +36,11 @@ const SidebarMenu = () => {
       key: "products",
       label: "Quản lý sản phẩm",
       icon: <ProductOutlined />,
+    },
+    {
+      key: "reviews",
+      label: "Quản lý đánh giá",
+      icon: <MessageOutlined />,
     },
   ];
 

@@ -1,0 +1,55 @@
+import { Request, Response } from "express";
+import Cart from "../models/Cart";
+import Product from "../models/Product";
+
+const demoUser = "65c000000000000000000001";
+
+export const addToCart = async (req: Request, res: Response) => {
+  try {
+    const { productId, quantity = 1, days } = req.body;
+
+    const product = await Product.findById(productId);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // lấy giá theo số ngày thuê
+    const tier = product.rentalTiers.find((t) => t.days === days);
+    const price = tier?.price || 0;
+
+    let cart = await Cart.findOne({ user: demoUser });
+
+    if (!cart) {
+      cart = await Cart.create({
+        user: demoUser,
+        items: [],
+      });
+    }
+
+    const existingItem = cart.items.find(
+      (i) => i.product.toString() === productId,
+    );
+
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      cart.items.push({
+        product: productId,
+        quantity,
+        price,
+      });
+    }
+
+    await cart.save();
+
+    const updatedCart = await Cart.findOne({ user: demoUser }).populate(
+      "items.product",
+    );
+
+    res.json(updatedCart);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Add to cart failed" });
+  }
+};

@@ -1,5 +1,7 @@
+
 import "./App.css";
 import { Navigate, useRoutes } from "react-router-dom";
+
 import Adminlayout from "./layouts/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import OrdersDashboard from "./pages/admin/OdersDashboard";
@@ -11,15 +13,19 @@ import ProductDashboard from "./pages/admin/products/ProductDashboard";
 import ProductCreate from "./pages/admin/products/ProductCreate";
 import ProductEdit from "./pages/admin/products/ProductEdit";
 import ProductDetail from "./pages/admin/products/ProductDetail";
+import HomePage from "./pages/client/HomePage";
+import DetailPage from "./pages/client/DetailPage";
+import PolicyPage from "./pages/client/PolicyPage";
+import CartPage from "./pages/client/CartPage";
+import LayoutClient from "./layouts/client/LayoutClient";
+import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
+
 function App() {
-  const RedirectToAdmin = () => <Navigate to="/admin" replace />;
+  
   const NotFound = () => <div>Not Found</div>;
 
   const router = useRoutes([
-    {
-      path: "/",
-      Component: RedirectToAdmin,
-    },
+    
     {
       path: "/admin",
       Component: Adminlayout,
@@ -35,9 +41,23 @@ function App() {
         { path: "products/new", Component: ProductCreate },
         { path: "products/:id/edit", Component: ProductEdit },
         { path: "products/:id", Component: ProductDetail },
+        // REVIEWS
+        { path: "reviews", Component: ReviewsDashboard },
+      ],
+    },
+
+     {
+      path: "/",
+      Component: LayoutClient,
+      children: [
+        { path: "", Component: HomePage },
+        { path: "detail/:id", Component: DetailPage },
+        { path: "policy", Component: PolicyPage },
+        { path: "cart", Component: CartPage },
       ],
     },
     {
+
       path: "*",
       Component: NotFound,
     },
