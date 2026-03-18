@@ -5,6 +5,7 @@ import {
 createProduct,
 getProducts,
 getProductDetail,
+getVariantStockHistory,
 updateProduct,
 deleteProduct
 
@@ -13,6 +14,8 @@ deleteProduct
 const router = express.Router()
 
 router.get("/", getProducts)
+
+router.get("/:id/variant-history", getVariantStockHistory)
 
 router.get("/:id", getProductDetail)
 

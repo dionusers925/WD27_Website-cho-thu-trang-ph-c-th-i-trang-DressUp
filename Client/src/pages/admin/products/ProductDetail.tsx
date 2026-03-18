@@ -1,9 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Card, Col, Image, Row, Tag, message } from "antd";
+import { Button, Card, Col, Image, Input, Row, Select, Table, Tag, message } from "antd";
 import { ArrowLeftOutlined, EditOutlined } from "@ant-design/icons";
-import { getProduct } from "../../../services/product.service";
-import { Product } from "../../../types/product";
+import { getProduct, getProductVariantHistory } from "../../../services/product.service";
+import { Product, VariantStockHistory } from "../../../types/product";
 import "./product.css";
 
 const formatCurrency = (value: number) =>
@@ -36,11 +36,34 @@ const statusLabel = (value?: string) => {
   if (value === "archived") return "Ngưng";
   return value ?? "-";
 };
+const historyActionLabel = (value?: string) => {
+  switch (value) {
+    case "initial":
+      return "Tạo mới";
+    case "update":
+      return "Cập nhật";
+    case "added":
+      return "Thêm biến thể";
+    case "removed":
+      return "Xoá biến thể";
+    default:
+      return value ?? "-";
+  }
+};
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
+  const [history, setHistory] = useState<VariantStockHistory[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit, setHistoryLimit] = useState(8);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historySku, setHistorySku] = useState("");
+  const [historyAction, setHistoryAction] = useState<string | undefined>(
+    undefined
+  );
 
   const fetchProduct = async () => {
     if (!id) return;
@@ -56,15 +79,105 @@ export default function ProductDetail() {
     }
   };
 
+  const fetchHistory = async () => {
+    if (!id) return;
+    try {
+      setHistoryLoading(true);
+      const res = await getProductVariantHistory(id, {
+        page: historyPage,
+        limit: historyLimit,
+        sku: historySku.trim() ? historySku.trim() : undefined,
+        action: historyAction,
+      });
+      const payload = res.data?.data ?? {};
+      setHistory(Array.isArray(payload.items) ? payload.items : []);
+      setHistoryTotal(Number(payload.total ?? 0));
+    } catch (error) {
+      message.error("Không thể tải lịch sử tồn kho");
+      setHistory([]);
+      setHistoryTotal(0);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [id, historyPage, historyLimit, historySku, historyAction]);
 
   const minRentalPrice = useMemo(() => {
     const prices = product?.rentalPrices ?? [];
     if (prices.length === 0) return 0;
     return Math.min(...prices.map((p) => p.price));
   }, [product]);
+  const variantCount = useMemo(
+    () => (product?.variants ?? []).length,
+    [product]
+  );
+
+  const historyColumns = [
+    {
+      title: "Thời gian",
+      dataIndex: "createdAt",
+      width: 160,
+      render: (value: string) => formatDateTime(value),
+    },
+    {
+      title: "SKU",
+      dataIndex: "sku",
+      width: 130,
+      render: (value: string) => value || "-",
+    },
+    {
+      title: "Size",
+      dataIndex: "size",
+      width: 80,
+      render: (value: string) => value || "-",
+    },
+    {
+      title: "Màu",
+      dataIndex: "color",
+      width: 100,
+      render: (value: string) => value || "-",
+    },
+    {
+      title: "Trước",
+      dataIndex: "oldStock",
+      width: 70,
+      render: (value: number) => value ?? 0,
+    },
+    {
+      title: "Sau",
+      dataIndex: "newStock",
+      width: 70,
+      render: (value: number) => value ?? 0,
+    },
+    {
+      title: "Thay đổi",
+      dataIndex: "change",
+      width: 90,
+      render: (value: number) => {
+        const changeValue = Number(value ?? 0);
+        const color =
+          changeValue > 0 ? "green" : changeValue < 0 ? "red" : "default";
+        const label =
+          changeValue > 0 ? `+${changeValue}` : String(changeValue);
+        return <Tag color={color}>{label}</Tag>;
+      },
+    },
+    {
+      title: "Hành động",
+      dataIndex: "action",
+      width: 120,
+      render: (value: string) => (
+        <Tag color="geekblue">{historyActionLabel(value)}</Tag>
+      ),
+    },
+  ];
 
   if (!product) return null;
 
@@ -128,6 +241,10 @@ export default function ProductDetail() {
               </span>
             </div>
             <div className="product-info-row">
+              <span>Số lượng biến thể:</span>
+              <span>{variantCount}</span>
+            </div>
+            <div className="product-info-row">
               <span>Tình trạng:</span>
               <span>
                 <Tag>{conditionLabel(product.condition)}</Tag>
@@ -160,13 +277,67 @@ export default function ProductDetail() {
           </Card>
 
           <Card className="product-card product-section" title="Biến thể">
+            {(product.variants ?? []).length === 0 && (
+              <div className="product-variants-empty">Chưa có biến thể</div>
+            )}
             <div className="product-info-list">
               {(product.variants ?? []).map((v, index) => (
                 <div key={index}>
-                  #{index + 1} {v.size} - {v.color} ({v.sku})
+                  #{index + 1} {v.size || "-"} - {v.color || "-"} ({v.sku || "-"})
+                  - Số lượng: {v.stock ?? 0}
                 </div>
               ))}
             </div>
+          </Card>
+
+          <Card
+            className="product-card product-section product-table-card"
+            title="Lịch sử tồn kho"
+          >
+            <div className="product-history-toolbar">
+              <Input
+                placeholder="Tìm theo SKU..."
+                value={historySku}
+                onChange={(e) => {
+                  setHistorySku(e.target.value);
+                  setHistoryPage(1);
+                }}
+                style={{ width: 220 }}
+              />
+              <Select
+                allowClear
+                placeholder="Lọc hành động"
+                value={historyAction}
+                onChange={(value) => {
+                  setHistoryAction(value);
+                  setHistoryPage(1);
+                }}
+                style={{ width: 180 }}
+                options={[
+                  { value: "initial", label: "Tạo mới" },
+                  { value: "update", label: "Cập nhật" },
+                  { value: "added", label: "Thêm biến thể" },
+                  { value: "removed", label: "Xoá biến thể" },
+                ]}
+              />
+            </div>
+            <Table
+              size="small"
+              rowKey="_id"
+              columns={historyColumns as any}
+              dataSource={history}
+              loading={historyLoading}
+              pagination={{
+                current: historyPage,
+                pageSize: historyLimit,
+                total: historyTotal,
+                onChange: (nextPage, nextPageSize) => {
+                  setHistoryPage(nextPage);
+                  setHistoryLimit(nextPageSize ?? historyLimit);
+                },
+              }}
+              locale={{ emptyText: "Chưa có lịch sử tồn kho" }}
+            />
           </Card>
 
           <Card className="product-card product-section" title="Tags">
@@ -177,7 +348,14 @@ export default function ProductDetail() {
           </Card>
 
           <Card className="product-card product-section" title="Mô tả">
-            {product.description ?? "-"}
+            {product.description ? (
+              <div
+                className="product-rich-text"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
+            ) : (
+              "-"
+            )}
           </Card>
 
           <Card className="product-card product-section" title="Metadata">

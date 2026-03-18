@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 import Product from "../models/product.model";
 import Variant from "../models/variant.model";
+import VariantStockHistory from "../models/variantStockHistory.model";
 import Category from "../models/Category";
 import { createProductSchema } from "../validations/product.validation";
 
@@ -42,10 +43,12 @@ const ensureUniqueSku = (variants: any[]) => {
   return true;
 };
 
+const normalizeSku = (value: any) => String(value ?? "").trim();
+
 const buildVariantDocs = (variants: any[], productId: any) =>
   variants.map((v) => ({
     productId,
-    sku: String(v.sku ?? "").trim(),
+    sku: normalizeSku(v.sku),
     size: String(v.size ?? "").trim(),
     color: String(v.color ?? "").trim(),
     stock: v.stock ?? 1,
@@ -94,6 +97,23 @@ export const createProduct = async (req: Request, res: Response) => {
 
     const variantDocs = buildVariantDocs(variants, product._id);
     const createdVariants = await Variant.insertMany(variantDocs);
+    if (createdVariants.length > 0) {
+      const historyDocs = createdVariants.map((variant) => {
+        const newStock = Number(variant.stock ?? 0);
+        return {
+          productId: product._id,
+          variantId: variant._id,
+          sku: normalizeSku(variant.sku),
+          size: String(variant.size ?? "").trim(),
+          color: String(variant.color ?? "").trim(),
+          oldStock: 0,
+          newStock,
+          change: newStock,
+          action: "initial",
+        };
+      });
+      await VariantStockHistory.insertMany(historyDocs);
+    }
 
     res.status(201).json({
       success: true,
@@ -130,14 +150,31 @@ export const getProducts = async (req: Request, res: Response) => {
       .populate("categoryId")
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const productIds = products.map((p) => p._id);
+    const variantCounts =
+      productIds.length > 0
+        ? await Variant.aggregate([
+            { $match: { productId: { $in: productIds } } },
+            { $group: { _id: "$productId", count: { $sum: 1 } } },
+          ])
+        : [];
+    const variantCountMap = new Map<string, number>(
+      variantCounts.map((item) => [String(item._id), item.count])
+    );
+    const productsWithCounts = products.map((product) => ({
+      ...product,
+      variantCount: variantCountMap.get(String(product._id)) ?? 0,
+    }));
 
     const total = await Product.countDocuments(query);
 
     res.json({
       success: true,
       data: {
-        products,
+        products: productsWithCounts,
         total,
         page,
         limit,
@@ -186,6 +223,59 @@ export const getProductDetail = async (req: Request, res: Response) => {
   }
 };
 
+export const getVariantStockHistory = async (req: Request, res: Response) => {
+  try {
+    const param = req.params.id;
+    let product: any = null;
+    if (mongoose.Types.ObjectId.isValid(param)) {
+      product = await Product.findById(param).select("_id");
+    }
+    if (!product) {
+      product = await Product.findOne({ slug: param }).select("_id");
+    }
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const limit = Math.max(1, Number(req.query.limit ?? 10) || 10);
+    const sku = String(req.query.sku ?? "").trim();
+    const action = String(req.query.action ?? "").trim();
+
+    const query: any = { productId: product._id };
+    if (sku) {
+      query.sku = { $regex: sku, $options: "i" };
+    }
+    if (action) {
+      query.action = action;
+    }
+
+    const total = await VariantStockHistory.countDocuments(query);
+    const items = await VariantStockHistory.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    res.json({
+      success: true,
+      data: {
+        items,
+        total,
+        page,
+        limit,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+    });
+  }
+};
+
 export const updateProduct = async (req: Request, res: Response) => {
   try {
     const validated = createProductSchema.parse(req.body);
@@ -214,6 +304,17 @@ export const updateProduct = async (req: Request, res: Response) => {
       });
     }
 
+    const existingVariants = await Variant.find({
+      productId: req.params.id,
+    }).lean();
+    const existingBySku = new Map<string, any>();
+    existingVariants.forEach((variant) => {
+      const skuKey = normalizeSku(variant.sku);
+      if (skuKey) {
+        existingBySku.set(skuKey, variant);
+      }
+    });
+
     const { variants, ...productData } = validated;
     const normalized = {
       ...productData,
@@ -241,6 +342,66 @@ export const updateProduct = async (req: Request, res: Response) => {
 
     const variantDocs = buildVariantDocs(variants, req.params.id);
     const newVariants = await Variant.insertMany(variantDocs);
+    const historyDocs: any[] = [];
+    const newSkuSet = new Set<string>();
+
+    newVariants.forEach((variant) => {
+      const skuKey = normalizeSku(variant.sku);
+      if (!skuKey) return;
+      newSkuSet.add(skuKey);
+      const oldVariant = existingBySku.get(skuKey);
+      const newStock = Number(variant.stock ?? 0);
+      if (oldVariant) {
+        const oldStock = Number(oldVariant.stock ?? 0);
+        if (oldStock !== newStock) {
+          historyDocs.push({
+            productId: product._id,
+            variantId: variant._id,
+            sku: skuKey,
+            size: String(variant.size ?? "").trim(),
+            color: String(variant.color ?? "").trim(),
+            oldStock,
+            newStock,
+            change: newStock - oldStock,
+            action: "update",
+          });
+        }
+      } else {
+        historyDocs.push({
+          productId: product._id,
+          variantId: variant._id,
+          sku: skuKey,
+          size: String(variant.size ?? "").trim(),
+          color: String(variant.color ?? "").trim(),
+          oldStock: 0,
+          newStock,
+          change: newStock,
+          action: "added",
+        });
+      }
+    });
+
+    existingVariants.forEach((variant) => {
+      const skuKey = normalizeSku(variant.sku);
+      if (!skuKey || newSkuSet.has(skuKey)) return;
+      const oldStock = Number(variant.stock ?? 0);
+      if (oldStock === 0) return;
+      historyDocs.push({
+        productId: product._id,
+        variantId: variant._id,
+        sku: skuKey,
+        size: String(variant.size ?? "").trim(),
+        color: String(variant.color ?? "").trim(),
+        oldStock,
+        newStock: 0,
+        change: -oldStock,
+        action: "removed",
+      });
+    });
+
+    if (historyDocs.length > 0) {
+      await VariantStockHistory.insertMany(historyDocs);
+    }
 
     res.json({
       success: true,
