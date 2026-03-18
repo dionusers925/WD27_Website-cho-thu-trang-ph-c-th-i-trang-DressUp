@@ -13,6 +13,16 @@ export const getProducts = (params?: {
 export const getProduct = (id: string) =>
   axios.get(`${API}/${id}`);
 
+export const getProductVariantHistory = (
+  id: string,
+  params?: {
+    page?: number;
+    limit?: number;
+    sku?: string;
+    action?: string;
+  }
+) => axios.get(`${API}/${id}/variant-history`, { params });
+
 export const createProduct = (data: any) =>
   axios.post(API, data);
 
