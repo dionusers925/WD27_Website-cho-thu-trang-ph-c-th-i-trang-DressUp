@@ -326,17 +326,7 @@ const OrdersDashboard = () => {
                 <select
                   className="w-full p-2.5 bg-white border border-gray-200 rounded-lg mb-3 outline-none focus:ring-2 focus:ring-blue-500"
                   value={currentProduct?._id || ""}
-<<<<<<< HEAD
-                  onChange={(e) => {
 
-                    const prod = products.find(p => p._id === e.target.value) as Product;
-                    if (prod) {
-                      setCurrentProduct(prod);
-                      const sizes = Array.from(new Set(prod.variants.map(v => v.size)));
-                      setCurrentSize(sizes[0] || "");
-                      const colorsForSize = prod.variants.filter(v => v.size === sizes[0]);
-
-=======
                   onChange={async (e) => {
                     const id = e.target.value;
                     const prod = products.find(p => p._id === id) as Product | undefined;
@@ -375,7 +365,7 @@ const OrdersDashboard = () => {
                       const sizes = Array.from(new Set(merged.variants.map(v => v.size)));
                       setCurrentSize(sizes[0] || "");
                       const colorsForSize = merged.variants.filter(v => v.size === sizes[0]);
->>>>>>> 5726aafd26fc91b17ffd2ef15c08f6ea597e359e
+
                       setCurrentColor(colorsForSize[0]?.color || "");
                     } catch (err) {
                       console.error("Lỗi lấy chi tiết sản phẩm:", err);
@@ -390,12 +380,8 @@ const OrdersDashboard = () => {
 
                   {products.map(p => (
                     <option key={p._id} value={p._id}>
-<<<<<<< HEAD
-                      {p.name} (Thuê: {p.rentalTiers?.[0]?.price.toLocaleString()}đ - Cọc: {p.depositDefault.toLocaleString()}đ)
 
-=======
                       {p.name} (Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ)
->>>>>>> 5726aafd26fc91b17ffd2ef15c08f6ea597e359e
                     </option>
                   ))}
                 </select>
