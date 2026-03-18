@@ -4,21 +4,28 @@ import userRoutes from "../routes/user";
 import "dotenv/config";
 import cors from "cors";
 import categoryRouter from "../routes/categories";
-import attributeRouter from "../routes/attributes";
-import productRoutes from "../routes/products";
 import orderRouter from "../routes/order";
+import costumeRoutes from "../routes/costumes";
+import cartRoutes from "../routes/cart";
+import productRouter from "../routes/product";
+import reviewRoutes from "../routes/review.route";
+
 const app = express();
 
 connectDB();
 
 app.use(cors());
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json());
 
 app.use("/users", userRoutes);
 app.use("/categories", categoryRouter);
-app.use("/attributes", attributeRouter);
-app.use("/api/products", productRoutes);
 app.use("/orders", orderRouter);
+app.use("/products", productRouter);
+app.use("/api/reviews", reviewRoutes);
+
+app.use("/api", costumeRoutes);
+app.use("/api", cartRoutes);
+
 app.listen(3000, () => {
   console.log("🚀 Server running on port 3000");
 });
