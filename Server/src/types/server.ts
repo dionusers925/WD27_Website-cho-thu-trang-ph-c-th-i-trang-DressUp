@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import { connectDB } from "./db";
 import userRoutes from "../routes/user";
 import "dotenv/config";
@@ -11,6 +12,7 @@ import productRouter from "../routes/product";
 import productRoutes from "../routes/products";
 import reviewRoutes from "../routes/review.route";
 import attributeRouter from "../routes/attributes";
+import uploadRouter from "../routes/upload";
 
 const app = express();
 
@@ -20,6 +22,7 @@ app.use(cors());
 // Increase payload limit to support rich-text content with embedded images/base64
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
+app.use("/uploads", express.static(path.resolve("uploads")));
 
 app.use("/users", userRoutes);
 app.use("/categories", categoryRouter);
@@ -28,6 +31,7 @@ app.use("/products", productRouter);
 app.use("/api/products", productRoutes);
 app.use("/attributes", attributeRouter);
 app.use("/api/reviews", reviewRoutes);
+app.use(uploadRouter);
 
 app.use("/api", costumeRoutes);
 app.use("/api", cartRoutes);
