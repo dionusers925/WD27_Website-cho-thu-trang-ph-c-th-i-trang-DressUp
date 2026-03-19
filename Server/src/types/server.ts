@@ -8,7 +8,9 @@ import orderRouter from "../routes/order";
 import costumeRoutes from "../routes/costumes";
 import cartRoutes from "../routes/cart";
 import productRouter from "../routes/product";
+import productRoutes from "../routes/products";
 import reviewRoutes from "../routes/review.route";
+import attributeRouter from "../routes/attributes";
 
 const app = express();
 
@@ -21,6 +23,8 @@ app.use("/users", userRoutes);
 app.use("/categories", categoryRouter);
 app.use("/orders", orderRouter);
 app.use("/products", productRouter);
+app.use("/api/products", productRoutes);
+app.use("/attributes", attributeRouter);
 app.use("/api/reviews", reviewRoutes);
 
 app.use("/api", costumeRoutes);

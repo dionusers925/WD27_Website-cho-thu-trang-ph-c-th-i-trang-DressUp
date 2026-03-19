@@ -15,7 +15,9 @@ export const addToCart = async (req: Request, res: Response) => {
     }
 
     // lấy giá theo số ngày thuê
-    const tier = product.rentalTiers.find((t) => t.days === days);
+    const rentalPrices =
+      (product as any).rentalPrices ?? (product as any).rentalTiers ?? [];
+    const tier = rentalPrices.find((t: any) => t.days === days);
     const price = tier?.price || 0;
 
     let cart = await Cart.findOne({ user: demoUser });

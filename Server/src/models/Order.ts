@@ -1,25 +1,35 @@
-import mongoose, { Schema, Document } from "mongoose";
+﻿import mongoose, { Schema, Document } from "mongoose";
 
-// Item trong order
-interface IOrderItem {
+export interface IOrderItem {
   productId: mongoose.Types.ObjectId;
+  name?: string;
+  size?: string;
+  color?: string;
+  deposit?: number;
   quantity: number;
   price: number;
 }
 
-// Định nghĩa Order
 export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;
   orderNumber: string;
 
   items: IOrderItem[];
 
-  shippingAddress: {
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  note?: string;
+
+  shippingAddress?: {
     name?: string;
     phone?: string;
     address?: string;
     city?: string;
   };
+
+  startDate?: Date;
+  endDate?: Date;
 
   subtotal: number;
   serviceFee: number;
@@ -40,14 +50,16 @@ export interface IOrder extends Document {
   updatedAt: Date;
 }
 
-// Schema item
-const orderItemSchema = new Schema({
+const orderItemSchema = new Schema<IOrderItem>({
   productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+  name: String,
+  size: String,
+  color: String,
+  deposit: { type: Number, default: 0 },
   quantity: { type: Number, default: 1 },
   price: { type: Number, required: true },
 });
 
-// Schema order
 const orderSchema: Schema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
@@ -59,12 +71,20 @@ const orderSchema: Schema = new Schema(
       required: true,
     },
 
+    customerName: String,
+    customerPhone: String,
+    customerAddress: String,
+    note: String,
+
     shippingAddress: {
       name: String,
       phone: String,
       address: String,
       city: String,
     },
+
+    startDate: Date,
+    endDate: Date,
 
     subtotal: { type: Number, default: 0 },
     serviceFee: { type: Number, default: 0 },

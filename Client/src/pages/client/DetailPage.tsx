@@ -23,12 +23,21 @@ function DetailPage() {
 
   useEffect(() => {
     axios
-      .get(`http://localhost:3000/products/${id}`)
+      .get(`http://localhost:3000/api/products/${id}`)
       .then((res) => {
-        const data = res.data;
-        setProduct(data);
-        if (data.images?.length > 0) setActiveImg(data.images[0]);
-        if (data.variants?.length > 0) setSelectedVariant(data.variants[0]);
+        const payload = res.data;
+        const productData = payload?.data?.product ?? payload?.product ?? payload;
+        const variants = Array.isArray(payload?.data?.variants)
+          ? payload.data.variants
+          : Array.isArray(payload?.variants)
+          ? payload.variants
+          : Array.isArray(productData?.variants)
+          ? productData.variants
+          : [];
+        const merged = productData ? { ...productData, variants } : productData;
+        setProduct(merged);
+        if (merged?.images?.length > 0) setActiveImg(merged.images[0]);
+        if (merged?.variants?.length > 0) setSelectedVariant(merged.variants[0]);
       })
       .catch((err) => console.error("Lỗi tải chi tiết:", err));
     window.scrollTo(0, 0);
@@ -47,15 +56,21 @@ function DetailPage() {
 
   const calculateRentalPrice = () => {
     if (diffDays <= 0) return 0;
-    const tier = product?.rentalTiers?.find((t: any) => t.days === diffDays);
+    const rentalPrices = Array.isArray(product?.rentalPrices)
+      ? product.rentalPrices
+      : Array.isArray(product?.rentalTiers)
+      ? product.rentalTiers
+      : [];
+    const tier = rentalPrices.find((t: any) => t.days === diffDays);
     if (tier) return tier.price;
     const basePrice =
-      product?.rentalTiers?.find((t: any) => t.days === 1)?.price || 0;
+      rentalPrices.find((t: any) => t.days === 1)?.price || 0;
     return basePrice * diffDays;
   };
 
   const rentalPrice = calculateRentalPrice();
-  const totalPayment = (product?.depositDefault || 0) + rentalPrice;
+  const totalPayment =
+    (product?.depositPrice ?? product?.depositDefault ?? 0) + rentalPrice;
 
   const quickSelectDays = (days: number) => {
     if (!startDate) return;
@@ -128,11 +143,13 @@ function DetailPage() {
                     className="w-5 h-5 rounded-full border border-gray-200"
                     style={{
                       backgroundColor:
-                        product.colorFamily === "Đỏ" ? "#B91C1C" : "#222",
+                        (product.colorGroup ?? product.colorFamily) === "Đỏ"
+                          ? "#B91C1C"
+                          : "#222",
                     }}
                   />
                   <span className="text-[10px] uppercase tracking-widest text-black font-medium">
-                    {product.colorFamily}
+                    {product.colorGroup ?? product.colorFamily}
                   </span>
                 </div>
               </div>
@@ -145,7 +162,9 @@ function DetailPage() {
                   <span className="text-[9px] text-gray-400 italic">
                     Color:{" "}
                     <span className="text-black font-medium">
-                      {selectedVariant.color || product.colorFamily}
+                      {selectedVariant.color ||
+                        product.colorGroup ||
+                        product.colorFamily}
                     </span>
                   </span>
                 )}
@@ -224,7 +243,7 @@ function DetailPage() {
               <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
                 <span>Security Deposit (Tiền cọc)</span>
                 <span className="text-black font-bold">
-                  {product.depositDefault?.toLocaleString()} VNĐ
+                  {(product.depositPrice ?? product.depositDefault ?? 0).toLocaleString()} VNĐ
                 </span>
               </div>
               <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">

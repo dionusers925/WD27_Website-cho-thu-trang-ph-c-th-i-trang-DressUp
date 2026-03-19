@@ -19,6 +19,7 @@ import PolicyPage from "./pages/client/PolicyPage";
 import CartPage from "./pages/client/CartPage";
 import LayoutClient from "./layouts/client/LayoutClient";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
+import OrderDetail from "./pages/admin/order/OrderDetail";
 
 function App() {
   
@@ -32,6 +33,7 @@ function App() {
       children: [
         { index: true, Component: Dashboard },
         { path: "order", Component: OrdersDashboard },
+        { path: "order/:id", Component: OrderDetail },
         { path: "categories", Component: ListCategory },
         { path: "categories/add", Component: AddCategory },
         { path: "categories/:id", Component: EditCategory },

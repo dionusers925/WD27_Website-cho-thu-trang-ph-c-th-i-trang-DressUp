@@ -9,9 +9,17 @@ function HomePage() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:3000/products")
+      .get("http://localhost:3000/api/products")
       .then((res) => {
-        setCostumes(res.data);
+        const payload = res.data;
+        const items = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data?.products)
+          ? payload.data.products
+          : Array.isArray(payload?.products)
+          ? payload.products
+          : [];
+        setCostumes(items);
         setLoading(false);
       })
       .catch((err) => {
@@ -85,12 +93,17 @@ function HomePage() {
                     : "https://placehold.co/600x800?text=DressUp";
 
                 // LẤY GIÁ: Tìm gói "1 ngày" (days: 1) để hiển thị giá 300,000
-                const dailyTier = item.rentalTiers?.find(
+                const rentalPrices = Array.isArray(item.rentalPrices)
+                  ? item.rentalPrices
+                  : Array.isArray(item.rentalTiers)
+                  ? item.rentalTiers
+                  : [];
+                const dailyTier = rentalPrices.find(
                   (t: any) => t.days === 1,
                 );
                 const displayPrice = dailyTier
                   ? dailyTier.price
-                  : item.depositDefault || 0;
+                  : item.depositPrice ?? item.depositDefault ?? 0;
 
                 return (
                   <Link
