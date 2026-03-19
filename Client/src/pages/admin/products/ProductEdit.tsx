@@ -25,7 +25,7 @@ export default function ProductEdit() {
   const [form] = Form.useForm();
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
-  const [slugLocked, setSlugLocked] = useState(true);
+  const [slugLocked, setSlugLocked] = useState(false);
 
   const fetchCategories = async () => {
     try {
