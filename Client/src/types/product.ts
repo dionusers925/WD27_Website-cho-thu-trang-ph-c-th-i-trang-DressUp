@@ -13,6 +13,21 @@ export interface ProductVariant {
   stock?: number;
 }
 
+export interface VariantStockHistory {
+  _id: string;
+  productId: string;
+  variantId?: string;
+  sku: string;
+  size?: string;
+  color?: string;
+  oldStock: number;
+  newStock: number;
+  change: number;
+  action?: string;
+  note?: string;
+  createdAt?: string;
+}
+
 export interface Product {
   _id: string;
   name: string;
@@ -30,6 +45,7 @@ export interface Product {
   depositPrice?: number;
   rentalPrices?: RentalPrice[];
   variants?: ProductVariant[];
+  variantCount?: number;
   status?: "active" | "draft" | "archived";
   createdAt?: string;
   updatedAt?: string;

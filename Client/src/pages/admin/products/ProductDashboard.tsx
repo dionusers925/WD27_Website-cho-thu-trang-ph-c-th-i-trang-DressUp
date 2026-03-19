@@ -115,6 +115,16 @@ const ProductDashboard = () => {
         record.categoryId?.name ?? (record as any).categoryId ?? "-",
     },
     {
+      title: "Biến thể",
+      width: 110,
+      render: (record: Product) => {
+        const count =
+          record.variantCount ??
+          (Array.isArray(record.variants) ? record.variants.length : 0);
+        return <Tag color="geekblue">{count}</Tag>;
+      },
+    },
+    {
       title: "Giá thuê",
       render: (record: Product) => {
         const prices = record.rentalPrices ?? [];

@@ -11,6 +11,7 @@ import { ICategory } from "../../../../types/category";
 import RentalPriceInput from "./RentalPriceInput";
 import ProductVariants from "./ProductVariants";
 import ProductImages from "./ProductImages";
+import RichTextEditor from "./RichTextEditor";
 
 type Props = {
   categories: ICategory[];
@@ -83,7 +84,7 @@ export default function ProductForm({
             </Form.Item>
 
             <Form.Item name="description" label="Mô tả">
-              <Input.TextArea rows={4} placeholder="Mô tả sản phẩm" />
+              <RichTextEditor placeholder="Mô tả sản phẩm" />
             </Form.Item>
           </Card>
 
@@ -133,12 +134,12 @@ export default function ProductForm({
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item name="careInstruction" label="Hướng dẫn bảo quản">
-                  <Input.TextArea rows={3} placeholder="Giặt tay nhẹ..." />
+                  <RichTextEditor placeholder="Giặt tay nhẹ..." />
                 </Form.Item>
               </Col>
               <Col span={12}>
                 <Form.Item name="internalNote" label="Ghi chú nội bộ">
-                  <Input.TextArea rows={3} placeholder="Ghi chú cho nhân viên..." />
+                  <RichTextEditor placeholder="Ghi chú cho nhân viên..." />
                 </Form.Item>
               </Col>
             </Row>
