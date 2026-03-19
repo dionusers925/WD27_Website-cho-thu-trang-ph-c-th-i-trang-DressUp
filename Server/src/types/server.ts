@@ -17,7 +17,9 @@ const app = express();
 connectDB();
 
 app.use(cors());
-app.use(express.json());
+// Increase payload limit to support rich-text content with embedded images/base64
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 app.use("/users", userRoutes);
 app.use("/categories", categoryRouter);
