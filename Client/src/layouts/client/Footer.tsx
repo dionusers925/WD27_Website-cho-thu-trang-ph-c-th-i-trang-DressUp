@@ -83,7 +83,7 @@ function Footer() {
                 <span className="block text-gray-500 mb-1 italic font-serif text-[13px]">
                   Office.
                 </span>
-                Quận 1, TP. Hồ Chí Minh
+                Trịnh Văn Bô, Nam Từ Liêm, Hà Nội
               </li>
               <li>
                 <span className="block text-gray-500 mb-1 italic font-serif text-[13px]">

@@ -2,11 +2,15 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { type ICostume } from "../../types/product";
+import { useRef } from "react";
 
 function HomePage() {
   const [costumes, setCostumes] = useState<ICostume[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
+  //call sản phẩm
   useEffect(() => {
     axios
       .get("http://localhost:3000/products")
@@ -26,6 +30,22 @@ function HomePage() {
     const element = document.getElementById("catalog");
     element?.scrollIntoView({ behavior: "smooth" });
   };
+
+  //call danh mục
+  useEffect(() => {
+  axios
+    .get("http://localhost:3000/categories")
+    .then((res) => setCategories(res.data))
+    .catch((err) => console.error("Lỗi categories:", err));
+}, []);
+
+const scrollLeft = () => {
+  scrollRef.current?.scrollBy({ left: -300, behavior: "smooth" });
+};
+
+const scrollRight = () => {
+  scrollRef.current?.scrollBy({ left: 300, behavior: "smooth" });
+};
 
   return (
     <div className="bg-[#FDFBF9] text-[#2C2C2C] font-sans selection:bg-black selection:text-white">
@@ -57,15 +77,15 @@ function HomePage() {
         />
       </section>
 
-      {/* 2. CATALOG SECTION - ĐÃ FIX HIỂN THỊ DỰA TRÊN DỮ LIỆU JSON */}
+      {/* 2. CATALOG SECTION */}
       <section id="catalog" className="py-32 bg-white px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <span className="text-[10px] tracking-[0.5em] text-gray-300 uppercase">
-              COLLECTION
+              Bộ sưu tập
             </span>
-            <h2 className="text-4xl font-serif italic mt-4 text-gray-900">
-              — Designer Clothes for Every Taste.
+            <h2 className="text-4xl font-serif italic text-gray-900 mt-2">
+              — Thiết kế dành cho mọi sở thích.
             </h2>
           </div>
 
@@ -142,153 +162,92 @@ function HomePage() {
               to="/catalog"
               className="text-[10px] font-bold uppercase tracking-widest border-b-2 border-black pb-2 hover:text-gray-400 hover:border-gray-200 transition-all"
             >
-              View Full Collection
+              Xem tất cả sản phẩm
             </Link>
           </div>
         </div>
       </section>
-      {/* --- SECTION 3: ABOUT US (PHẦN MỚI THÊM) --- */}
-      <div className="max-w-7xl mx-auto px-6 mt-40 py-40 border-t border-gray-100">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-20 items-center">
-          {/* Cột ảnh trái & Trích dẫn */}
-          <div className="space-y-12">
-            <div className="aspect-[4/5] overflow-hidden bg-gray-50">
-              <img
-                src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop"
-                className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
-                alt="About DressUp"
-              />
-            </div>
-            <div className="max-w-md">
-              <span className="text-4xl font-serif text-gray-200">“</span>
-              <p className="text-lg font-serif italic text-gray-600 leading-relaxed -mt-4">
-                I have always had difficulties with buying clothes for every-day
-                wear. Therefore, together with Linda, we decided to create our
-                own brand.
-              </p>
-              <p className="mt-4 text-[10px] uppercase tracking-widest text-gray-400">
-                — Johanna Innsbruck
-              </p>
-            </div>
+      {/* --- SECTION: CATEGORY (DANH MỤC) --- */}
+<div className="max-w-7xl mx-auto px-6 mt-40 py-20 border-t border-gray-100">
+  <div className="flex justify-between items-center mb-10">
+    <div>
+      <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
+        Danh mục
+      </span>
+      <h2 className="text-4xl font-serif italic text-gray-900 mt-2">
+        — Khám phá theo phong cách
+      </h2>
+    </div>
+
+    {/* Nút scroll */}
+    <div className="flex gap-3">
+      <button
+        onClick={scrollLeft}
+        className="w-10 h-10 border border-gray-300 hover:bg-black hover:text-white transition"
+      >
+        ←
+      </button>
+      <button
+        onClick={scrollRight}
+        className="w-10 h-10 border border-gray-300 hover:bg-black hover:text-white transition"
+      >
+        →
+      </button>
+    </div>
+  </div>
+
+  {/* LIST CATEGORY */}
+  <div
+    ref={scrollRef}
+    className="flex gap-6 overflow-x-auto scroll-smooth no-scrollbar"
+  >
+    {categories.map((cat: any, index: number) => {
+      // fallback ảnh random theo index cho đỡ trùng
+      const fallbackImages = [
+        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
+        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
+        "https://images.unsplash.com/photo-1539109136881-3be0616acf4b",
+        "https://images.unsplash.com/photo-1509631179647-0177331693ae",
+      ];
+
+      const img = fallbackImages[index % fallbackImages.length];
+
+      return (
+        <Link
+          key={cat._id}
+          to={`/catalog?category=${cat._id}`}
+          className="min-w-[250px] group"
+        >
+          <div className="aspect-[3/4] overflow-hidden bg-gray-100 mb-4">
+            <img
+              src={`${img}?w=600`}
+              className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
+              alt={cat.name}
+            />
           </div>
 
-          {/* Cột nội dung phải */}
-          <div className="space-y-10">
-            <div className="space-y-4">
-              <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
-                About Us
-              </span>
-              <h2 className="text-5xl font-serif text-gray-900 leading-tight">
-                Comfort and <br />
-                Quality Come First.
-              </h2>
-            </div>
+          <h3 className="text-lg font-serif italic text-gray-800 text-center">
+            {cat.name}
+          </h3>
+        </Link>
+      );
+    })}
+  </div>
+</div>
 
-            <div className="space-y-6 text-sm text-gray-500 font-light leading-relaxed max-w-lg">
-              <p>
-                Johanna Innsbruck and Linda Copperfield have always dreamed of
-                comfortable women's clothing that would look appropriate in any
-                circumstances.
-              </p>
-              <p>
-                This is how the DressUp brand appeared — it is a brand for women
-                who want to feel confident, seductive, and stylish in any
-                situation.
-              </p>
-            </div>
 
-            <div className="pt-6">
-              <img
-                src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000&auto=format&fit=crop"
-                className="w-full aspect-video object-cover"
-                alt="DressUp Collection"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* --- KẾT THÚC PHẦN ABOUT US --- */}
+      {/* --- KẾT THÚC PHẦN CATEGORY --- */}
 
-      {/* --- SECTION: HISTORY (MOMENTS THAT MATTER) --- */}
-      <div className="max-w-7xl mx-auto px-6 py-40">
-        <div className="text-center space-y-4 mb-24">
-          <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
-            History
-          </span>
-          <h2 className="text-5xl font-serif text-gray-900">
-            — Moments That Matter for Us.
-          </h2>
-          <p className="text-sm text-gray-400 font-light">
-            A few words about how our brand of designer clothes was created and
-            developed.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Milestone 1997 */}
-          <div className="border border-gray-100 p-16 text-center space-y-8 hover:shadow-2xl transition-shadow duration-500">
-            <div className="w-24 h-24 bg-[#F9F7F5] rounded-full flex items-center justify-center mx-auto">
-              <span className="text-2xl font-serif italic text-gray-800">
-                1997
-              </span>
-            </div>
-            <div className="space-y-4">
-              <h4 className="text-xl font-serif italic">Beginning</h4>
-              <div className="w-8 h-[1px] bg-gray-200 mx-auto"></div>
-              <p className="text-xs text-gray-400 leading-relaxed font-light px-4">
-                Johanna met Linda, and together they decided to create a fashion
-                brand.
-              </p>
-            </div>
-          </div>
-
-          {/* Milestone 2001 */}
-          <div className="border border-gray-100 p-16 text-center space-y-8 hover:shadow-2xl transition-shadow duration-500">
-            <div className="w-24 h-24 bg-[#F9F7F5] rounded-full flex items-center justify-center mx-auto">
-              <span className="text-2xl font-serif italic text-gray-800">
-                2001
-              </span>
-            </div>
-            <div className="space-y-4">
-              <h4 className="text-xl font-serif italic">Featured in Vogue</h4>
-              <div className="w-8 h-[1px] bg-gray-200 mx-auto"></div>
-              <p className="text-xs text-gray-400 leading-relaxed font-light px-4">
-                We were featured as the "Editor's Pick for Spring-Summer 2001".
-              </p>
-            </div>
-          </div>
-
-          {/* Milestone 2019 */}
-          <div className="border border-gray-100 p-16 text-center space-y-8 hover:shadow-2xl transition-shadow duration-500">
-            <div className="w-24 h-24 bg-[#F9F7F5] rounded-full flex items-center justify-center mx-auto">
-              <span className="text-2xl font-serif italic text-gray-800">
-                2019
-              </span>
-            </div>
-            <div className="space-y-4">
-              <h4 className="text-xl font-serif italic">First Offline Store</h4>
-              <div className="w-8 h-[1px] bg-gray-200 mx-auto"></div>
-              <p className="text-xs text-gray-400 leading-relaxed font-light px-4">
-                In 2019, we opened our first boutique on the Quận 1, TP. Hồ Chí
-                Minh.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* --- SECTION: GALLERY (TRENDY LOOKS) --- */}
       <div className="max-w-7xl mx-auto px-6 py-40 border-t border-gray-50">
         <div className="text-center space-y-4 mb-20">
           <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
-            Gallery
+            Trưng bày xu hướng
           </span>
-          <h2 className="text-5xl font-serif text-gray-900">
-            — Trendy Looks of Your Spring.
+          <h2 className="text-4xl font-serif italic text-gray-900 mt-2">
+            — Làm mới phong cách của bạn.
           </h2>
           <p className="text-sm text-gray-400 font-light">
-            Stay playful and romantic this spring with the new collection by
-            DressUp.
+            Hãy giữ tinh thần vui tươi và lãng mạn với bộ sưu tập mới của DressUp.
           </p>
         </div>
 
@@ -349,54 +308,7 @@ function HomePage() {
         </div>
       </div>
       {/* --- SECTION: GALLERY (TRENDY LOOKS) --- */}
-
-      {/* --- SECTION: INSTAGRAM FEED --- */}
-      <div className="max-w-7xl mx-auto px-6 py-32 border-t border-gray-50">
-        <div className="text-center mb-16">
-          <h2 className="text-2xl font-serif text-gray-900 tracking-tight">
-            Follow Us @DressUp.store
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          {/* Các ảnh trong feed Instagram */}
-          <div className="aspect-square overflow-hidden bg-gray-50">
-            <img
-              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=500"
-              className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-              alt="Instagram 1"
-            />
-          </div>
-          <div className="aspect-square overflow-hidden bg-gray-50">
-            <img
-              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=500"
-              className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-              alt="Instagram 2"
-            />
-          </div>
-          <div className="aspect-square overflow-hidden bg-gray-50">
-            <img
-              src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=500"
-              className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-              alt="Instagram 3"
-            />
-          </div>
-          <div className="aspect-square overflow-hidden bg-gray-50">
-            <img
-              src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=500"
-              className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-              alt="Instagram 4"
-            />
-          </div>
-          <div className="aspect-square overflow-hidden bg-gray-50">
-            <img
-              src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=500"
-              className="w-full h-full object-cover hover:opacity-80 transition-opacity"
-              alt="Instagram 5"
-            />
-          </div>
-        </div>
-      </div>
+      
     </div>
   );
 }

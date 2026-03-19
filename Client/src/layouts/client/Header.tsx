@@ -37,16 +37,16 @@ function Header() {
       {/* Điều hướng */}
       <nav className="hidden md:flex gap-12 text-[10px] uppercase tracking-[0.3em] font-medium text-white">
         <a href="/" className="hover:opacity-50 transition-all">
-          Home
+          Trang chủ
         </a>
         <a href="#catalog" className="hover:opacity-50 transition-all">
-          Catalog
+          sản phẩm
         </a>
-        <a href="#history" className="hover:opacity-50 transition-all">
-          History
+        <a href="/cart" className="hover:opacity-50 transition-all">
+          Giỏ hàng
         </a>
-        <a href="#contact" className="hover:opacity-50 transition-all">
-          Contact
+        <a href="/policy" className="hover:opacity-50 transition-all">
+          Hướng dẫn mua hàng
         </a>
       </nav>
 
