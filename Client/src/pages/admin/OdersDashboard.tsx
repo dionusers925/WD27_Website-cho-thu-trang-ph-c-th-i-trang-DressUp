@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 interface Variant {
   size: string;
@@ -34,16 +35,80 @@ const OrdersDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
+  const navigate = useNavigate();
+
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [currentSize, setCurrentSize] = useState("");
   const [currentColor, setCurrentColor] = useState("");
+
+  const normalizeProduct = (p: any): Product => {
+    const rentalTiers = Array.isArray(p?.rentalTiers)
+      ? p.rentalTiers
+      : Array.isArray(p?.rentalPrices)
+        ? p.rentalPrices.map((rp: any) => ({
+            label: `${Number(rp?.days ?? 0) || 0} ngày`,
+            days: Number(rp?.days ?? 0) || 0,
+            price: Number(rp?.price ?? 0) || 0,
+          }))
+        : [];
+
+    const depositDefault =
+      Number(p?.depositDefault ?? p?.depositPrice ?? 0) || 0;
+
+    return {
+      _id: String(p?._id ?? ""),
+      name: String(p?.name ?? ""),
+      rentalTiers,
+      depositDefault,
+      variants: Array.isArray(p?.variants)
+        ? p.variants.map((v: any) => ({
+            size: String(v?.size ?? ""),
+            color: String(v?.color ?? ""),
+            _id: v?._id,
+          }))
+        : [],
+    };
+  };
+
+  const normalizeVariants = (variants: any[]): Variant[] =>
+    variants
+      .map((v: any) => {
+        const attrs = Array.isArray(v?.attributes) ? v.attributes : [];
+        const nameOf = (a: any) =>
+          String(a?.attributeName ?? "")
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+
+        const isSizeAttr = (a: any) => {
+          const n = nameOf(a);
+          return n.includes("size") || n.includes("kich") || n.includes("co");
+        };
+
+        const isColorAttr = (a: any) => {
+          const n = nameOf(a);
+          return n.includes("color") || n.includes("mau");
+        };
+
+        const attrSize = attrs.find(isSizeAttr)?.value;
+        const attrColor = attrs.find(isColorAttr)?.value;
+
+        const size = String(v?.size ?? attrSize ?? "").trim();
+        const color = String(v?.color ?? attrColor ?? "").trim();
+
+        return { size, color, _id: v?._id };
+      })
+      .filter((v: Variant) => v.size && v.color);
 
   const [newOrder, setNewOrder] = useState({
     userId: "",
     total: 0,
     paymentMethod: "Tiền mặt",
+
+    shippingMethod: "Nhận tại cửa hàng",
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date().toISOString().split("T")[0],
+
     items: [] as OrderItem[],
   });
 
@@ -51,12 +116,27 @@ const OrdersDashboard = () => {
     try {
       const [ordersRes, productsRes] = await Promise.all([
         axios.get("http://localhost:3000/orders"),
-        axios.get("http://localhost:3000/products"),
+
+        axios.get("http://localhost:3000/api/products"),
       ]);
+
       setOrders(ordersRes.data);
-      setProducts(productsRes.data);
+
+      const productData = productsRes.data as any;
+      const normalizedProducts = Array.isArray(productData)
+        ? productData
+        : Array.isArray(productData?.data?.products)
+          ? productData.data.products
+          : Array.isArray(productData?.products)
+            ? productData.products
+            : [];
+
+      setProducts(
+        normalizedProducts.map(normalizeProduct).filter((p: Product) => p._id),
+      );
     } catch (err) {
       console.error("Lỗi lấy dữ liệu:", err);
+      setProducts([]);
     }
   };
 
@@ -99,6 +179,7 @@ const OrdersDashboard = () => {
       price: itemPrice,
       deposit: itemDeposit,
       size: currentSize,
+
       color: currentColor,
     };
 
@@ -121,8 +202,10 @@ const OrdersDashboard = () => {
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (newOrder.items.length === 0)
       return alert("Vui lòng thêm ít nhất 1 sản phẩm!");
+
     setLoading(true);
     try {
       await axios.post("http://localhost:3000/orders", newOrder);
@@ -133,6 +216,8 @@ const OrdersDashboard = () => {
         userId: "",
         total: 0,
         paymentMethod: "Tiền mặt",
+
+        shippingMethod: "Nhận tại cửa hàng",
         startDate: new Date().toISOString().split("T")[0],
         endDate: new Date().toISOString().split("T")[0],
         items: [],
@@ -188,22 +273,33 @@ const OrdersDashboard = () => {
               <th className="p-4 text-sm font-semibold text-gray-600">
                 Tổng tiền
               </th>
+
+              <th className="p-4 text-sm font-semibold text-gray-600">
+                Thanh toán
+              </th>
               <th className="p-4 text-sm font-semibold text-gray-600">
                 Trạng thái
+              </th>
+              <th className="p-4 text-sm font-semibold text-gray-600">
+                Thao tác
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {orders.map((order: any) => (
               <tr key={order._id} className="hover:bg-gray-50 transition">
-                <td className="p-4 font-mono text-sm text-blue-600 font-bold">
+                <td className="p-4 font-mono text-sm text-blue-600 font-semibold">
                   {order._id?.slice(-6).toUpperCase()}
                 </td>
-                <td className="p-4 text-sm font-medium">
+                <td className="p-4 text-sm ">
                   {order.userId?.name || "Khách tại quầy"}
                 </td>
-                <td className="p-4 text-sm font-bold">
+                <td className="p-4 text-sm ">
                   {(order.total ?? 0).toLocaleString()}đ
+                </td>
+
+                <td className="p-4 text-sm text-gray-600">
+                  {order.paymentMethod || "Nhận tại cửa hàng"}
                 </td>
                 <td className="p-4">
                   <span
@@ -211,6 +307,18 @@ const OrdersDashboard = () => {
                   >
                     {order.status || "pending"}
                   </span>
+                </td>
+                <td className="p-4 text-sm ">
+                  <button
+                    onClick={() => navigate(`/admin/order/${order._id}`)}
+                    className="px-4 text-sm py-1.5 bg-blue-50 text-white rounded-lg text-xs font-bold transition-all shadow-sm border border-blue-100"
+                    style={{
+                      backgroundColor: "#377abd",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    Chi tiết
+                  </button>
                 </td>
               </tr>
             ))}
@@ -250,29 +358,82 @@ const OrdersDashboard = () => {
                 <select
                   className="w-full p-2.5 bg-white border border-gray-200 rounded-lg mb-3 outline-none focus:ring-2 focus:ring-blue-500"
                   value={currentProduct?._id || ""}
-                  onChange={(e) => {
-                    const prod = products.find(
-                      (p) => p._id === e.target.value,
-                    ) as Product;
-                    if (prod) {
-                      setCurrentProduct(prod);
+                  onChange={async (e) => {
+                    const id = e.target.value;
+                    const prod = products.find((p) => p._id === id) as
+                      | Product
+                      | undefined;
+
+                    if (!id || !prod) {
+                      setCurrentProduct(null);
+                      setCurrentSize("");
+                      setCurrentColor("");
+                      return;
+                    }
+
+                    try {
+                      const detailRes = await axios.get(
+                        `http://localhost:3000/api/products/${id}`,
+                      );
+                      const detail = detailRes.data as any;
+
+                      const rawVariants =
+                        Array.isArray(detail?.data?.variants) &&
+                        detail.data.variants.length > 0
+                          ? detail.data.variants
+                          : Array.isArray(detail?.data?.product?.variants) &&
+                              detail.data.product.variants.length > 0
+                            ? detail.data.product.variants
+                            : Array.isArray(detail?.variants) &&
+                                detail.variants.length > 0
+                              ? detail.variants
+                              : [];
+
+                      const mappedVariants = normalizeVariants(rawVariants);
+
+                      const merged: Product = {
+                        ...prod,
+                        variants: mappedVariants,
+                      };
+
+                      setCurrentProduct(merged);
+
+                      if (mappedVariants.length === 0) {
+                        setCurrentSize("");
+                        setCurrentColor("");
+                        alert(
+                          "Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.",
+                        );
+                        return;
+                      }
+
                       const sizes = Array.from(
-                        new Set(prod.variants.map((v) => v.size)),
+                        new Set(merged.variants.map((v) => v.size)),
                       );
                       setCurrentSize(sizes[0] || "");
-                      const colorsForSize = prod.variants.filter(
+
+                      const colorsForSize = merged.variants.filter(
                         (v) => v.size === sizes[0],
                       );
                       setCurrentColor(colorsForSize[0]?.color || "");
+                    } catch (err) {
+                      console.error("Lỗi lấy chi tiết sản phẩm:", err);
+                      alert(
+                        "Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.",
+                      );
+                      setCurrentProduct(null);
+                      setCurrentSize("");
+                      setCurrentColor("");
                     }
                   }}
                 >
                   <option value="">-- Click chọn sản phẩm --</option>
+
                   {products.map((p) => (
                     <option key={p._id} value={p._id}>
                       {p.name} (Thuê:{" "}
-                      {p.rentalTiers?.[0]?.price.toLocaleString()}đ - Cọc:{" "}
-                      {p.depositDefault.toLocaleString()}đ)
+                      {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ -
+                      Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ)
                     </option>
                   ))}
                 </select>
@@ -378,6 +539,7 @@ const OrdersDashboard = () => {
                 <label className="block font-semibold text-gray-700 mb-1">
                   Tổng cộng (Đã gồm tiền cọc)
                 </label>
+
                 <div className="w-full p-3 bg-gray-100 border rounded-xl font-bold text-lg text-blue-900 text-center">
                   {newOrder.total.toLocaleString()} đ
                 </div>

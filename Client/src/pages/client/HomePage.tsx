@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { type ICostume } from "../../types/product";
+import { type Product } from "../../types/product";
 
 function HomePage() {
-  const [costumes, setCostumes] = useState<ICostume[]>([]);
+  const [costumes, setCostumes] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

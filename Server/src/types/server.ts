@@ -8,7 +8,6 @@ import orderRouter from "../routes/order";
 import costumeRoutes from "../routes/costumes";
 import cartRoutes from "../routes/cart";
 import productRouter from "../routes/product";
-import authRoutes from "../routes/auth";
 
 const app = express();
 
@@ -21,6 +20,7 @@ app.use("/users", userRoutes);
 app.use("/categories", categoryRouter);
 app.use("/orders", orderRouter);
 app.use("/products", productRouter);
+app.use("/api/reviews", reviewRoutes);
 
 app.use("/api", costumeRoutes);
 app.use("/api", cartRoutes);
