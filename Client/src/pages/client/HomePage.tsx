@@ -1,75 +1,105 @@
-import { useEffect, useState } from "react";
+
+
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { type ICostume } from "../../types/product";
-import { useRef } from "react";
 
+/* ================= TYPES ================= */
+interface ICategory {
+  _id: string;
+  name: string;
+}
+
+/* ================= CONFIG ================= */
+const API_URL = "http://localhost:3000";
+
+/* ================= COMPONENT ================= */
 function HomePage() {
   const [costumes, setCostumes] = useState<ICostume[]>([]);
+  const [categories, setCategories] = useState<ICategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<any[]>([]);
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  //call sản phẩm
+  /* ================= FETCH DATA ================= */
   useEffect(() => {
-    axios
-      .get("http://localhost:3000/products")
-      .then((res) => {
-        setCostumes(res.data);
+    const fetchData = async () => {
+      try {
+        const [productsRes, categoriesRes] = await Promise.all([
+          axios.get(`${API_URL}/products`),
+          axios.get(`${API_URL}/categories`),
+        ]);
+
+        setCostumes(productsRes.data);
+        setCategories(categoriesRes.data);
+      } catch (err) {
+        console.error("Lỗi API:", err);
+      } finally {
         setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Lỗi kết nối:", err);
-        setLoading(false);
-      });
+      }
+    };
+
+    fetchData();
     window.scrollTo(0, 0);
   }, []);
 
-  const scrollToCatalog = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const element = document.getElementById("catalog");
-    element?.scrollIntoView({ behavior: "smooth" });
+  /* ================= SCROLL CATEGORY ================= */
+  const scrollLeft = () => {
+    scrollRef.current?.scrollBy({ left: -300, behavior: "smooth" });
   };
 
-  //call danh mục
-  useEffect(() => {
-  axios
-    .get("http://localhost:3000/categories")
-    .then((res) => setCategories(res.data))
-    .catch((err) => console.error("Lỗi categories:", err));
-}, []);
+  const scrollRight = () => {
+    scrollRef.current?.scrollBy({ left: 300, behavior: "smooth" });
+  };
 
-const scrollLeft = () => {
-  scrollRef.current?.scrollBy({ left: -300, behavior: "smooth" });
+  const luxuryFont = { fontFamily: "Playfair Display, serif" };
+
+  const isDown = useRef(false);
+const startX = useRef(0);
+const scrollLeftPos = useRef(0);
+
+const handleMouseDown = (e: React.MouseEvent) => {
+  isDown.current = true;
+  startX.current = e.pageX - (scrollRef.current?.offsetLeft || 0);
+  scrollLeftPos.current = scrollRef.current?.scrollLeft || 0;
 };
 
-const scrollRight = () => {
-  scrollRef.current?.scrollBy({ left: 300, behavior: "smooth" });
+const handleMouseLeave = () => (isDown.current = false);
+const handleMouseUp = () => (isDown.current = false);
+
+const handleMouseMove = (e: React.MouseEvent) => {
+  if (!isDown.current) return;
+  e.preventDefault();
+  const x = e.pageX - (scrollRef.current?.offsetLeft || 0);
+  const walk = (x - startX.current) * 1.5;
+  if (scrollRef.current) {
+    scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
+  }
 };
 
   return (
     <div className="bg-[#FDFBF9] text-[#2C2C2C] font-sans selection:bg-black selection:text-white">
-      {/* 1. HERO SECTION */}
+      {/* ================= HERO ================= */}
       <section className="relative h-screen flex items-center overflow-hidden">
         <div className="z-10 bg-white/95 p-10 md:p-16 max-w-xl shadow-2xl animate-fadeIn ml-6 md:ml-20">
           <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400 mb-6 block font-bold">
             Premium Rental
           </span>
-          <h1 className="text-5xl md:text-7xl mb-8 leading-[1.1] font-serif italic text-gray-900">
+
+          <h1
+            className="text-5xl md:text-7xl mb-8 leading-[1.1] italic text-gray-900"
+            style={luxuryFont}
+          >
             — Your New <br /> Everyday Style.
           </h1>
+
           <p className="text-sm text-gray-500 mb-10 leading-relaxed font-light max-w-sm">
             DressUp mang đến những bộ trang phục thiết kế cao cấp, giúp bạn tỏa
             sáng trong mọi sự kiện quan trọng.
           </p>
-          <div className="flex gap-4">
-            <a href="#catalog" onClick={scrollToCatalog}>
-              <button className="bg-[#222] text-white px-10 py-4 text-[10px] uppercase tracking-widest hover:bg-black transition-all">
-                Shop Now +
-              </button>
-            </a>
-          </div>
         </div>
+
         <img
           src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070"
           className="absolute right-0 top-0 w-full md:w-2/3 h-full object-cover"
@@ -77,14 +107,18 @@ const scrollRight = () => {
         />
       </section>
 
-      {/* 2. CATALOG SECTION */}
+      {/* ================= CATALOG ================= */}
       <section id="catalog" className="py-32 bg-white px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
             <span className="text-[10px] tracking-[0.5em] text-gray-300 uppercase">
               Bộ sưu tập
             </span>
-            <h2 className="text-4xl font-serif italic text-gray-900 mt-2">
+
+            <h2
+              className="text-4xl italic text-gray-900 mt-2"
+              style={luxuryFont}
+            >
               — Thiết kế dành cho mọi sở thích.
             </h2>
           </div>
@@ -97,17 +131,16 @@ const scrollRight = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-16">
-              {costumes.slice(0, 3).map((item: any) => {
-                // LẤY ẢNH: Sử dụng link đầu tiên trong mảng images hoàn chỉnh
+              {costumes.slice(0, 3).map((item) => {
                 const itemImg =
                   item.images && item.images.length > 0
                     ? item.images[0]
                     : "https://placehold.co/600x800?text=DressUp";
 
-                // LẤY GIÁ: Tìm gói "1 ngày" (days: 1) để hiển thị giá 300,000
                 const dailyTier = item.rentalTiers?.find(
-                  (t: any) => t.days === 1,
+                  (t: any) => t.days === 1
                 );
+
                 const displayPrice = dailyTier
                   ? dailyTier.price
                   : item.depositDefault || 0;
@@ -123,12 +156,12 @@ const scrollRight = () => {
                         src={itemImg}
                         alt={item.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s]"
-                        // Dự phòng nếu link hstatic gặp sự cố mạng hoặc lỗi DNS
                         onError={(e: any) => {
                           e.currentTarget.src =
                             "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=600";
                         }}
                       />
+
                       {item.status !== "active" && (
                         <div className="absolute top-4 right-4 bg-black text-white text-[8px] px-3 py-1 uppercase tracking-widest">
                           Rented
@@ -136,12 +169,15 @@ const scrollRight = () => {
                       )}
                     </div>
 
-                    {/* Hiển thị Tên và Thương hiệu */}
-                    <h3 className="text-xl font-serif italic text-gray-800">
+                    <h3
+                      className="text-xl italic text-gray-800"
+                      style={luxuryFont}
+                    >
                       {item.name}
                     </h3>
+
                     <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest">
-                      {item.brand || "Designer"}
+                      {item.brand?.name || "Designer"}
                     </p>
 
                     <p className="text-[10px] text-gray-900 mt-3 uppercase tracking-[0.2em] font-medium">
@@ -167,148 +203,106 @@ const scrollRight = () => {
           </div>
         </div>
       </section>
-      {/* --- SECTION: CATEGORY (DANH MỤC) --- */}
-<div className="max-w-7xl mx-auto px-6 mt-40 py-20 border-t border-gray-100">
-  <div className="flex justify-between items-center mb-10">
-    <div>
-      <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
-        Danh mục
-      </span>
-      <h2 className="text-4xl font-serif italic text-gray-900 mt-2">
-        — Khám phá theo phong cách
-      </h2>
-    </div>
 
-    {/* Nút scroll */}
-    <div className="flex gap-3">
-      <button
-        onClick={scrollLeft}
-        className="w-10 h-10 border border-gray-300 hover:bg-black hover:text-white transition"
-      >
-        ←
-      </button>
-      <button
-        onClick={scrollRight}
-        className="w-10 h-10 border border-gray-300 hover:bg-black hover:text-white transition"
-      >
-        →
-      </button>
-    </div>
+      {/* ================= CATEGORY ================= */}
+      <div className="max-w-7xl mx-auto px-6 mt-40 py-20 border-t border-gray-100">
+  <div className="mb-10">
+    <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
+      Danh mục
+    </span>
+
+    <h2
+      className="text-4xl italic text-gray-900 mt-2"
+      style={luxuryFont}
+    >
+      — Khám phá theo phong cách
+    </h2>
   </div>
 
-  {/* LIST CATEGORY */}
-  <div
-    ref={scrollRef}
-    className="flex gap-6 overflow-x-auto scroll-smooth no-scrollbar"
-  >
-    {categories.map((cat: any, index: number) => {
-      // fallback ảnh random theo index cho đỡ trùng
-      const fallbackImages = [
-        "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
-        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
-        "https://images.unsplash.com/photo-1539109136881-3be0616acf4b",
-        "https://images.unsplash.com/photo-1509631179647-0177331693ae",
-      ];
+  <div className="relative">
+    {/* fade trái */}
+    <div className="absolute left-0 top-0 w-16 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+    
+    {/* fade phải */}
+    <div className="absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
 
-      const img = fallbackImages[index % fallbackImages.length];
+    <div
+      ref={scrollRef}
+      onMouseDown={handleMouseDown}
+      onMouseLeave={handleMouseLeave}
+      onMouseUp={handleMouseUp}
+      onMouseMove={handleMouseMove}
+      className="flex gap-6 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing snap-x snap-mandatory"
+    >
+      {categories.map((cat, index) => {
+        const fallbackImages = [
+          "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
+          "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
+          "https://images.unsplash.com/photo-1539109136881-3be0616acf4b",
+          "https://images.unsplash.com/photo-1509631179647-0177331693ae",
+        ];
 
-      return (
-        <Link
-          key={cat._id}
-          to={`/catalog?category=${cat._id}`}
-          className="min-w-[250px] group"
-        >
-          <div className="aspect-[3/4] overflow-hidden bg-gray-100 mb-4">
-            <img
-              src={`${img}?w=600`}
-              className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
-              alt={cat.name}
-            />
-          </div>
+        const img = fallbackImages[index % fallbackImages.length];
 
-          <h3 className="text-lg font-serif italic text-gray-800 text-center">
-            {cat.name}
-          </h3>
-        </Link>
-      );
-    })}
+        return (
+          <Link
+            key={cat._id}
+            to={`/catalog?category=${cat._id}`}
+            className="min-w-[250px] group snap-start"
+          >
+            <div className="aspect-[3/4] overflow-hidden bg-gray-100 mb-4">
+              <img
+                src={`${img}?w=600`}
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
+                alt={cat.name}
+              />
+            </div>
+
+            <h3
+              className="text-lg italic text-gray-800 text-center"
+              style={luxuryFont}
+            >
+              {cat.name}
+            </h3>
+          </Link>
+        );
+      })}
+    </div>
   </div>
 </div>
 
-
-      {/* --- KẾT THÚC PHẦN CATEGORY --- */}
-
+      {/* ================= GALLERY ================= */}
       <div className="max-w-7xl mx-auto px-6 py-40 border-t border-gray-50">
         <div className="text-center space-y-4 mb-20">
           <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
             Trưng bày xu hướng
           </span>
-          <h2 className="text-4xl font-serif italic text-gray-900 mt-2">
+
+          <h2
+            className="text-4xl italic text-gray-900 mt-2"
+            style={luxuryFont}
+          >
             — Làm mới phong cách của bạn.
           </h2>
-          <p className="text-sm text-gray-400 font-light">
-            Hãy giữ tinh thần vui tươi và lãng mạn với bộ sưu tập mới của DressUp.
-          </p>
         </div>
 
         <div className="grid grid-cols-12 gap-6">
-          {/* Ảnh lớn bên trái */}
           <div className="col-span-12 md:col-span-4 space-y-6">
-            <div className="aspect-[4/5] overflow-hidden bg-gray-100">
-              <img
-                src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000"
-                className="w-full h-full object-cover hover:scale-105 transition-all duration-1000"
-                alt="Spring Look 1"
-              />
-            </div>
-            <div className="aspect-[3/4] overflow-hidden bg-gray-100">
-              <img
-                src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
-                className="w-full h-full object-cover hover:scale-105 transition-all duration-1000"
-                alt="Spring Look 2"
-              />
-            </div>
+            <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000" />
+            <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000" />
           </div>
 
-          {/* Ảnh trung tâm */}
           <div className="col-span-12 md:col-span-4 space-y-6 md:pt-20">
-            <div className="aspect-[3/5] overflow-hidden bg-gray-100">
-              <img
-                src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000"
-                className="w-full h-full object-cover hover:scale-105 transition-all duration-1000"
-                alt="Spring Look 3"
-              />
-            </div>
-            <div className="aspect-square overflow-hidden bg-gray-100">
-              <img
-                src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
-                className="w-full h-full object-cover hover:scale-105 transition-all duration-1000"
-                alt="Spring Look 4"
-              />
-            </div>
+            <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000" />
+            <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000" />
           </div>
 
-          {/* Cột bên phải */}
           <div className="col-span-12 md:col-span-4 space-y-6">
-            <div className="aspect-[4/5] overflow-hidden bg-gray-100">
-              <img
-                src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000"
-                className="w-full h-full object-cover hover:scale-105 transition-all duration-1000"
-                alt="Spring Look 5"
-              />
-            </div>
-            <div className="aspect-video overflow-hidden bg-gray-100">
-              <img
-                src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000"
-                className="w-full h-full object-cover hover:scale-105 transition-all duration-1000"
-                alt="Spring Look 6"
-              />
-            </div>
+            <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000" />
+            <img src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000" />
           </div>
         </div>
       </div>
-      {/* --- SECTION: GALLERY (TRENDY LOOKS) --- */}
-      
     </div>
   );
 }
