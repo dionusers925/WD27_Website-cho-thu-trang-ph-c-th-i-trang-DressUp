@@ -77,7 +77,6 @@ export default function CartPage() {
 
   return (
     <div className="max-w-7xl mx-auto grid grid-cols-12 gap-8 pt-28">
-      {/* LEFT */}
       <div className="col-span-8 bg-white border border-gray-300">
         {items.map((item, index) => (
           <CartItem
@@ -91,7 +90,6 @@ export default function CartPage() {
         ))}
       </div>
 
-      {/* RIGHT */}
       <div className="col-span-4">
         <CartSummary
           subtotal={subtotal}

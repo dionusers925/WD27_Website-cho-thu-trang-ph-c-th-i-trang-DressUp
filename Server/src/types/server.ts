@@ -8,7 +8,11 @@ import orderRouter from "../routes/order";
 import costumeRoutes from "../routes/costumes";
 import cartRoutes from "../routes/cart";
 import productRouter from "../routes/product";
+
 import reviewRoutes from "../routes/review.route";
+
+import authRoutes from "../routes/auth";
+
 
 const app = express();
 
@@ -25,6 +29,7 @@ app.use("/api/reviews", reviewRoutes);
 
 app.use("/api", costumeRoutes);
 app.use("/api", cartRoutes);
+app.use("/api/auth", authRoutes);
 
 app.listen(3000, () => {
   console.log("🚀 Server running on port 3000");
