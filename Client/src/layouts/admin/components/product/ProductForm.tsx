@@ -12,17 +12,20 @@ import RentalPriceInput from "./RentalPriceInput";
 import ProductVariants from "./ProductVariants";
 import ProductImages from "./ProductImages";
 import RichTextEditor from "./RichTextEditor";
+import { Attribute } from "../../../../types/attribute";
 
 type Props = {
   categories: ICategory[];
   loadingCategories?: boolean;
   onSlugManualChange?: () => void;
+  attributes?: Attribute[];
 };
 
 export default function ProductForm({
   categories,
   loadingCategories,
   onSlugManualChange,
+  attributes = [],
 }: Props) {
   return (
     <div className="product-form">
@@ -177,7 +180,7 @@ export default function ProductForm({
                 },
               ]}
             >
-              <ProductVariants />
+              <ProductVariants attributes={attributes} />
             </Form.Item>
           </Card>
         </Col>

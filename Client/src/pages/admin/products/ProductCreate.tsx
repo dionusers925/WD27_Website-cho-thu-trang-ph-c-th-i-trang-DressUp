@@ -5,7 +5,9 @@ import { useNavigate } from "react-router-dom";
 import ProductForm from "../../../layouts/admin/components/product/ProductForm";
 import { createProduct } from "../../../services/product.service";
 import { getCategories } from "../../../services/category.service";
+import { getAttributes } from "../../../services/attribute.service";
 import { ICategory } from "../../../types/category";
+import { Attribute } from "../../../types/attribute";
 import "./product.css";
 
 const slugify = (text: string) =>
@@ -24,6 +26,7 @@ export default function ProductCreate() {
   const [form] = Form.useForm();
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [slugLocked, setSlugLocked] = useState(false);
 
   const fetchCategories = async () => {
@@ -36,8 +39,18 @@ export default function ProductCreate() {
     }
   };
 
+  const fetchAttributes = async () => {
+    try {
+      const res = await getAttributes();
+      setAttributes(res.data);
+    } catch (error) {
+      // ignore attributes load failure
+    }
+  };
+
   useEffect(() => {
     fetchCategories();
+    fetchAttributes();
   }, []);
 
   const handleValuesChange = (changed: any) => {
@@ -100,6 +113,7 @@ export default function ProductCreate() {
         <ProductForm
           categories={categories}
           loadingCategories={loadingCategories}
+          attributes={attributes}
           onSlugManualChange={() => setSlugLocked(true)}
         />
       </Form>

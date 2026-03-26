@@ -11,6 +11,13 @@ export interface ProductVariant {
   color: string;
   sku: string;
   stock?: number;
+  attributes?: VariantAttribute[];
+}
+
+export interface VariantAttribute {
+  attributeId?: string;
+  attributeName: string;
+  value: string;
 }
 
 export interface VariantStockHistory {

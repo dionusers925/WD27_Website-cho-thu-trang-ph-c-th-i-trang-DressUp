@@ -5,7 +5,9 @@ import { ArrowLeftOutlined } from "@ant-design/icons";
 import ProductForm from "../../../layouts/admin/components/product/ProductForm";
 import { getProduct, updateProduct } from "../../../services/product.service";
 import { getCategories } from "../../../services/category.service";
+import { getAttributes } from "../../../services/attribute.service";
 import { ICategory } from "../../../types/category";
+import { Attribute } from "../../../types/attribute";
 import "./product.css";
 
 const slugify = (text: string) =>
@@ -25,6 +27,7 @@ export default function ProductEdit() {
   const [form] = Form.useForm();
   const [categories, setCategories] = useState<ICategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [slugLocked, setSlugLocked] = useState(false);
 
   const fetchCategories = async () => {
@@ -34,6 +37,15 @@ export default function ProductEdit() {
       setCategories(res.data);
     } finally {
       setLoadingCategories(false);
+    }
+  };
+
+  const fetchAttributes = async () => {
+    try {
+      const res = await getAttributes();
+      setAttributes(res.data);
+    } catch (error) {
+      // ignore attributes load failure
     }
   };
 
@@ -60,6 +72,7 @@ export default function ProductEdit() {
 
   useEffect(() => {
     fetchCategories();
+    fetchAttributes();
   }, []);
 
   useEffect(() => {
@@ -115,6 +128,7 @@ export default function ProductEdit() {
         <ProductForm
           categories={categories}
           loadingCategories={loadingCategories}
+          attributes={attributes}
           onSlugManualChange={() => setSlugLocked(true)}
         />
       </Form>

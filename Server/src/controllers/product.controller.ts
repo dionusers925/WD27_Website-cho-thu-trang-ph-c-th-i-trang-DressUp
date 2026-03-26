@@ -4,6 +4,7 @@ import Product from "../models/product.model";
 import Variant from "../models/variant.model";
 import VariantStockHistory from "../models/variantStockHistory.model";
 import Category from "../models/Category";
+import Order from "../models/Order";
 import { createProductSchema } from "../validations/product.validation";
 
 const slugify = (text: string) =>
@@ -45,18 +46,62 @@ const ensureUniqueSku = (variants: any[]) => {
 
 const normalizeSku = (value: any) => String(value ?? "").trim();
 
+const normalizeAttributes = (variant: any) => {
+  const raw = Array.isArray(variant?.attributes) ? variant.attributes : [];
+  const cleaned = raw
+    .map((attr: any) => {
+      const name = String(attr?.attributeName ?? "").trim();
+      if (!name) return null;
+      const value = String(attr?.value ?? "").trim();
+      const attributeId =
+        attr?.attributeId && mongoose.Types.ObjectId.isValid(attr.attributeId)
+          ? attr.attributeId
+          : undefined;
+      return {
+        attributeId,
+        attributeName: name,
+        value,
+      };
+    })
+    .filter(Boolean) as {
+    attributeId?: string;
+    attributeName: string;
+    value: string;
+  }[];
+
+  const map = new Map<string, (typeof cleaned)[number]>();
+  cleaned.forEach((attr) => {
+    map.set(attr.attributeName.toLowerCase(), attr);
+  });
+  return map;
+};
+
 const buildVariantDocs = (variants: any[], productId: any) =>
-  variants.map((v) => ({
-    productId,
-    sku: normalizeSku(v.sku),
-    size: String(v.size ?? "").trim(),
-    color: String(v.color ?? "").trim(),
-    stock: v.stock ?? 1,
-    attributes: [
-      { attributeName: "Size", value: String(v.size ?? "").trim() },
-      { attributeName: "Color", value: String(v.color ?? "").trim() },
-    ],
-  }));
+  variants.map((v) => {
+    const size = String(v.size ?? "").trim();
+    const color = String(v.color ?? "").trim();
+    const attributesMap = normalizeAttributes(v);
+
+    const baseAttributes = [
+      { attributeName: "Size", value: size },
+      { attributeName: "Color", value: color },
+    ];
+
+    baseAttributes.forEach((attr) => {
+      const key = attr.attributeName.toLowerCase();
+      const existing = attributesMap.get(key);
+      attributesMap.set(key, existing ? { ...existing, ...attr } : { ...attr });
+    });
+
+    return {
+      productId,
+      sku: normalizeSku(v.sku),
+      size,
+      color,
+      stock: v.stock ?? 1,
+      attributes: Array.from(attributesMap.values()),
+    };
+  });
 
 export const createProduct = async (req: Request, res: Response) => {
   try {
@@ -422,10 +467,29 @@ export const updateProduct = async (req: Request, res: Response) => {
 
 export const deleteProduct = async (req: Request, res: Response) => {
   try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    await Order.updateMany(
+      { "items.productId": product._id },
+      { $set: { "items.$[elem].name": product.name } },
+      {
+        arrayFilters: [
+          {
+            "elem.productId": product._id,
+            "elem.name": { $in: [null, ""] },
+          },
+        ],
+      }
+    );
+
     await Product.findByIdAndDelete(req.params.id);
-    await Variant.deleteMany({
-      productId: req.params.id,
-    });
+    await Variant.deleteMany({ productId: req.params.id });
 
     res.json({
       success: true,

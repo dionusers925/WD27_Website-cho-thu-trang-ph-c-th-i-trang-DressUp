@@ -1,6 +1,8 @@
 ﻿import express from "express";
 import mongoose from "mongoose";
 import Order from "../models/Order";
+import Variant from "../models/variant.model";
+import VariantStockHistory from "../models/variantStockHistory.model";
 
 const orderRouter = express.Router();
 
@@ -9,6 +11,16 @@ const calcRentalDays = (start: Date, end: Date) => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   return diffDays > 0 ? diffDays : 1;
 };
+
+const normalizeValue = (value: any) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const buildVariantKey = (productId: any, size: any, color: any) =>
+  `${String(productId)}::${normalizeValue(size)}::${normalizeValue(color)}`;
 
 // Lấy danh sách đơn hàng
 orderRouter.get("/", async (_req, res) => {
@@ -71,8 +83,8 @@ orderRouter.post("/", async (req, res) => {
           .map((item: any) => ({
             productId: item?.productId,
             name: item?.name ? String(item.name) : undefined,
-            size: item?.size ? String(item.size) : undefined,
-            color: item?.color ? String(item.color) : undefined,
+            size: item?.size ? String(item.size) : "",
+            color: item?.color ? String(item.color) : "",
             deposit: Number(item?.deposit ?? 0) || 0,
             quantity: Number(item?.quantity ?? 1) || 1,
             price: Number(item?.price ?? 0) || 0,
@@ -82,6 +94,15 @@ orderRouter.post("/", async (req, res) => {
 
     if (normalizedItems.length === 0) {
       return res.status(400).json({ message: "Đơn hàng phải có ít nhất 1 sản phẩm." });
+    }
+
+    const missingVariantInfo = normalizedItems.find(
+      (item: any) => !item.size || !item.color
+    );
+    if (missingVariantInfo) {
+      return res.status(400).json({
+        message: "Sản phẩm thuê phải có Size và Màu.",
+      });
     }
 
     const start = startDate ? new Date(startDate) : new Date();
@@ -101,12 +122,122 @@ orderRouter.post("/", async (req, res) => {
     const orderTotal = Number(total);
     const finalTotal = Number.isFinite(orderTotal) && orderTotal > 0 ? orderTotal : computedTotal;
 
+    const orderNumber = `DU${new Date().getFullYear()}${Math.floor(
+      1000 + Math.random() * 9000
+    )}`;
+
+    const aggregated = new Map<
+      string,
+      { productId: string; size: string; color: string; quantity: number }
+    >();
+    normalizedItems.forEach((item: any) => {
+      const key = buildVariantKey(item.productId, item.size, item.color);
+      const current = aggregated.get(key);
+      if (current) {
+        current.quantity += Number(item.quantity ?? 1) || 1;
+      } else {
+        aggregated.set(key, {
+          productId: String(item.productId),
+          size: String(item.size ?? "").trim(),
+          color: String(item.color ?? "").trim(),
+          quantity: Number(item.quantity ?? 1) || 1,
+        });
+      }
+    });
+
+    const productIds = Array.from(
+      new Set(Array.from(aggregated.values()).map((item) => item.productId))
+    );
+    const variants = await Variant.find({
+      productId: { $in: productIds },
+    }).lean();
+
+    const variantMap = new Map<string, any>();
+    variants.forEach((variant) => {
+      const key = buildVariantKey(
+        variant.productId,
+        variant.size,
+        variant.color
+      );
+      if (!variantMap.has(key)) {
+        variantMap.set(key, variant);
+      }
+    });
+
+    const pendingUpdates: {
+      variant: any;
+      quantity: number;
+    }[] = [];
+
+    for (const item of aggregated.values()) {
+      const key = buildVariantKey(item.productId, item.size, item.color);
+      const variant = variantMap.get(key);
+      if (!variant) {
+        return res.status(400).json({
+          message: `Không tìm thấy biến thể cho Size "${item.size}" và Màu "${item.color}".`,
+        });
+      }
+      const available = Number(variant.stock ?? 0);
+      if (available < item.quantity) {
+        return res.status(400).json({
+          message: `Tồn kho không đủ cho "${variant.sku || variant.size + " - " + variant.color}".`,
+        });
+      }
+      pendingUpdates.push({ variant, quantity: item.quantity });
+    }
+
+    const appliedUpdates: { variantId: string; quantity: number }[] = [];
+    const historyDocs: any[] = [];
+
+    const rollbackStock = async () => {
+      for (const applied of appliedUpdates) {
+        await Variant.updateOne(
+          { _id: applied.variantId },
+          { $inc: { stock: applied.quantity, reservedStock: -applied.quantity } }
+        );
+      }
+    };
+
+    for (const item of pendingUpdates) {
+      const oldStock = Number(item.variant.stock ?? 0);
+      const updated = await Variant.findOneAndUpdate(
+        { _id: item.variant._id, stock: { $gte: item.quantity } },
+        { $inc: { stock: -item.quantity, reservedStock: item.quantity } },
+        { new: true }
+      );
+
+      if (!updated) {
+        await rollbackStock();
+        return res.status(400).json({
+          message: "Tồn kho không đủ, vui lòng kiểm tra lại.",
+        });
+      }
+
+      appliedUpdates.push({
+        variantId: String(item.variant._id),
+        quantity: item.quantity,
+      });
+
+      historyDocs.push({
+        productId: item.variant.productId,
+        variantId: item.variant._id,
+        sku: String(item.variant.sku ?? "").trim(),
+        size: String(item.variant.size ?? "").trim(),
+        color: String(item.variant.color ?? "").trim(),
+        oldStock,
+        newStock: Number(updated.stock ?? 0),
+        change: -item.quantity,
+        action: "rent",
+        note: `Order: ${orderNumber}`,
+      });
+    }
+
     const newOrder = new Order({
       userId: resolvedUserId,
       total: finalTotal,
       subtotal: rentalSubtotal,
       paymentMethod: paymentMethod || "cash",
-      orderNumber: `DU${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`,
+      orderNumber,
       status: "pending",
       startDate: start,
       endDate: end,
@@ -123,7 +254,24 @@ orderRouter.post("/", async (req, res) => {
       },
     });
 
-    await newOrder.save();
+    try {
+      await newOrder.save();
+    } catch (error) {
+      await rollbackStock();
+      return res.status(400).json({ message: "Lỗi tạo đơn hàng" });
+    }
+
+    try {
+      if (historyDocs.length > 0) {
+        await VariantStockHistory.insertMany(historyDocs);
+      }
+    } catch (error) {
+      await rollbackStock();
+      await Order.findByIdAndDelete(newOrder._id);
+      await VariantStockHistory.deleteMany({ note: `Order: ${orderNumber}` });
+      return res.status(400).json({ message: "Không thể lưu lịch sử tồn kho." });
+    }
+
     res.status(201).json(newOrder);
   } catch (error: any) {
     console.error("Lỗi Backend:", error);
