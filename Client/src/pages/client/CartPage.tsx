@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import CartItem from "../../components/cart/CartItem";
 import CartSummary from "../../components/cart/CartSummary";
+import axios from "axios";
 import {
   getCart,
   updateCartItem,
@@ -75,6 +76,40 @@ export default function CartPage() {
     0,
   );
 
+  
+
+const handleCheckout = async () => {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null") as any;
+
+    console.log("USER:", user);
+    console.log("USER ID SEND:", user._id);
+
+    if (!user) {
+      alert("Bạn chưa đăng nhập");
+      return;
+    }
+
+    const formattedItems = selectedItems.map((item) => ({
+      productId: item.productId || item._id,
+      quantity: item.quantity || 1,
+      price: item.price,
+    }));
+
+    const res = await axios.post(
+      "http://localhost:3000/api/payment/checkout",
+      {
+        userId: user._id,
+        total: subtotal,
+        items: formattedItems,
+      }
+    );
+
+    window.location.href = res.data.paymentUrl;
+  } catch (error) {
+    console.error("Lỗi thanh toán", error);
+  }
+};
   return (
     <div className="max-w-7xl mx-auto grid grid-cols-12 gap-8 pt-28">
       <div className="col-span-8 bg-white border border-gray-300">
@@ -95,6 +130,7 @@ export default function CartPage() {
           subtotal={subtotal}
           count={selectedItems.length}
           onClear={handleClearCart}
+          onCheckout={handleCheckout}
         />
       </div>
     </div>

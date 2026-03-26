@@ -4,9 +4,10 @@ type Props = {
   subtotal: number;
   count: number;
   onClear: () => void;
+  onCheckout: () => void;
 };
 
-export default function CartSummary({ subtotal, count, onClear }: Props) {
+export default function CartSummary({ subtotal, count, onClear, onCheckout }: Props) {
   return (
     <div className="bg-white border border-gray-300 p-6">
       <h3 className="uppercase font-semibold mb-4">Tổng giỏ hàng</h3>
@@ -30,9 +31,12 @@ export default function CartSummary({ subtotal, count, onClear }: Props) {
         <span className="text-[#c8a693]">{formatPrice(subtotal)}</span>
       </div>
 
-      <button className="w-full bg-[#c8a693] text-white py-3 mb-4 hover:bg-[#c7bab1] transition">
-        TIẾN HÀNH THANH TOÁN
-      </button>
+      <button
+  onClick={onCheckout}
+  className="w-full bg-black text-#c8a693 py-3 mt-4"
+>
+  Thanh toán VNPAY
+</button>
 
       <button
         onClick={onClear}

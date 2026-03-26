@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"productId":{"$numberInt":"1"},"sku":{"$numberInt":"1"},"createdAt":{"$numberInt":"-1"}},"name":"productId_1_sku_1_createdAt_-1"}],"uuid":"a9cd2e8de6d7432e8a15767d5373d7b2","collectionName":"variantstockhistories","type":"collection"}

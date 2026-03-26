@@ -23,7 +23,7 @@ import LayoutClient from "./layouts/client/LayoutClient";
 import AuthLayout from "./layouts/AuthLayout";
 import RegisterPage from "./layouts/RegisterPage";
 import LoginPage from "./layouts/LoginPage";
-import ProtectedRoute from "./routes/ProtectedRoute";
+// import ProtectedRoute from "./routes/ProtectedRoute";
 
 function App() {
   const NotFound = () => <div>Not Found</div>;
@@ -31,7 +31,7 @@ function App() {
   const router = useRoutes([
     {
       path: "/admin",
-      Component: ProtectedRoute,
+      // Component: ProtectedRoute,
       children: [
         {
           path: "",
