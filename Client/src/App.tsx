@@ -1,4 +1,3 @@
-
 import "./App.css";
 import { Navigate, useRoutes } from "react-router-dom";
 
@@ -20,35 +19,43 @@ import CartPage from "./pages/client/CartPage";
 import LayoutClient from "./layouts/client/LayoutClient";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
 import OrderDetail from "./pages/admin/order/OrderDetail";
+import AuthLayout from "./layouts/AuthLayout";
+import LoginPage from "./layouts/LoginPage";
+import RegisterPage from "./layouts/RegisterPage";
+import ProtectedRoute from "./layouts/ProtectedRoute";
 
 function App() {
-  
   const NotFound = () => <div>Not Found</div>;
 
   const router = useRoutes([
-    
     {
       path: "/admin",
-      Component: Adminlayout,
+      Component: ProtectedRoute, // bọc bảo vệ
       children: [
-        { index: true, Component: Dashboard },
-        { path: "order", Component: OrdersDashboard },
-        { path: "order/:id", Component: OrderDetail},
-        { path: "categories", Component: ListCategory },
-        { path: "categories/add", Component: AddCategory },
-        { path: "categories/:id", Component: EditCategory },
-        { path: "attributes", Component: AttributeDashboard },
-        // PRODUCTS
-        { path: "products", Component: ProductDashboard },
-        { path: "products/new", Component: ProductCreate },
-        { path: "products/:id/edit", Component: ProductEdit },
-        { path: "products/:id", Component: ProductDetail },
-        // REVIEWS
-        { path: "reviews", Component: ReviewsDashboard },
+        {
+          path: "",
+          Component: Adminlayout,
+          children: [
+            { index: true, Component: Dashboard },
+            { path: "order", Component: OrdersDashboard },
+            { path: "order/:id", Component: OrderDetail },
+            { path: "categories", Component: ListCategory },
+            { path: "categories/add", Component: AddCategory },
+            { path: "categories/:id", Component: EditCategory },
+            { path: "attributes", Component: AttributeDashboard },
+            // PRODUCTS
+            { path: "products", Component: ProductDashboard },
+            { path: "products/new", Component: ProductCreate },
+            { path: "products/:id/edit", Component: ProductEdit },
+            { path: "products/:id", Component: ProductDetail },
+            // REVIEWS
+            { path: "reviews", Component: ReviewsDashboard },
+          ],
+        },
       ],
     },
 
-     {
+    {
       path: "/",
       Component: LayoutClient,
       children: [
@@ -59,7 +66,14 @@ function App() {
       ],
     },
     {
-
+      path: "/auth",
+      Component: AuthLayout,
+      children: [
+        { path: "login", Component: LoginPage },
+        { path: "register", Component: RegisterPage },
+      ],
+    },
+    {
       path: "*",
       Component: NotFound,
     },
