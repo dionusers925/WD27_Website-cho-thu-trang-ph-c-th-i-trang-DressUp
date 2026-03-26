@@ -12,6 +12,17 @@ const calcRentalDays = (start: Date, end: Date) => {
   return diffDays > 0 ? diffDays : 1;
 };
 
+const allowedStatuses = [
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "completed",
+  "cancelled",
+];
+
+const allowedPaymentStatuses = ["pending", "paid", "completed", "success"];
+
 const normalizeValue = (value: any) =>
   String(value ?? "")
     .trim()
@@ -64,6 +75,12 @@ orderRouter.post("/", async (req, res) => {
       userId,
       total,
       paymentMethod,
+      paymentStatus,
+      status,
+      lateFee,
+      lateDays,
+      damageFee,
+      penaltyNote,
       items,
       startDate,
       endDate,
@@ -119,8 +136,40 @@ orderRouter.post("/", async (req, res) => {
     );
     const computedTotal = rentalSubtotal + depositTotal;
 
+    let normalizedLateDays = Number(lateDays ?? 0) || 0;
+    const rentalPerDay = normalizedItems.reduce(
+      (sum: number, item: any) => sum + item.price * item.quantity,
+      0
+    );
+    let extraLateFee =
+      normalizedLateDays > 0
+        ? rentalPerDay * normalizedLateDays
+        : Number(lateFee ?? 0) || 0;
+    let extraDamageFee = Number(damageFee ?? 0) || 0;
+
+    if (resolvedStatus !== "completed") {
+      normalizedLateDays = 0;
+      extraLateFee = 0;
+      extraDamageFee = 0;
+    }
+
+    const computedTotalWithFees = computedTotal + extraLateFee + extraDamageFee;
+
     const orderTotal = Number(total);
-    const finalTotal = Number.isFinite(orderTotal) && orderTotal > 0 ? orderTotal : computedTotal;
+    const finalTotal =
+      Number.isFinite(orderTotal) && orderTotal > 0
+        ? orderTotal
+        : computedTotalWithFees;
+
+    const resolvedStatus =
+      typeof status === "string" && allowedStatuses.includes(status)
+        ? status
+        : "pending";
+    const resolvedPaymentStatus =
+      typeof paymentStatus === "string" &&
+      allowedPaymentStatuses.includes(paymentStatus)
+        ? paymentStatus
+        : "pending";
 
     const orderNumber = `DU${new Date().getFullYear()}${Math.floor(
       1000 + Math.random() * 9000
@@ -237,11 +286,16 @@ orderRouter.post("/", async (req, res) => {
       total: finalTotal,
       subtotal: rentalSubtotal,
       paymentMethod: paymentMethod || "cash",
+      paymentStatus: resolvedPaymentStatus,
       orderNumber,
-      status: "pending",
+      status: resolvedStatus,
       startDate: start,
       endDate: end,
       items: normalizedItems,
+      lateDays: normalizedLateDays,
+      lateFee: extraLateFee,
+      damageFee: extraDamageFee,
+      penaltyNote: resolvedStatus === "completed" ? penaltyNote || undefined : undefined,
       customerName: customerName || undefined,
       customerPhone: customerPhone || undefined,
       customerAddress: customerAddress || undefined,
@@ -276,6 +330,109 @@ orderRouter.post("/", async (req, res) => {
   } catch (error: any) {
     console.error("Lỗi Backend:", error);
     res.status(400).json({ message: "Lỗi tạo đơn hàng", error: error.message });
+  }
+});
+
+// Cập nhật trạng thái và phí phạt
+orderRouter.patch("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    const updates: any = {};
+    if (typeof req.body.status === "string") {
+      if (!allowedStatuses.includes(req.body.status)) {
+        return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+      }
+      updates.status = req.body.status;
+    }
+
+    if (typeof req.body.paymentStatus === "string") {
+      if (!allowedPaymentStatuses.includes(req.body.paymentStatus)) {
+        return res.status(400).json({ message: "Trạng thái thanh toán không hợp lệ" });
+      }
+      updates.paymentStatus = req.body.paymentStatus;
+    }
+
+    if (req.body.lateDays !== undefined) {
+      updates.lateDays = Number(req.body.lateDays ?? 0) || 0;
+    }
+    if (req.body.damageFee !== undefined) {
+      updates.damageFee = Number(req.body.damageFee ?? 0) || 0;
+    }
+    if (req.body.penaltyNote !== undefined) {
+      updates.penaltyNote = String(req.body.penaltyNote ?? "");
+    }
+
+    const start = order.startDate ?? new Date();
+    const end = order.endDate ?? start;
+    const rentalDays = calcRentalDays(start, end);
+
+    const rentalSubtotal =
+      Number(order.subtotal ?? 0) ||
+      (order.items ?? []).reduce((sum: number, item: any) => {
+        const price = Number(item.price ?? 0);
+        const quantity = Number(item.quantity ?? 1);
+        return sum + price * quantity * rentalDays;
+      }, 0);
+
+    const depositTotal = (order.items ?? []).reduce((sum: number, item: any) => {
+      const deposit = Number(item.deposit ?? 0);
+      const quantity = Number(item.quantity ?? 1);
+      return sum + deposit * quantity;
+    }, 0);
+
+    const rentalPerDay = (order.items ?? []).reduce((sum: number, item: any) => {
+      const price = Number(item.price ?? 0);
+      const quantity = Number(item.quantity ?? 1);
+      return sum + price * quantity;
+    }, 0);
+
+    const targetStatus = updates.status ?? order.status;
+
+    if (targetStatus !== "completed") {
+      updates.lateDays = 0;
+      updates.lateFee = 0;
+      updates.damageFee = 0;
+      updates.penaltyNote = "";
+    }
+
+    const resolvedLateDays =
+      targetStatus === "completed"
+        ? updates.lateDays !== undefined
+          ? updates.lateDays
+          : Number(order.lateDays ?? 0) || 0
+        : 0;
+
+    const lateFeeValue =
+      targetStatus === "completed" ? rentalPerDay * resolvedLateDays : 0;
+
+    updates.lateFee = lateFeeValue;
+    updates.lateDays = resolvedLateDays;
+
+    const damageFeeValue =
+      targetStatus === "completed"
+        ? updates.damageFee !== undefined
+          ? updates.damageFee
+          : Number(order.damageFee ?? 0) || 0
+        : 0;
+
+    updates.total = rentalSubtotal + depositTotal + lateFeeValue + damageFeeValue;
+
+    const updated = await Order.findByIdAndUpdate(id, updates, {
+      returnDocument: "after",
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi Server" });
   }
 });
 

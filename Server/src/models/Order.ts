@@ -33,6 +33,10 @@ export interface IOrder extends Document {
 
   subtotal: number;
   serviceFee: number;
+  lateDays?: number;
+  lateFee?: number;
+  damageFee?: number;
+  penaltyNote?: string;
   total: number;
 
   paymentMethod: string;
@@ -88,6 +92,10 @@ const orderSchema: Schema = new Schema(
 
     subtotal: { type: Number, default: 0 },
     serviceFee: { type: Number, default: 0 },
+    lateDays: { type: Number, default: 0 },
+    lateFee: { type: Number, default: 0 },
+    damageFee: { type: Number, default: 0 },
+    penaltyNote: { type: String },
     total: { type: Number, required: true },
 
     paymentMethod: { type: String, default: "cod" },

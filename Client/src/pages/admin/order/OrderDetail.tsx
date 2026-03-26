@@ -30,6 +30,10 @@ interface Order {
   paymentMethod?: string;
   paymentStatus?: string;
   status?: string;
+  lateDays?: number;
+  lateFee?: number;
+  damageFee?: number;
+  penaltyNote?: string;
   startDate?: string;
   endDate?: string;
   createdAt?: string;
@@ -120,6 +124,13 @@ const OrderDetail = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  const [editStatus, setEditStatus] = useState<string>("pending");
+  const [editLateDays, setEditLateDays] = useState<number>(0);
+  const [editDamageFee, setEditDamageFee] = useState<number>(0);
+  const [editPenaltyNote, setEditPenaltyNote] = useState<string>("");
+  const [selectedDamages, setSelectedDamages] = useState<string[]>([]);
+  const [customDamageFee, setCustomDamageFee] = useState<number>(0);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -128,7 +139,15 @@ const OrderDetail = () => {
       setError("");
       try {
         const res = await axios.get(`http://localhost:3000/orders/${id}`);
-        setOrder(res.data as Order);
+        const data = res.data as Order;
+        setOrder(data);
+        setEditStatus(data.status || "pending");
+        setEditLateDays(Number(data.lateDays ?? 0) || 0);
+        const initialDamageFee = Number(data.damageFee ?? 0) || 0;
+        setEditDamageFee(initialDamageFee);
+        setSelectedDamages([]);
+        setCustomDamageFee(initialDamageFee);
+        setEditPenaltyNote(data.penaltyNote || "");
       } catch (err: any) {
         const message =
           err?.response?.data?.message ||
@@ -142,6 +161,65 @@ const OrderDetail = () => {
 
     fetchOrder();
   }, [id]);
+
+  const handleUpdateOrder = async () => {
+    if (!order?._id) return;
+    setSaving(true);
+    try {
+      const res = await axios.patch(`http://localhost:3000/orders/${order._id}`, {
+        status: editStatus,
+        lateDays: editLateDays,
+        damageFee: editDamageFee,
+        penaltyNote: editPenaltyNote,
+      });
+      const data = res.data as Order;
+      setOrder(data);
+      setEditStatus(data.status || editStatus);
+      setEditLateDays(Number(data.lateDays ?? 0) || 0);
+      setEditDamageFee(Number(data.damageFee ?? 0) || 0);
+      setEditPenaltyNote(data.penaltyNote || "");
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message || err?.message || "Không thể cập nhật đơn";
+      alert(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const damageOptions = [
+    { key: "stain", label: "Vết bẩn khó giặt", fee: 30000 },
+    { key: "scratch", label: "Rách/xước nhỏ", fee: 50000 },
+    { key: "broken", label: "Rách lớn/Hỏng khóa", fee: 100000 },
+    { key: "burn", label: "Cháy/Thủng", fee: 200000 },
+    { key: "lost", label: "Mất đồ/Phụ kiện", fee: 300000 },
+  ];
+
+  const damageFeeFromOptions = useMemo(
+    () =>
+      selectedDamages.reduce((sum, key) => {
+        const option = damageOptions.find((item) => item.key === key);
+        return sum + (option?.fee ?? 0);
+      }, 0),
+    [selectedDamages]
+  );
+
+  useEffect(() => {
+    const totalDamage = damageFeeFromOptions + (Number(customDamageFee ?? 0) || 0);
+    setEditDamageFee(totalDamage);
+  }, [damageFeeFromOptions, customDamageFee]);
+
+  const penaltyEnabled = editStatus === "completed";
+
+  useEffect(() => {
+    if (!penaltyEnabled) {
+      setEditLateDays(0);
+      setSelectedDamages([]);
+      setCustomDamageFee(0);
+      setEditDamageFee(0);
+      setEditPenaltyNote("");
+    }
+  }, [penaltyEnabled]);
 
   const items = useMemo(
     () => (Array.isArray(order?.items) ? order?.items : []),
@@ -172,8 +250,25 @@ const OrderDetail = () => {
     [items]
   );
 
-  const computedTotal = rentalSubtotal + depositTotal;
+  const rentalPerDay = useMemo(
+    () =>
+      items.reduce((sum, item) => {
+        const price = Number(item.price ?? 0);
+        const quantity = Number(item.quantity ?? 1);
+        return sum + price * quantity;
+      }, 0),
+    [items]
+  );
+  const previewLateFee = rentalPerDay * (Number(editLateDays ?? 0) || 0);
+
+  const lateFee = penaltyEnabled ? previewLateFee : 0;
+  const damageFee = penaltyEnabled ? Number(editDamageFee ?? 0) || 0 : 0;
+  const penaltyTotal = lateFee + damageFee;
+  const computedTotal = rentalSubtotal + depositTotal + penaltyTotal;
   const displayTotal = computedTotal > 0 ? computedTotal : Number(order?.total ?? 0);
+
+  const refundDeposit = Math.max(depositTotal - damageFee, 0);
+  const totalRevenue = rentalSubtotal + penaltyTotal;
 
   const customerName =
     order?.customerName ||
@@ -283,20 +378,126 @@ const OrderDetail = () => {
 
         <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
           <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-3">
-            Tổng quan
+            Chi phí phát sinh
           </div>
-          <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-            <span>Tiền thuê</span>
-            <span className="font-semibold text-gray-800">{formatCurrency(rentalSubtotal)}</span>
+
+          <div className="text-xs font-semibold text-gray-700 mb-2">
+            Phạt quá ngày
           </div>
-          <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-            <span>Phí vận chuyển</span>
-            <span className="font-semibold text-gray-800">0 đ</span>
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="number"
+              min={0}
+              className="w-24 p-2 border border-gray-200 rounded-lg text-sm"
+              value={editLateDays}
+              onChange={(e) => setEditLateDays(Number(e.target.value) || 0)}
+              disabled={!penaltyEnabled}
+            />
+            <span className="text-sm text-gray-500">ngày</span>
+            <div className="ml-auto text-sm font-semibold text-red-600">
+              {formatCurrency(previewLateFee)}
+            </div>
           </div>
-          <div className="h-px bg-gray-200 my-3"></div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-semibold text-gray-700">TỔNG THANH TOÁN</span>
-            <span className="font-bold text-gray-900">{formatCurrency(displayTotal)}</span>
+
+          <div className="text-xs font-semibold text-gray-700 mb-2">
+            Phạt đồ hư hỏng (Trừ tiền cọc)
+          </div>
+          <div className="space-y-2 mb-3">
+            {damageOptions.map((option) => {
+              const checked = selectedDamages.includes(option.key);
+              return (
+                <label
+                  key={option.key}
+                  className="flex items-center justify-between gap-2 text-sm text-gray-600"
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={!penaltyEnabled}
+                      onChange={(e) => {
+                        setSelectedDamages((prev) =>
+                          e.target.checked
+                            ? [...prev, option.key]
+                            : prev.filter((key) => key !== option.key)
+                        );
+                      }}
+                    />
+                    {option.label}
+                  </div>
+                  <span className="text-xs text-red-600 border border-red-200 px-2 py-0.5 rounded-md">
+                    +{formatCurrency(option.fee)}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="number"
+              min={0}
+              className="w-full p-2 border border-gray-200 rounded-lg text-sm"
+              placeholder="Nhập phí phạt khác (nếu có)"
+              value={customDamageFee}
+              onChange={(e) => setCustomDamageFee(Number(e.target.value) || 0)}
+              disabled={!penaltyEnabled}
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-sm font-semibold text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+            <span>Tổng lỗi phát sinh (Cộng thêm):</span>
+            <span>{formatCurrency(penaltyTotal)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
+            <span>Tiền thuê gốc:</span>
+            <span className="font-semibold text-gray-800">
+              {formatCurrency(rentalSubtotal)}
+            </span>
+          </div>
+
+          <div className="mt-4">
+            <div className="text-xs text-gray-400 mb-1">Ghi chú phạt</div>
+            <input
+              type="text"
+              className="w-full p-2 border border-gray-200 rounded-lg text-sm"
+              placeholder="Nhập ghi chú phạt (nếu có)"
+              value={editPenaltyNote}
+              onChange={(e) => setEditPenaltyNote(e.target.value)}
+              disabled={!penaltyEnabled}
+            />
+            {!penaltyEnabled && (
+              <div className="text-[11px] text-gray-400 mt-1">
+                Chỉ được nhập chi phí phát sinh khi đơn hàng ở trạng thái Hoàn tất.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <div className="text-xs text-gray-400 mb-1">Trạng thái đơn</div>
+            <select
+              className="w-full p-2 border border-gray-200 rounded-lg text-sm"
+              value={editStatus}
+              onChange={(e) => setEditStatus(e.target.value)}
+            >
+              <option value="pending">Chờ xử lý</option>
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="shipped">Đang giao</option>
+              <option value="delivered">Đã giao</option>
+              <option value="completed">Hoàn tất</option>
+              <option value="cancelled">Đã hủy</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={handleUpdateOrder}
+              disabled={saving}
+              className="px-4 py-2 rounded-lg text-white font-semibold"
+              style={{ backgroundColor: "#377abd" }}
+            >
+              {saving ? "Đang lưu..." : "Lưu thay đổi"}
+            </button>
           </div>
         </div>
 
@@ -366,17 +567,21 @@ const OrderDetail = () => {
 
           <div className="mt-4 rounded-xl bg-[#0f1b33] text-white p-4">
             <div className="flex items-center justify-between text-sm">
-              <span>Phí thuê</span>
-              <span className="font-semibold">{formatCurrency(rentalSubtotal)}</span>
+              <span>Phí thuê + Phạt</span>
+              <span className="font-semibold">{formatCurrency(totalRevenue)}</span>
             </div>
             <div className="flex items-center justify-between text-sm mt-2">
-              <span>Tiền đặt cọc</span>
+              <span>Tiền đặt cọc của khách</span>
               <span className="font-semibold">{formatCurrency(depositTotal)}</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span>Khách nhận lại cọc (Sau khi trừ lỗi)</span>
+              <span className="font-semibold">{formatCurrency(refundDeposit)}</span>
             </div>
             <div className="h-px bg-white/20 my-3"></div>
             <div className="flex items-center justify-between text-sm font-bold">
-              <span>THỰC NHẬN</span>
-              <span>{formatCurrency(displayTotal)}</span>
+              <span>TỔNG THỰC THU DOANH THU</span>
+              <span>{formatCurrency(totalRevenue)}</span>
             </div>
           </div>
         </div>
