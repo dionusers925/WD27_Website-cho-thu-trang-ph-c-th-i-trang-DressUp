@@ -99,6 +99,11 @@ orderRouter.post("/", async (req, res) => {
       ? items
           .map((item: any) => ({
             productId: item?.productId,
+            variantId:
+              item?.variantId &&
+              mongoose.Types.ObjectId.isValid(String(item.variantId))
+                ? item.variantId
+                : undefined,
             name: item?.name ? String(item.name) : undefined,
             size: item?.size ? String(item.size) : "",
             color: item?.color ? String(item.color) : "",
@@ -114,7 +119,7 @@ orderRouter.post("/", async (req, res) => {
     }
 
     const missingVariantInfo = normalizedItems.find(
-      (item: any) => !item.size || !item.color
+      (item: any) => !item.variantId && (!item.size || !item.color)
     );
     if (missingVariantInfo) {
       return res.status(400).json({
@@ -135,6 +140,16 @@ orderRouter.post("/", async (req, res) => {
       0
     );
     const computedTotal = rentalSubtotal + depositTotal;
+
+    const resolvedStatus =
+      typeof status === "string" && allowedStatuses.includes(status)
+        ? status
+        : "pending";
+    const resolvedPaymentStatus =
+      typeof paymentStatus === "string" &&
+      allowedPaymentStatuses.includes(paymentStatus)
+        ? paymentStatus
+        : "pending";
 
     let normalizedLateDays = Number(lateDays ?? 0) || 0;
     const rentalPerDay = normalizedItems.reduce(
@@ -161,32 +176,31 @@ orderRouter.post("/", async (req, res) => {
         ? orderTotal
         : computedTotalWithFees;
 
-    const resolvedStatus =
-      typeof status === "string" && allowedStatuses.includes(status)
-        ? status
-        : "pending";
-    const resolvedPaymentStatus =
-      typeof paymentStatus === "string" &&
-      allowedPaymentStatuses.includes(paymentStatus)
-        ? paymentStatus
-        : "pending";
-
     const orderNumber = `DU${new Date().getFullYear()}${Math.floor(
       1000 + Math.random() * 9000
     )}`;
 
     const aggregated = new Map<
       string,
-      { productId: string; size: string; color: string; quantity: number }
+      {
+        productId: string;
+        variantId?: string;
+        size: string;
+        color: string;
+        quantity: number;
+      }
     >();
     normalizedItems.forEach((item: any) => {
-      const key = buildVariantKey(item.productId, item.size, item.color);
+      const key = item.variantId
+        ? `variant:${String(item.variantId)}`
+        : buildVariantKey(item.productId, item.size, item.color);
       const current = aggregated.get(key);
       if (current) {
         current.quantity += Number(item.quantity ?? 1) || 1;
       } else {
         aggregated.set(key, {
           productId: String(item.productId),
+          variantId: item.variantId ? String(item.variantId) : undefined,
           size: String(item.size ?? "").trim(),
           color: String(item.color ?? "").trim(),
           quantity: Number(item.quantity ?? 1) || 1,
@@ -194,22 +208,44 @@ orderRouter.post("/", async (req, res) => {
       }
     });
 
-    const productIds = Array.from(
-      new Set(Array.from(aggregated.values()).map((item) => item.productId))
+    const variantIdList = Array.from(
+      new Set(
+        Array.from(aggregated.values())
+          .map((item) => item.variantId)
+          .filter(Boolean)
+      )
     );
-    const variants = await Variant.find({
-      productId: { $in: productIds },
-    }).lean();
 
-    const variantMap = new Map<string, any>();
+    const productIds = Array.from(
+      new Set(
+        Array.from(aggregated.values())
+          .filter((item) => !item.variantId)
+          .map((item) => item.productId)
+      )
+    );
+
+    const variantQuery: any[] = [];
+    if (variantIdList.length > 0) {
+      variantQuery.push({ _id: { $in: variantIdList } });
+    }
+    if (productIds.length > 0) {
+      variantQuery.push({ productId: { $in: productIds } });
+    }
+    const variants = await Variant.find(
+      variantQuery.length > 0 ? { $or: variantQuery } : {}
+    ).lean();
+
+    const variantMapById = new Map<string, any>();
+    const variantMapByKey = new Map<string, any>();
     variants.forEach((variant) => {
+      variantMapById.set(String(variant._id), variant);
       const key = buildVariantKey(
         variant.productId,
         variant.size,
         variant.color
       );
-      if (!variantMap.has(key)) {
-        variantMap.set(key, variant);
+      if (!variantMapByKey.has(key)) {
+        variantMapByKey.set(key, variant);
       }
     });
 
@@ -219,11 +255,16 @@ orderRouter.post("/", async (req, res) => {
     }[] = [];
 
     for (const item of aggregated.values()) {
-      const key = buildVariantKey(item.productId, item.size, item.color);
-      const variant = variantMap.get(key);
+      const variant = item.variantId
+        ? variantMapById.get(item.variantId)
+        : variantMapByKey.get(
+            buildVariantKey(item.productId, item.size, item.color)
+          );
       if (!variant) {
         return res.status(400).json({
-          message: `Không tìm thấy biến thể cho Size "${item.size}" và Màu "${item.color}".`,
+          message: item.variantId
+            ? "Không tìm thấy biến thể được chọn."
+            : `Không tìm thấy biến thể cho Size "${item.size}" và Màu "${item.color}".`,
         });
       }
       const available = Number(variant.stock ?? 0);

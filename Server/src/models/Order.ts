@@ -2,6 +2,7 @@
 
 export interface IOrderItem {
   productId: mongoose.Types.ObjectId;
+  variantId?: mongoose.Types.ObjectId;
   name?: string;
   size?: string;
   color?: string;
@@ -56,6 +57,7 @@ export interface IOrder extends Document {
 
 const orderItemSchema = new Schema<IOrderItem>({
   productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+  variantId: { type: Schema.Types.ObjectId, ref: "Variant" },
   name: String,
   size: String,
   color: String,

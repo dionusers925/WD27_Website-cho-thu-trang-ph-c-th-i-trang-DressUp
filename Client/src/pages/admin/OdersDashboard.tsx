@@ -22,6 +22,7 @@ interface Product {
 
 interface OrderItem {
   productId: string;
+  variantId?: string;
   name: string;
   price: number;
   deposit: number;
@@ -177,8 +178,13 @@ const OrdersDashboard = () => {
     const itemPrice = Number(currentProduct.rentalTiers?.[0]?.price) || 0;
     const itemDeposit = Number(currentProduct.depositDefault) || 0;
 
+    const matchedVariant = currentProduct.variants.find(
+      (v) => v.size === currentSize && v.color === currentColor
+    );
+
     const newItem: OrderItem = {
       productId: currentProduct._id,
+      variantId: matchedVariant?._id,
       name: currentProduct.name,
       price: itemPrice,
       deposit: itemDeposit,
