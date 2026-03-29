@@ -21,11 +21,11 @@ router.post("/cart", async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    const tier = product.rentalTiers?.find((t: any) => t.days === days);
+    const tier = product.rentalPrices?.find((t: any) => t.days === days);
 
     const rentalPrice = tier
       ? tier.price
-      : (product.rentalTiers?.[0]?.price || 0) * days;
+      : (product.rentalPrices?.[0]?.price || 0) * days;
 
     const existingItem = cart.items.find((i: any) => i._id === productId);
 

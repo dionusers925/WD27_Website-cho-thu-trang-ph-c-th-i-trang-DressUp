@@ -13,6 +13,7 @@ import productRoutes from "../routes/products";
 import reviewRoutes from "../routes/review.route";
 import attributeRouter from "../routes/attributes";
 import uploadRouter from "../routes/upload";
+import authRoutes from "../routes/auth";
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use(uploadRouter);
 
 app.use("/api", costumeRoutes);
 app.use("/api", cartRoutes);
+app.use("/api/auth", authRoutes);
 
 app.listen(3000, () => {
   console.log("🚀 Server running on port 3000");
