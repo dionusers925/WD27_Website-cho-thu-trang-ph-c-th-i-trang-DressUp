@@ -13,6 +13,7 @@ import productRoutes from "../routes/products";
 import reviewRoutes from "../routes/review.route";
 import attributeRouter from "../routes/attributes";
 import uploadRouter from "../routes/upload";
+import stockHistoryRouter from "../routes/stockHistory";
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use("/api/products", productRoutes);
 app.use("/attributes", attributeRouter);
 app.use("/api/reviews", reviewRoutes);
 app.use(uploadRouter);
+app.use("/api", stockHistoryRouter);
 
 app.use("/api", costumeRoutes);
 app.use("/api", cartRoutes);

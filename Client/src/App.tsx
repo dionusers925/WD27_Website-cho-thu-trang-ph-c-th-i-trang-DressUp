@@ -20,6 +20,7 @@ import CartPage from "./pages/client/CartPage";
 import LayoutClient from "./layouts/client/LayoutClient";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
 import OrderDetail from "./pages/admin/order/OrderDetail";
+import StockHistoryDashboard from "./pages/admin/stock/StockHistoryDashboard";
 
 function App() {
   
@@ -43,6 +44,7 @@ function App() {
         { path: "products/new", Component: ProductCreate },
         { path: "products/:id/edit", Component: ProductEdit },
         { path: "products/:id", Component: ProductDetail },
+        { path: "stock-history", Component: StockHistoryDashboard },
         // REVIEWS
         { path: "reviews", Component: ReviewsDashboard },
       ],
