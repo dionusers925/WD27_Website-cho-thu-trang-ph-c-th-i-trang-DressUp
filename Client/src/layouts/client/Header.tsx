@@ -11,7 +11,7 @@ function Header() {
   useEffect(() => {
     const loadCart = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/cart");
+        const res = await axios.get("http://localhost:3000/api/cart");
 
         const total = res.data.items.reduce(
           (sum: number, item: any) => sum + item.quantity,
@@ -46,10 +46,12 @@ function Header() {
         </a>
         <Link to="/catalog" className="hover:opacity-50 transition-all">
           sản phẩm
+
         </Link>
         <a href="/cart" className="hover:opacity-50 transition-all">
+
           Giỏ hàng
-        </a>
+        </a> 
         <a href="/policy" className="hover:opacity-50 transition-all">
           Hướng dẫn mua hàng
         </a>
