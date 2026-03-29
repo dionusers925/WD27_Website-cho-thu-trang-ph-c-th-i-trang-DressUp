@@ -11,6 +11,7 @@ const luxuryFont = { fontFamily: "Playfair Display, serif" };
 function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryParam = searchParams.get("category");
+  const queryParam = searchParams.get("q");
 
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -65,6 +66,9 @@ function ProductsPage() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((item) => {
+      // Filter by search query
+      const matchQuery = !queryParam || item.name.toLowerCase().includes(queryParam.toLowerCase());
+
       // Filter by category
       // item.categoryId could be an object if populated, or string if not.
       const itemCatId = typeof item.categoryId === "object" ? item.categoryId?._id : item.categoryId;
@@ -81,9 +85,9 @@ function ProductsPage() {
         matchPrice = price > 1000000;
       }
 
-      return matchCategory && matchPrice;
+      return matchQuery && matchCategory && matchPrice;
     });
-  }, [products, selectedCategory, priceRange]);
+  }, [products, selectedCategory, priceRange, queryParam]);
 
   return (
     <div className="bg-[#FDFBF9] text-[#2C2C2C] font-sans min-h-screen pt-24 pb-20">
@@ -94,7 +98,7 @@ function ProductsPage() {
             Bộ Sưu Tập
           </span>
           <h1 className="text-5xl italic text-gray-900" style={luxuryFont}>
-            — Tất Cả Sản Phẩm.
+            {queryParam ? `— Kết quả: "${queryParam}"` : "— Tất Cả Sản Phẩm."}
           </h1>
         </div>
 
