@@ -1,7 +1,6 @@
-
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 interface Variant {
   size: string;
@@ -38,7 +37,6 @@ const OrdersDashboard = () => {
 
   const navigate = useNavigate();
 
-
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [currentSize, setCurrentSize] = useState("");
   const [currentColor, setCurrentColor] = useState("");
@@ -47,12 +45,12 @@ const OrdersDashboard = () => {
     const rentalTiers = Array.isArray(p?.rentalTiers)
       ? p.rentalTiers
       : Array.isArray(p?.rentalPrices)
-      ? p.rentalPrices.map((rp: any) => ({
-          label: `${Number(rp?.days ?? 0) || 0} ngày`,
-          days: Number(rp?.days ?? 0) || 0,
-          price: Number(rp?.price ?? 0) || 0
-        }))
-      : [];
+        ? p.rentalPrices.map((rp: any) => ({
+            label: `${Number(rp?.days ?? 0) || 0} ngày`,
+            days: Number(rp?.days ?? 0) || 0,
+            price: Number(rp?.price ?? 0) || 0,
+          }))
+        : [];
 
     const depositDefault =
       Number(p?.depositDefault ?? p?.depositPrice ?? 0) || 0;
@@ -66,9 +64,9 @@ const OrdersDashboard = () => {
         ? p.variants.map((v: any) => ({
             size: String(v?.size ?? ""),
             color: String(v?.color ?? ""),
-            _id: v?._id
+            _id: v?._id,
           }))
-        : []
+        : [],
     };
   };
 
@@ -107,9 +105,9 @@ const OrdersDashboard = () => {
     total: 0,
     paymentMethod: "Tiền mặt",
 
-    shippingMethod: "Nhận tại cửa hàng", 
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    shippingMethod: "Nhận tại cửa hàng",
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date().toISOString().split("T")[0],
 
     items: [] as OrderItem[],
   });
@@ -119,7 +117,7 @@ const OrdersDashboard = () => {
       const [ordersRes, productsRes] = await Promise.all([
         axios.get("http://localhost:3000/orders"),
 
-        axios.get("http://localhost:3000/api/products")
+        axios.get("http://localhost:3000/api/products"),
       ]);
 
       setOrders(ordersRes.data);
@@ -128,16 +126,17 @@ const OrdersDashboard = () => {
       const normalizedProducts = Array.isArray(productData)
         ? productData
         : Array.isArray(productData?.data?.products)
-        ? productData.data.products
-        : Array.isArray(productData?.products)
-        ? productData.products
-        : [];
+          ? productData.data.products
+          : Array.isArray(productData?.products)
+            ? productData.products
+            : [];
 
-      setProducts(normalizedProducts.map(normalizeProduct).filter((p: Product) => p._id));
+      setProducts(
+        normalizedProducts.map(normalizeProduct).filter((p: Product) => p._id),
+      );
     } catch (err) {
       console.error("Lỗi lấy dữ liệu:", err);
       setProducts([]);
-
     }
   };
 
@@ -163,9 +162,7 @@ const OrdersDashboard = () => {
       return sum + rentalPrice + depositPrice;
     }, 0);
 
-
-    setNewOrder(prev => ({ ...prev, total: finalTotal }));
-
+    setNewOrder((prev) => ({ ...prev, total: finalTotal }));
   }, [newOrder.items, newOrder.startDate, newOrder.endDate]);
 
   const addItemToOrder = () => {
@@ -183,13 +180,12 @@ const OrdersDashboard = () => {
       deposit: itemDeposit,
       size: currentSize,
 
-      color: currentColor
+      color: currentColor,
     };
 
-    setNewOrder(prev => ({
+    setNewOrder((prev) => ({
       ...prev,
-      items: [...prev.items, newItem]
-
+      items: [...prev.items, newItem],
     }));
 
     setCurrentProduct(null);
@@ -198,16 +194,17 @@ const OrdersDashboard = () => {
   };
 
   const removeItemFromOrder = (indexToRemove: number) => {
-
-    const updatedItems = newOrder.items.filter((_, index) => index !== indexToRemove);
-    setNewOrder(prev => ({ ...prev, items: updatedItems }));
-
+    const updatedItems = newOrder.items.filter(
+      (_, index) => index !== indexToRemove,
+    );
+    setNewOrder((prev) => ({ ...prev, items: updatedItems }));
   };
 
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (newOrder.items.length === 0) return alert("Vui lòng thêm ít nhất 1 sản phẩm!");
+    if (newOrder.items.length === 0)
+      return alert("Vui lòng thêm ít nhất 1 sản phẩm!");
 
     setLoading(true);
     try {
@@ -221,10 +218,9 @@ const OrdersDashboard = () => {
         paymentMethod: "Tiền mặt",
 
         shippingMethod: "Nhận tại cửa hàng",
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0],
-        items: []
-
+        startDate: new Date().toISOString().split("T")[0],
+        endDate: new Date().toISOString().split("T")[0],
+        items: [],
       });
     } catch (err) {
       alert("❌ Lỗi hệ thống.");
@@ -246,12 +242,16 @@ const OrdersDashboard = () => {
     <div className="p-8 bg-gray-50 min-h-screen font-sans">
       <div className="flex justify-between items-center mb-6">
         <div>
-
-          <h1 className="text-2xl font-bold text-gray-800">Quản lý đơn hàng DressUp</h1>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Quản lý đơn hàng DressUp
+          </h1>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={() => setShowModal(true)} style={{ backgroundColor: '#1e3a8a' }} className="text-white px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-lg transition-all active:scale-95">
-
+          <button
+            onClick={() => setShowModal(true)}
+            style={{ backgroundColor: "#1e3a8a" }}
+            className="text-white px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-lg transition-all active:scale-95"
+          >
             <span className="text-xl">+</span> Tạo đơn trực tiếp
           </button>
           <span className="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-lg text-sm font-bold border border-blue-200">
@@ -264,43 +264,62 @@ const OrdersDashboard = () => {
         <table className="w-full text-left">
           <thead className="bg-gray-100 border-b border-gray-200">
             <tr>
+              <th className="p-4 text-sm font-semibold text-gray-600">
+                Mã đơn
+              </th>
+              <th className="p-4 text-sm font-semibold text-gray-600">
+                Khách hàng
+              </th>
+              <th className="p-4 text-sm font-semibold text-gray-600">
+                Tổng tiền
+              </th>
 
-              <th className="p-4 text-sm font-semibold text-gray-600">Mã đơn</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Khách hàng</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Tổng tiền</th>
-
-              <th className="p-4 text-sm font-semibold text-gray-600">Thanh toán</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Trạng thái</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Thao tác</th>
-
+              <th className="p-4 text-sm font-semibold text-gray-600">
+                Thanh toán
+              </th>
+              <th className="p-4 text-sm font-semibold text-gray-600">
+                Trạng thái
+              </th>
+              <th className="p-4 text-sm font-semibold text-gray-600">
+                Thao tác
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {orders.map((order: any) => (
               <tr key={order._id} className="hover:bg-gray-50 transition">
+                <td className="p-4 font-mono text-sm text-blue-600 font-semibold">
+                  {order._id?.slice(-6).toUpperCase()}
+                </td>
+                <td className="p-4 text-sm ">
+                  {order.userId?.name || "Khách tại quầy"}
+                </td>
+                <td className="p-4 text-sm ">
+                  {(order.total ?? 0).toLocaleString()}đ
+                </td>
 
-                <td className="p-4 font-mono text-sm text-blue-600 font-semibold">{order._id?.slice(-6).toUpperCase()}</td>
-                <td className="p-4 text-sm ">{order.userId?.name || "Khách tại quầy"}</td>
-                <td className="p-4 text-sm ">{(order.total ?? 0).toLocaleString()}đ</td>
-
-                <td className="p-4 text-sm text-gray-600">{order.paymentMethod || "Nhận tại cửa hàng"}</td>
+                <td className="p-4 text-sm text-gray-600">
+                  {order.paymentMethod || "Nhận tại cửa hàng"}
+                </td>
                 <td className="p-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(order.status)}`}>
-                    {order.status || 'pending'}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(order.status)}`}
+                  >
+                    {order.status || "pending"}
                   </span>
                 </td>
                 <td className="p-4 text-sm ">
                   <button
                     onClick={() => navigate(`/admin/order/${order._id}`)}
-                    className="px-4 text-sm py-1.5 bg-blue-50 text-white rounded-lg text-xs font-bold transition-all shadow-sm border border-blue-100" style={{
-                      backgroundColor: '#377abd',
-                      border: '1px solid #e2e8f0'
+                    className="px-4 text-sm py-1.5 bg-blue-50 text-white rounded-lg text-xs font-bold transition-all shadow-sm border border-blue-100"
+                    style={{
+                      backgroundColor: "#377abd",
+                      border: "1px solid #e2e8f0",
                     }}
                   >
                     Chi tiết
                   </button>
                 </td>
-
               </tr>
             ))}
           </tbody>
@@ -310,18 +329,31 @@ const OrdersDashboard = () => {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md shadow-2xl overflow-y-auto max-h-[95vh]">
-
-            <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Đơn thuê tại quầy</h2>
+            <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">
+              Đơn thuê tại quầy
+            </h2>
 
             <form onSubmit={handleCreateOrder} className="space-y-4 text-sm">
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">ID Khách hàng</label>
-                <input type="text" required placeholder="Dán ID khách..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.userId} onChange={(e) => setNewOrder({ ...newOrder, userId: e.target.value })} />
+                <label className="block font-semibold text-gray-700 mb-1">
+                  ID Khách hàng
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Dán ID khách..."
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newOrder.userId}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, userId: e.target.value })
+                  }
+                />
               </div>
 
               <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                <label className="block text-xs font-bold text-blue-800 mb-2 uppercase">Chọn đồ thuê</label>
-
+                <label className="block text-xs font-bold text-blue-800 mb-2 uppercase">
+                  Chọn đồ thuê
+                </label>
 
                 <select
                   className="w-full p-2.5 bg-white border border-gray-200 rounded-lg mb-3 outline-none focus:ring-2 focus:ring-blue-500"
@@ -329,7 +361,10 @@ const OrdersDashboard = () => {
 
                   onChange={async (e) => {
                     const id = e.target.value;
-                    const prod = products.find(p => p._id === id) as Product | undefined;
+                    const prod = products.find((p) => p._id === id) as
+                      | Product
+                      | undefined;
+
                     if (!id || !prod) {
                       setCurrentProduct(null);
                       setCurrentSize("");
@@ -338,38 +373,56 @@ const OrdersDashboard = () => {
                     }
 
                     try {
-                      const detailRes = await axios.get(`http://localhost:3000/api/products/${id}`);
+                      const detailRes = await axios.get(
+                        `http://localhost:3000/api/products/${id}`,
+                      );
                       const detail = detailRes.data as any;
-                      const rawVariants = Array.isArray(detail?.data?.variants) && detail.data.variants.length > 0
-                        ? detail.data.variants
-                        : Array.isArray(detail?.data?.product?.variants) && detail.data.product.variants.length > 0
-                        ? detail.data.product.variants
-                        : Array.isArray(detail?.variants) && detail.variants.length > 0
-                        ? detail.variants
-                        : [];
+
+                      const rawVariants =
+                        Array.isArray(detail?.data?.variants) &&
+                        detail.data.variants.length > 0
+                          ? detail.data.variants
+                          : Array.isArray(detail?.data?.product?.variants) &&
+                              detail.data.product.variants.length > 0
+                            ? detail.data.product.variants
+                            : Array.isArray(detail?.variants) &&
+                                detail.variants.length > 0
+                              ? detail.variants
+                              : [];
 
                       const mappedVariants = normalizeVariants(rawVariants);
 
                       const merged: Product = {
                         ...prod,
-                        variants: mappedVariants
+                        variants: mappedVariants,
                       };
 
                       setCurrentProduct(merged);
+
                       if (mappedVariants.length === 0) {
                         setCurrentSize("");
                         setCurrentColor("");
-                        alert("Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.");
+                        alert(
+                          "Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.",
+                        );
                         return;
                       }
-                      const sizes = Array.from(new Set(merged.variants.map(v => v.size)));
-                      setCurrentSize(sizes[0] || "");
-                      const colorsForSize = merged.variants.filter(v => v.size === sizes[0]);
 
+                      const sizes = Array.from(
+                        new Set(merged.variants.map((v) => v.size)),
+                      );
+                      setCurrentSize(sizes[0] || "");
+
+
+                      const colorsForSize = merged.variants.filter(
+                        (v) => v.size === sizes[0],
+                      );
                       setCurrentColor(colorsForSize[0]?.color || "");
                     } catch (err) {
                       console.error("Lỗi lấy chi tiết sản phẩm:", err);
-                      alert("Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.");
+                      alert(
+                        "Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.",
+                      );
                       setCurrentProduct(null);
                       setCurrentSize("");
                       setCurrentColor("");
@@ -378,57 +431,119 @@ const OrdersDashboard = () => {
                 >
                   <option value="">-- Click chọn sản phẩm --</option>
 
-                  {products.map(p => (
+                  {products.map((p) => (
                     <option key={p._id} value={p._id}>
-                      {p.name} (Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ)
+
+                      {p.name} (Thuê:{" "}
+                      {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ -
+                      Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ)
+
                     </option>
                   ))}
                 </select>
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className="text-[10px] text-gray-400 font-bold uppercase italic">Size</label>
-                    <select className="w-full p-2 bg-white border rounded-lg text-xs outline-none" value={currentSize} onChange={(e) => setCurrentSize(e.target.value)} disabled={!currentProduct}>
-                      {currentProduct && Array.from(new Set(currentProduct.variants.map(v => v.size))).map(s => <option key={s} value={s}>{s}</option>)}
+
+                    <label className="text-[10px] text-gray-400 font-bold uppercase italic">
+                      Size
+                    </label>
+                    <select
+                      className="w-full p-2 bg-white border rounded-lg text-xs outline-none"
+                      value={currentSize}
+                      onChange={(e) => setCurrentSize(e.target.value)}
+                      disabled={!currentProduct}
+                    >
+                      {currentProduct &&
+                        Array.from(
+                          new Set(currentProduct.variants.map((v) => v.size)),
+                        ).map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-400 font-bold uppercase italic">Màu</label>
-                    <select className="w-full p-2 bg-white border rounded-lg text-xs outline-none" value={currentColor} onChange={(e) => setCurrentColor(e.target.value)} disabled={!currentProduct}>
-                      {currentProduct?.variants.filter(v => v.size === currentSize).map((v, i) => <option key={i} value={v.color}>{v.color}</option>)}
-
+                    <label className="text-[10px] text-gray-400 font-bold uppercase italic">
+                      Màu
+                    </label>
+                    <select
+                      className="w-full p-2 bg-white border rounded-lg text-xs outline-none"
+                      value={currentColor}
+                      onChange={(e) => setCurrentColor(e.target.value)}
+                      disabled={!currentProduct}
+                    >
+                      {currentProduct?.variants
+                        .filter((v) => v.size === currentSize)
+                        .map((v, i) => (
+                          <option key={i} value={v.color}>
+                            {v.color}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>
 
-
-                <button type="button" onClick={addItemToOrder} style={{ backgroundColor: '#1e3a8a' }} className="w-full py-2 text-white rounded-lg font-bold shadow-sm">
-
+                <button
+                  type="button"
+                  onClick={addItemToOrder}
+                  style={{ backgroundColor: "#1e3a8a" }}
+                  className="w-full py-2 text-white rounded-lg font-bold shadow-sm"
+                >
                   + Thêm vào danh sách
                 </button>
               </div>
 
               <div className="space-y-2 max-h-32 overflow-y-auto">
                 {newOrder.items.map((item, index) => (
-
-                  <div key={index} className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-gray-200">
+                  <div
+                    key={index}
+                    className="flex justify-between items-center bg-white p-2.5 rounded-lg border border-gray-200"
+                  >
                     <div>
                       <p className="font-bold text-gray-800">{item.name}</p>
-                      <p className="text-[10px] text-blue-600 font-bold uppercase italic">Cọc: {item.deposit.toLocaleString()}đ | Thuê: {item.price.toLocaleString()}đ/ngày</p>
+                      <p className="text-[10px] text-blue-600 font-bold uppercase italic">
+                        Cọc: {item.deposit.toLocaleString()}đ | Thuê:{" "}
+                        {item.price.toLocaleString()}đ/ngày
+                      </p>
                     </div>
-                    <button type="button" onClick={() => removeItemFromOrder(index)} className="text-red-500 font-bold">✕</button>
-
+                    <button
+                      type="button"
+                      onClick={() => removeItemFromOrder(index)}
+                      className="text-red-500 font-bold"
+                    >
+                      ✕
+                    </button>
                   </div>
                 ))}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-
-                <input type="date" required className="w-full p-2 bg-gray-50 border rounded-xl" value={newOrder.startDate} onChange={(e) => setNewOrder({ ...newOrder, startDate: e.target.value })} />
-                <input type="date" required className="w-full p-2 bg-gray-50 border rounded-xl" value={newOrder.endDate} onChange={(e) => setNewOrder({ ...newOrder, endDate: e.target.value })} />
+                <input
+                  type="date"
+                  required
+                  className="w-full p-2 bg-gray-50 border rounded-xl"
+                  value={newOrder.startDate}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, startDate: e.target.value })
+                  }
+                />
+                <input
+                  type="date"
+                  required
+                  className="w-full p-2 bg-gray-50 border rounded-xl"
+                  value={newOrder.endDate}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, endDate: e.target.value })
+                  }
+                />
               </div>
 
               <div>
-                <label className="block font-semibold text-gray-700 mb-1">Tổng cộng (Đã gồm tiền cọc)</label>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Tổng cộng (Đã gồm tiền cọc)
+                </label>
 
                 <div className="w-full p-3 bg-gray-100 border rounded-xl font-bold text-lg text-blue-900 text-center">
                   {newOrder.total.toLocaleString()} đ
@@ -436,10 +551,19 @@ const OrdersDashboard = () => {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
-
-                <button type="button" onClick={() => setShowModal(false)} className="px-6 py-2 text-gray-400 font-semibold">Hủy</button>
-                <button type="submit" disabled={loading} style={{ backgroundColor: '#1e3a8a' }} className="px-8 py-2 text-white rounded-xl font-semibold shadow-lg">
-
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-6 py-2 text-gray-400 font-semibold"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  style={{ backgroundColor: "#1e3a8a" }}
+                  className="px-8 py-2 text-white rounded-xl font-semibold shadow-lg"
+                >
                   {loading ? "Đang xử lý..." : "Xác nhận tạo đơn"}
                 </button>
               </div>

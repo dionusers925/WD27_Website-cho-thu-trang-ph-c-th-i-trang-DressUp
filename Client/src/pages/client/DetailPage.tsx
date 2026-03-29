@@ -79,7 +79,7 @@ function DetailPage() {
         1,
         diffDays,
         selectedVariant.size,
-        selectedVariant.color,
+        selectedVariant.color || product.colorFamily,
       );
 
       navigate("/cart");
@@ -304,13 +304,8 @@ function DetailPage() {
       </div>
       <ReviewList productId={id!} />
 
-<ReviewForm
-  productId={id!}
-  onSuccess={() => window.location.reload()}
-/>
+      <ReviewForm productId={id!} onSuccess={() => window.location.reload()} />
     </div>
-
-    
   );
 }
 

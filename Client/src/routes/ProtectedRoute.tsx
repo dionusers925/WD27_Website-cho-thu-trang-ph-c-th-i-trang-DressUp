@@ -1,20 +1,27 @@
-// import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 
-// const ProtectedRoute = ({ role }: { role?: string }) => {
-//   const token = localStorage.getItem("token");
-//   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-//   // ❌ chưa đăng nhập
-//   if (!token) {
-//     return <Navigate to="/auth/login" replace />;
-//   }
+interface ProtectedRouteProps {
+  role?: string;
+}
 
-//   // ❌ không phải admin
-//   if (role && user.role !== role) {
-//     return <Navigate to="/auth/login" replace />;
-//   }
+const ProtectedRoute = ({ role }: ProtectedRouteProps) => {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
-//   return <Outlet />;
-// };
+  // Chưa đăng nhập
+  if (!token) {
+    return <Navigate to="/auth/login" replace />;
+  }
 
-// export default ProtectedRoute;
+  // Không phải admin
+  if (role && user.role !== role) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  // Đã login + role hợp lệ
+  return <Outlet />;
+};
+
+
+export default ProtectedRoute;

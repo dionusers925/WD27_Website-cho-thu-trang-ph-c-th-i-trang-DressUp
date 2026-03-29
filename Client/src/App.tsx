@@ -1,8 +1,7 @@
 import "./App.css";
 import { useRoutes } from "react-router-dom";
 
-// ADMIN
-import AdminLayout from "./layouts/admin/AdminLayout";
+import Adminlayout from "./layouts/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import OrdersDashboard from "./pages/admin/OdersDashboard";
 import OrderDetail from "./pages/admin/order/OrderDetail";
@@ -16,36 +15,38 @@ import ProductEdit from "./pages/admin/products/ProductEdit";
 import ProductDetail from "./pages/admin/products/ProductDetail";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
 
-// CLIENT
-import LayoutClient from "./layouts/client/LayoutClient";
 import HomePage from "./pages/client/HomePage";
 import DetailPage from "./pages/client/DetailPage";
 import PolicyPage from "./pages/client/PolicyPage";
 import CartPage from "./pages/client/CartPage";
 import ProductsPage from "./pages/client/ProductsPage";
-import PaymentResult from "./pages/client/PaymentResult";
+import LayoutClient from "./layouts/client/LayoutClient";
 
-// AUTH
 import AuthLayout from "./layouts/AuthLayout";
-import LoginPage from "./layouts/LoginPage";
 import RegisterPage from "./layouts/RegisterPage";
+import LoginPage from "./layouts/LoginPage";
 import ProtectedRoute from "./layouts/ProtectedRoute";
+
+import PaymentResult from "./pages/client/PaymentResult";
 
 function App() {
   const NotFound = () => <div>Not Found</div>;
 
   const router = useRoutes([
+    // PAYMENT
     {
       path: "/payment-result",
       Component: PaymentResult,
     },
 
+    // ADMIN
     {
       path: "/admin",
-      Component: ProtectedRoute,
+      Component: ProtectedRoute, // giữ bảo vệ route
       children: [
         {
-          Component: AdminLayout,
+          path: "",
+          Component: Adminlayout,
           children: [
             { index: true, Component: Dashboard },
 
@@ -74,6 +75,7 @@ function App() {
       ],
     },
 
+    // CLIENT
     {
       path: "/",
       Component: LayoutClient,
@@ -86,6 +88,7 @@ function App() {
       ],
     },
 
+    // AUTH
     {
       path: "/auth",
       Component: AuthLayout,
@@ -95,6 +98,7 @@ function App() {
       ],
     },
 
+    // NOT FOUND
     {
       path: "*",
       Component: NotFound,

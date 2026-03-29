@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Order from "../models/Order";
+import Cart from "../models/Cart";
 import { createVnpayUrl } from "../services/vnpay.service";
 
 export const checkout = async (req: Request, res: Response) => {
@@ -43,6 +44,25 @@ export const checkout = async (req: Request, res: Response) => {
       orderNumber: order.orderNumber,
       total: order.total
     });
+
+    // 👇 SỬA: Xóa giỏ hàng sau khi tạo order
+    try {
+      // Cách 1: Dùng updateOne
+      await Cart.updateOne(
+        { user: userId },
+        { $set: { items: [] } }
+      );
+      console.log("Đã xóa giỏ hàng của user:", userId);
+      
+      // Hoặc Cách 2: Dùng splice nếu bạn muốn lấy cart object ra
+      // const cart = await Cart.findOne({ user: userId });
+      // if (cart) {
+      //   cart.items.splice(0, cart.items.length);
+      //   await cart.save();
+      // }
+    } catch (cartError) {
+      console.error("Lỗi khi xóa giỏ hàng:", cartError);
+    }
 
     // Lấy IP client đúng cách
     const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || '127.0.0.1';
