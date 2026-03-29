@@ -1,3 +1,4 @@
+
 import { Outlet, Navigate } from "react-router-dom";
 
 const ProtectedRoute = () => {
@@ -11,3 +12,4 @@ const ProtectedRoute = () => {
 };
 
 export default ProtectedRoute;
+

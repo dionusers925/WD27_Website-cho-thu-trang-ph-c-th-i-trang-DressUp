@@ -30,9 +30,21 @@ export default function CartItem({
       <div className="flex-1">
         <h3 className="font-medium text-2xl">{item.name}</h3>
 
+        <div className="flex gap-6 text-sm text-gray-500 mt-1">
+          <span>Size: {item.size}</span>
+          <span>Màu: {item.color}</span>
+        </div>
+
         <p>{item.days} Ngày thuê</p>
 
         <p className="text-gray-600 mt-1">{item.price?.toLocaleString()} đ</p>
+
+        {/* <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
+          <span>Security Deposit (Tiền cọc)</span>
+          {/* <span className="text-black font-bold">
+            {product.depositDefault?.toLocaleString()} VNĐ
+          </span> 
+        </div> */}
 
         <div className="flex items-center gap-4 mt-4">
           <div className="flex items-center border border-gray-200 rounded-md overflow-hidden">

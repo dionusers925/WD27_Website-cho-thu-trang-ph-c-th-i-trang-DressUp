@@ -380,16 +380,12 @@ const OrdersDashboard = () => {
 
                   {products.map(p => (
                     <option key={p._id} value={p._id}>
-
                       {p.name} (Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ)
                     </option>
                   ))}
                 </select>
-
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-
-                    
                     <label className="text-[10px] text-gray-400 font-bold uppercase italic">Size</label>
                     <select className="w-full p-2 bg-white border rounded-lg text-xs outline-none" value={currentSize} onChange={(e) => setCurrentSize(e.target.value)} disabled={!currentProduct}>
                       {currentProduct && Array.from(new Set(currentProduct.variants.map(v => v.size))).map(s => <option key={s} value={s}>{s}</option>)}
