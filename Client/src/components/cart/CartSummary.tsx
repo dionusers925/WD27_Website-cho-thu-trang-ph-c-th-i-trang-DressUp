@@ -33,7 +33,7 @@ export default function CartSummary({ subtotal, count, onClear, onCheckout }: Pr
 
       <button
   onClick={onCheckout}
-  className="w-full bg-black text-#c8a693 py-3 mt-4"
+  className="w-full bg-black text-white py-3 mt-4"
 >
   Thanh toán VNPAY
 </button>

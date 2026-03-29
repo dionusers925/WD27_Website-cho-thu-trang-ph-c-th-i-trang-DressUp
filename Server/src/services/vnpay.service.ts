@@ -1,60 +1,71 @@
 import crypto from "crypto";
 import qs from "qs";
 
+function formatDate(date: Date) {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return (
+    date.getFullYear() +
+    pad(date.getMonth() + 1) +
+    pad(date.getDate()) +
+    pad(date.getHours()) +
+    pad(date.getMinutes()) +
+    pad(date.getSeconds())
+  );
+}
+
 export const createVnpayUrl = (
   amount: number,
-  orderId: string,
+  order: any,
   ipAddr: string
 ) => {
   const tmnCode = process.env.VNP_TMN_CODE!;
   const secretKey = process.env.VNP_HASH_SECRET!;
   const vnpUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+  // ✅ SỬA LỖI 1: thêm http://
   const returnUrl = "http://localhost:5173/payment-result";
 
-  const date = new Date();
-  const createDate = date
-    .toISOString()
-    .replace(/[-:TZ.]/g, "")
-    .slice(0, 14);
+  const createDate = formatDate(new Date());
 
   let vnp_Params: any = {
     vnp_Version: "2.1.0",
     vnp_Command: "pay",
     vnp_TmnCode: tmnCode,
-    vnp_Amount: amount * 100,
+    vnp_Amount: Number(amount) * 100,
     vnp_CurrCode: "VND",
-    vnp_TxnRef: orderId,
-    vnp_OrderInfo: "Thanh toan don hang",
+    vnp_TxnRef: `${order._id}`,
+    vnp_OrderInfo: `Thanh_toan_don_${order._id}`,
     vnp_OrderType: "other",
     vnp_Locale: "vn",
+    // ✅ SỬA LỖI 3: comment hoặc bỏ dòng này
+    // vnp_BankCode: "NCB",
     vnp_ReturnUrl: returnUrl,
-    vnp_IpAddr: ipAddr,
+    vnp_IpAddr: ipAddr || "127.0.0.1",
     vnp_CreateDate: createDate,
   };
 
-  // 🔥 SORT PARAMS
-  vnp_Params = Object.keys(vnp_Params)
-    .sort()
-    .reduce((result: any, key) => {
-      result[key] = vnp_Params[key];
-      return result;
-    }, {});
+  // Sort params theo key
+  const sortedKeys = Object.keys(vnp_Params).sort();
+  
+  // ✅ SỬA LỖI 2: encode giá trị khi tạo signData
+  let signData = "";
+  sortedKeys.forEach((key, index) => {
+    const value = vnp_Params[key];
+    if (index === 0) {
+      signData += `${key}=${encodeURIComponent(value)}`;
+    } else {
+      signData += `&${key}=${encodeURIComponent(value)}`;
+    }
+  });
 
-  // 🔥 STRINGIFY
-  const signData = qs.stringify(vnp_Params, { encode: false });
-
-  // 🔥 HASH
   const secureHash = crypto
     .createHmac("sha512", secretKey)
     .update(signData)
     .digest("hex");
 
-  vnp_Params["vnp_SecureHash"] = secureHash;
+  // Thêm secureHash vào params để tạo URL
+  vnp_Params.vnp_SecureHash = secureHash;
 
-  // 🔥 URL
-  const paymentUrl = `${vnpUrl}?${qs.stringify(vnp_Params, {
-    encode: true,
-  })}`;
+  const paymentUrl = vnpUrl + "?" + qs.stringify(vnp_Params, { encode: true });
 
   return paymentUrl;
 };

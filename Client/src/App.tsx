@@ -25,10 +25,18 @@ import RegisterPage from "./layouts/RegisterPage";
 import LoginPage from "./layouts/LoginPage";
 // import ProtectedRoute from "./routes/ProtectedRoute";
 
+import PaymentResult from "./pages/client/PaymentResult";
+
 function App() {
   const NotFound = () => <div>Not Found</div>;
 
   const router = useRoutes([
+
+     {
+      path: "/payment-result",
+      Component: PaymentResult,
+    },
+
     {
       path: "/admin",
       // Component: ProtectedRoute,
