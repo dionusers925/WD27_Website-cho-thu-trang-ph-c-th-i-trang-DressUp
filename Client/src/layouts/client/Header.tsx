@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { logout } from "../../utils/auth";
 
 function Header() {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
@@ -42,22 +44,44 @@ function Header() {
         <a href="/" className="hover:opacity-50 transition-all">
           Trang chủ
         </a>
-        <a href="#catalog" className="hover:opacity-50 transition-all">
+        <Link to="/catalog" className="hover:opacity-50 transition-all">
           sản phẩm
-        </a>
-        {/* <a href="/cart" className="hover:opacity-50 transition-all">
+
+        </Link>
+        <a href="/cart" className="hover:opacity-50 transition-all">
+
           Giỏ hàng
-        </a> */}
+        </a> 
         <a href="/policy" className="hover:opacity-50 transition-all">
           Hướng dẫn mua hàng
         </a>
       </nav>
 
       {/* Icons bên phải */}
-      <div className="flex items-center gap-8 text-white">
-        <button className="text-[10px] text-white uppercase tracking-widest hidden md:block border-b border-white pb-1 hover:text-gray-300 hover:border-gray-300 transition-all">
-          Search
-        </button>
+      <div className="flex items-center gap-6 text-white">
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (searchQuery.trim()) {
+              navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`);
+              setSearchQuery("");
+            }
+          }}
+          className="hidden md:flex items-center border-b border-white pb-1"
+        >
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="bg-transparent text-[10px] text-white uppercase tracking-widest outline-none placeholder:text-gray-400 w-24 focus:w-40 transition-all font-medium"
+          />
+          <button type="submit" className="text-white hover:text-gray-300 ml-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
+        </form>
 
         <Link to="/cart">
           <div className="relative cursor-pointer hover:scale-110 transition-transform">
