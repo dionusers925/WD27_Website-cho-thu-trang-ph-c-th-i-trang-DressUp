@@ -42,9 +42,9 @@ function Header() {
         <a href="/" className="hover:opacity-50 transition-all">
           Trang chủ
         </a>
-        <a href="#catalog" className="hover:opacity-50 transition-all">
+        <Link to="/catalog" className="hover:opacity-50 transition-all">
           sản phẩm
-        </a>
+        </Link>
         <a href="/cart" className="hover:opacity-50 transition-all">
           Giỏ hàng
         </a>

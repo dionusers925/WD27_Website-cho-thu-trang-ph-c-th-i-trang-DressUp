@@ -16,6 +16,7 @@ import HomePage from "./pages/client/HomePage";
 import DetailPage from "./pages/client/DetailPage";
 import PolicyPage from "./pages/client/PolicyPage";
 import CartPage from "./pages/client/CartPage";
+import ProductsPage from "./pages/client/ProductsPage";
 import LayoutClient from "./layouts/client/LayoutClient";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
 import OrderDetail from "./pages/admin/order/OrderDetail";
@@ -62,6 +63,7 @@ function App() {
         { path: "", Component: HomePage },
         { path: "detail/:id", Component: DetailPage },
         { path: "policy", Component: PolicyPage },
+        { path: "catalog", Component: ProductsPage },
         { path: "cart", Component: CartPage },
       ],
     },
