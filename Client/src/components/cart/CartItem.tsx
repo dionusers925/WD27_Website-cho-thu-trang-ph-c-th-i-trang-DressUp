@@ -32,7 +32,7 @@ export default function CartItem({
 
         <div className="flex gap-6 text-sm text-gray-500 mt-1">
           <span>Size: {item.size}</span>
-          <span>Màu: {item.color}</span>
+          <span>Màu: {item.colorFamily || "Không có"}</span>
         </div>
 
         <p>{item.days} Ngày thuê</p>
