@@ -57,24 +57,6 @@ const formatDateTime = (value?: string) =>
 const formatDate = (value?: string) =>
   value ? new Date(value).toLocaleDateString("vi-VN") : "-";
 
-const statusLabel = (value?: string) => {
-  switch (value) {
-    case "pending":
-      return "Chờ xử lý";
-    case "confirmed":
-      return "Đã xác nhận";
-    case "shipped":
-      return "Đang giao";
-    case "delivered":
-      return "Đã giao";
-    case "completed":
-      return "Hoàn tất";
-    case "cancelled":
-      return "Đã hủy";
-    default:
-      return value ?? "-";
-  }
-};
 
 const statusBadge = (status?: string) => {
   const styles: Record<string, string> = {
@@ -84,6 +66,7 @@ const statusBadge = (status?: string) => {
     cancelled: "bg-red-100 text-red-800",
     confirmed: "bg-blue-100 text-blue-800",
     shipped: "bg-purple-100 text-purple-800",
+    fee_incurred: "bg-orange-100 text-orange-800",
   };
   return styles[status ?? ""] || "bg-gray-100 text-gray-800";
 };
@@ -124,13 +107,14 @@ const OrderDetail = () => {
   const [error, setError] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Thêm state để quản lý phí phát sinh và trạng thái tạm thời
+
   const [lateFee, setLateFee] = useState<number>(0);
   const [damageFee, setDamageFee] = useState<number>(0);
   const [status, setStatus] = useState<string>("pending");
   const [paymentStatus, setPaymentStatus] = useState<string>("pending");
   const [overdueDays, setOverdueDays] = useState<number | ''>('');
   const [selectedErrors, setSelectedErrors] = useState<string[]>([]);
+  const [lostItemIds, setLostItemIds] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -141,13 +125,14 @@ const OrderDetail = () => {
         const res = await axios.get(`http://localhost:3000/orders/${id}`);
         const data = res.data as Order;
         setOrder(data);
-        // Gán giá trị từ đơn hàng vào các state chỉnh sửa
+       
         setLateFee(data.lateFee || 0);
         setDamageFee(data.damageFee || 0);
         setStatus(data.status || "pending");
         setPaymentStatus(data.paymentStatus || "pending");
         setOverdueDays((data as any).overdueDays || '');
         setSelectedErrors((data as any).damageErrors || []);
+        setLostItemIds((data as any).lostItems || []);
       } catch (err: any) {
         const message =
           err?.response?.data?.message ||
@@ -172,7 +157,8 @@ const OrderDetail = () => {
         status,
         paymentStatus,
         overdueDays,
-        damageErrors: selectedErrors
+        damageErrors: selectedErrors,
+        lostItems: lostItemIds
       });
       setOrder(res.data); // Cập nhật lại UI sau khi lưu thành công
       alert("Cập nhật đơn hàng thành công!");
@@ -212,16 +198,31 @@ const OrderDetail = () => {
     [items]
   );
 
-  // LOGIC TRỪ TIỀN CỌC KHI HOÀN THÀNH
+  // Tiền cọc bị giữ do sản phẩm mất
+  const getItemKey = (item: OrderItem, idx: number) => item._id || `idx_${idx}`;
+
+  const lostDepositTotal = useMemo(
+    () =>
+      items.reduce((sum, item, idx) => {
+        const key = getItemKey(item, idx);
+        if (lostItemIds.includes(key)) {
+          return sum + Number(item.deposit ?? 0) * Number(item.quantity ?? 1);
+        }
+        return sum;
+      }, 0),
+    [items, lostItemIds]
+  );
+
+  // LOGIC TÍNH TỔNG
   const displayTotal = useMemo(() => {
-    const feeTotal = lateFee + damageFee;
-    // Nếu trạng thái là hoàn tất, thực nhận = tiền thuê + phí phạt (không tính cọc vì đã trả khách)
+    const feeTotal = lateFee + damageFee + lostDepositTotal;
+    // Hoàn tất: thu = tiền thuê + phạt + cọc sản phẩm mất (cọc hàng bình thường trả khách)
     if (status === "completed") {
       return rentalSubtotal + feeTotal;
     }
-    // Ngược lại tính đầy đủ bao gồm cả cọc
+    // Trạng thái khác: bao gồm cả tiền cọc
     return rentalSubtotal + depositTotal + feeTotal;
-  }, [status, rentalSubtotal, depositTotal, lateFee, damageFee]);
+  }, [status, rentalSubtotal, depositTotal, lateFee, damageFee, lostDepositTotal]);
 
   const customerName =
     order?.customerName ||
@@ -307,6 +308,7 @@ const OrderDetail = () => {
             <option value="confirmed">Đã xác nhận</option>
             <option value="shipped">Đang giao</option>
             <option value="delivered">Đã giao</option>
+            <option value="fee_incurred">Phát sinh phí</option>
             <option value="completed">Hoàn tất</option>
             <option value="cancelled">Đã hủy</option>
           </select>
@@ -480,21 +482,60 @@ const OrderDetail = () => {
                 const price = Number(item.price ?? 0);
                 const deposit = Number(item.deposit ?? 0);
                 const itemTotal = (price * rentalDays + deposit) * quantity;
+                const itemKey = getItemKey(item, idx);
+                const isLost = lostItemIds.includes(itemKey);
+
+                const toggleLost = () => {
+                  setLostItemIds(prev =>
+                    isLost ? prev.filter(k => k !== itemKey) : [...prev, itemKey]
+                  );
+                };
+
                 return (
                   <div
                     key={item._id || idx}
-                    className="flex items-center justify-between gap-4 border border-gray-100 rounded-lg p-3"
+                    className={`flex items-start justify-between gap-4 border rounded-lg p-3 transition-all ${
+                      isLost
+                        ? "border-red-300 bg-red-50/60"
+                        : "border-gray-100 bg-white"
+                    }`}
                   >
-                    <div>
-                      <div className="font-semibold text-gray-800">{name}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        Size: {item.size || "-"} · Màu: {item.color || "-"} · SL: {quantity}
+                    <div className="flex items-start gap-3 flex-1">
+                      {/* Checkbox mất sản phẩm */}
+                      <label className="flex flex-col items-center gap-1 cursor-pointer pt-0.5" title="Đánh dấu sản phẩm bị mất">
+                        <input
+                          type="checkbox"
+                          checked={isLost}
+                          onChange={toggleLost}
+                          className="w-4 h-4 accent-red-600 cursor-pointer"
+                        />
+                        <span className="text-[9px] text-red-500 font-bold uppercase leading-tight text-center">Mất</span>
+                      </label>
+
+                      <div className="flex-1">
+                        <div className={`font-semibold ${ isLost ? "text-red-700 line-through opacity-70" : "text-gray-800" }`}>
+                          {name}
+                          {isLost && <span className="ml-2 text-xs font-bold text-red-600 no-underline" style={{textDecoration:'none'}}>⚠ Mất</span>}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Size: {item.size || "-"} · Màu: {item.color || "-"} · SL: {quantity}
+                        </div>
+                        {isLost && (
+                          <div className="text-xs text-red-600 font-semibold mt-1 bg-red-100 px-2 py-0.5 rounded inline-block">
+                            Giữ cọc: {formatCurrency(deposit * quantity)}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right text-sm">
-                      <div className="font-semibold text-gray-800">{formatCurrency(price)}</div>
-                      <div className="text-xs text-gray-500">Cọc {formatCurrency(deposit)}</div>
-                      <div className="text-xs text-gray-400">Thành tiền {formatCurrency(itemTotal)}</div>
+
+                    <div className="text-right text-sm shrink-0">
+                      <div className={`font-semibold ${ isLost ? "text-gray-400 line-through" : "text-gray-800" }`}>
+                        {formatCurrency(price)}/ngày
+                      </div>
+                      <div className={`text-xs mt-0.5 ${ isLost ? "text-red-500 font-semibold" : "text-gray-500" }`}>
+                        Cọc {formatCurrency(deposit)}
+                      </div>
+                      <div className="text-xs text-gray-400">Tổng {formatCurrency(itemTotal)}</div>
                     </div>
                   </div>
                 );
@@ -531,10 +572,16 @@ const OrderDetail = () => {
                 {formatCurrency(depositTotal)}
               </span>
             </div>
+            {lostDepositTotal > 0 && (
+              <div className="flex items-center justify-between text-sm mt-2 text-red-400 font-semibold">
+                <span>🔴 Giữ cọc (sản phẩm mất)</span>
+                <span>+{formatCurrency(lostDepositTotal)}</span>
+              </div>
+            )}
             {status === 'completed' && (
               <div className="flex items-center justify-between text-sm mt-2 text-emerald-400 font-semibold">
-                <span>Khách nhận lại cọc (Sau khi trừ lỗi)</span>
-                <span>{formatCurrency(Math.max(0, depositTotal - lateFee - damageFee))}</span>
+                <span>Khách nhận lại cọc (Sau khi trừ)</span>
+                <span>{formatCurrency(Math.max(0, depositTotal - lateFee - damageFee - lostDepositTotal))}</span>
               </div>
             )}
             <div className="h-px bg-white/20 my-3"></div>
