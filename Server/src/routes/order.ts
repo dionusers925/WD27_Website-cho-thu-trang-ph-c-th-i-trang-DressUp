@@ -58,6 +58,8 @@ orderRouter.post("/", async (req, res) => {
       customerName,
       customerPhone,
       customerAddress,
+      bankName,
+      bankAccount,
       note,
       status,
     } = req.body;
@@ -115,6 +117,8 @@ orderRouter.post("/", async (req, res) => {
       customerName: customerName || undefined,
       customerPhone: customerPhone || undefined,
       customerAddress: customerAddress || undefined,
+      bankName: bankName || undefined,
+      bankAccount: bankAccount || undefined,
       note: note || undefined,
       shippingAddress: {
         name: customerName || "Khách tại quầy",
@@ -135,7 +139,7 @@ orderRouter.post("/", async (req, res) => {
 orderRouter.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { lateFee, damageFee, status, paymentStatus } = req.body;
+    const { lateFee, damageFee, status, paymentStatus, overdueDays, damageErrors, lostItems } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "ID không hợp lệ" });
@@ -147,7 +151,10 @@ orderRouter.put("/:id", async (req, res) => {
         lateFee: Number(lateFee) || 0,
         damageFee: Number(damageFee) || 0,
         status,
-        paymentStatus
+        paymentStatus,
+        overdueDays: overdueDays !== undefined ? Number(overdueDays) : undefined,
+        damageErrors: Array.isArray(damageErrors) ? damageErrors : undefined,
+        lostItems: Array.isArray(lostItems) ? lostItems : undefined,
       },
       { new: true }
     );

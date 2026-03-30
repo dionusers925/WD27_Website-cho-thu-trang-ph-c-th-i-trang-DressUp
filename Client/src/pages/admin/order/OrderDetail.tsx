@@ -37,6 +37,8 @@ interface Order {
   customerName?: string;
   customerPhone?: string;
   customerAddress?: string;
+  bankName?: string;
+  bankAccount?: string;
   note?: string;
   lateFee?: number;      // Thêm trường phạt quá hạn
   damageFee?: number;    // Thêm trường phạt hư hỏng
@@ -125,7 +127,7 @@ const OrderDetail = () => {
         const res = await axios.get(`http://localhost:3000/orders/${id}`);
         const data = res.data as Order;
         setOrder(data);
-       
+
         setLateFee(data.lateFee || 0);
         setDamageFee(data.damageFee || 0);
         setStatus(data.status || "pending");
@@ -348,6 +350,18 @@ const OrderDetail = () => {
               <div className="text-xs text-gray-400">Phương thức giao</div>
               <div className="font-semibold text-gray-800">Đơn thuê tại quầy / Không giao hàng</div>
             </div>
+            {order.bankName && (
+              <div>
+                <div className="text-xs text-gray-400">Ngân hàng</div>
+                <div className="font-semibold text-gray-800">{order.bankName}</div>
+              </div>
+            )}
+            {order.bankAccount && (
+              <div>
+                <div className="text-xs text-gray-400">Số tài khoản</div>
+                <div className="font-semibold text-gray-800">{order.bankAccount}</div>
+              </div>
+            )}
           </div>
           {order.note && (
             <div className="mt-4 text-sm text-gray-700">
@@ -494,11 +508,10 @@ const OrderDetail = () => {
                 return (
                   <div
                     key={item._id || idx}
-                    className={`flex items-start justify-between gap-4 border rounded-lg p-3 transition-all ${
-                      isLost
+                    className={`flex items-start justify-between gap-4 border rounded-lg p-3 transition-all ${isLost
                         ? "border-red-300 bg-red-50/60"
                         : "border-gray-100 bg-white"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start gap-3 flex-1">
                       {/* Checkbox mất sản phẩm */}
@@ -513,9 +526,9 @@ const OrderDetail = () => {
                       </label>
 
                       <div className="flex-1">
-                        <div className={`font-semibold ${ isLost ? "text-red-700 line-through opacity-70" : "text-gray-800" }`}>
+                        <div className={`font-semibold ${isLost ? "text-red-700 line-through opacity-70" : "text-gray-800"}`}>
                           {name}
-                          {isLost && <span className="ml-2 text-xs font-bold text-red-600 no-underline" style={{textDecoration:'none'}}>⚠ Mất</span>}
+                          {isLost && <span className="ml-2 text-xs font-bold text-red-600 no-underline" style={{ textDecoration: 'none' }}>⚠ Mất</span>}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
                           Size: {item.size || "-"} · Màu: {item.color || "-"} · SL: {quantity}
@@ -529,10 +542,10 @@ const OrderDetail = () => {
                     </div>
 
                     <div className="text-right text-sm shrink-0">
-                      <div className={`font-semibold ${ isLost ? "text-gray-400 line-through" : "text-gray-800" }`}>
+                      <div className={`font-semibold ${isLost ? "text-gray-400 line-through" : "text-gray-800"}`}>
                         {formatCurrency(price)}/ngày
                       </div>
-                      <div className={`text-xs mt-0.5 ${ isLost ? "text-red-500 font-semibold" : "text-gray-500" }`}>
+                      <div className={`text-xs mt-0.5 ${isLost ? "text-red-500 font-semibold" : "text-gray-500"}`}>
                         Cọc {formatCurrency(deposit)}
                       </div>
                       <div className="text-xs text-gray-400">Tổng {formatCurrency(itemTotal)}</div>

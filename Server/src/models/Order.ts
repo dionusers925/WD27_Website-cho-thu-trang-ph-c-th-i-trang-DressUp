@@ -19,6 +19,8 @@ export interface IOrder extends Document {
   customerName?: string;
   customerPhone?: string;
   customerAddress?: string;
+  bankName?: string;
+  bankAccount?: string;
   note?: string;
 
   shippingAddress?: {
@@ -37,6 +39,9 @@ export interface IOrder extends Document {
 
   lateFee: number;
   damageFee: number;
+  overdueDays?: number;
+  damageErrors?: string[];
+  lostItems?: string[];
 
 
   total: number;
@@ -81,6 +86,8 @@ const orderSchema: Schema = new Schema(
     customerName: String,
     customerPhone: String,
     customerAddress: String,
+    bankName: String,
+    bankAccount: String,
     note: String,
 
     shippingAddress: {
@@ -96,10 +103,11 @@ const orderSchema: Schema = new Schema(
     subtotal: { type: Number, default: 0 },
     serviceFee: { type: Number, default: 0 },
 
-    // --- THÊM MỚI VÀO SCHEMA ---
     lateFee: { type: Number, default: 0 },
     damageFee: { type: Number, default: 0 },
-    // ---------------------------
+    overdueDays: { type: Number, default: 0 },
+    damageErrors: { type: [String], default: [] },
+    lostItems: { type: [String], default: [] },
 
     total: { type: Number, required: true },
 
