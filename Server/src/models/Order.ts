@@ -33,11 +33,11 @@ export interface IOrder extends Document {
 
   subtotal: number;
   serviceFee: number;
-  
-  
-  lateFee: number;     
-  damageFee: number;   
-  
+
+
+  lateFee: number;
+  damageFee: number;
+
 
   total: number;
 
@@ -45,12 +45,12 @@ export interface IOrder extends Document {
   paymentStatus: string;
 
   status:
-    | "pending"
-    | "confirmed"
-    | "shipped"
-    | "delivered"
-    | "completed"
-    | "cancelled";
+  | "pending"
+  | "confirmed"
+  | "shipped"
+  | "delivered"
+  | "completed"
+  | "cancelled";
 
   createdAt: Date;
   updatedAt: Date;

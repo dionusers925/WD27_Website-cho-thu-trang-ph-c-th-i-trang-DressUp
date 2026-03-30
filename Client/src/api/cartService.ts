@@ -33,6 +33,13 @@ export const addToCart = async (
     size,
     color,
   });
+  console.log("ADD TO CART:", {
+    productId,
+    quantity,
+    days,
+    size,
+    color,
+  });
 
   return res.data;
 };

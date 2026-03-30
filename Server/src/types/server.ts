@@ -6,6 +6,9 @@ import path from "path";
 import { connectDB } from "./db";
 
 
+
+
+
 import "dotenv/config";
 import cors from "cors";
 
@@ -28,15 +31,12 @@ import uploadRouter from "../routes/upload";
 
 
 
+
+
+
 const app = express();
 
-// 🔥 CONNECT MONGODB
-const MONGO_URI = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/datn_wd27";
-
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("✅ Kết nối MongoDB thành công"))
-  .catch((err) => console.error("❌ Lỗi MongoDB:", err));
+connectDB();
 
 // middleware
 app.use(cors());
@@ -58,24 +58,10 @@ app.use("/api/payment", paymentRoutes);
 
 app.use(uploadRouter);
 
-
 app.use("/api", costumeRoutes);
 app.use("/api", cartRoutes);
 app.use("/api/auth", authRoutes);
 
-
-// test API
-app.get("/", (req, res) => {
-  res.send("API is running...");
-});
-
-// start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
-
 app.listen(3000, () => {
   console.log("🚀 Server running on port 3000");
 });
-
