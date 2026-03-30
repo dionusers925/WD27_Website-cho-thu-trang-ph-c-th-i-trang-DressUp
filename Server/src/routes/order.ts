@@ -59,6 +59,7 @@ orderRouter.post("/", async (req, res) => {
       customerPhone,
       customerAddress,
       note,
+      status,
     } = req.body;
 
     const demoUserId = "65c000000000000000000001";
@@ -68,16 +69,16 @@ orderRouter.post("/", async (req, res) => {
 
     const normalizedItems = Array.isArray(items)
       ? items
-          .map((item: any) => ({
-            productId: item?.productId,
-            name: item?.name ? String(item.name) : undefined,
-            size: item?.size ? String(item.size) : undefined,
-            color: item?.color ? String(item.color) : undefined,
-            deposit: Number(item?.deposit ?? 0) || 0,
-            quantity: Number(item?.quantity ?? 1) || 1,
-            price: Number(item?.price ?? 0) || 0,
-          }))
-          .filter((item: any) => item.productId)
+        .map((item: any) => ({
+          productId: item?.productId,
+          name: item?.name ? String(item.name) : undefined,
+          size: item?.size ? String(item.size) : undefined,
+          color: item?.color ? String(item.color) : undefined,
+          deposit: Number(item?.deposit ?? 0) || 0,
+          quantity: Number(item?.quantity ?? 1) || 1,
+          price: Number(item?.price ?? 0) || 0,
+        }))
+        .filter((item: any) => item.productId)
       : [];
 
     if (normalizedItems.length === 0) {
@@ -107,7 +108,7 @@ orderRouter.post("/", async (req, res) => {
       subtotal: rentalSubtotal,
       paymentMethod: paymentMethod || "cash",
       orderNumber: `DU${new Date().getFullYear()}${Math.floor(1000 + Math.random() * 9000)}`,
-      status: "pending",
+      status: status || "pending",
       startDate: start,
       endDate: end,
       items: normalizedItems,
@@ -142,11 +143,11 @@ orderRouter.put("/:id", async (req, res) => {
 
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
-      { 
-        lateFee: Number(lateFee) || 0, 
+      {
+        lateFee: Number(lateFee) || 0,
         damageFee: Number(damageFee) || 0,
-        status, 
-        paymentStatus 
+        status,
+        paymentStatus
       },
       { new: true }
     );

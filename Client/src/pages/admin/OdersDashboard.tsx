@@ -47,12 +47,12 @@ const OrdersDashboard = () => {
     const rentalTiers = Array.isArray(p?.rentalTiers)
       ? p.rentalTiers
       : Array.isArray(p?.rentalPrices)
-      ? p.rentalPrices.map((rp: any) => ({
+        ? p.rentalPrices.map((rp: any) => ({
           label: `${Number(rp?.days ?? 0) || 0} ngày`,
           days: Number(rp?.days ?? 0) || 0,
           price: Number(rp?.price ?? 0) || 0
         }))
-      : [];
+        : [];
 
     const depositDefault =
       Number(p?.depositDefault ?? p?.depositPrice ?? 0) || 0;
@@ -64,10 +64,10 @@ const OrdersDashboard = () => {
       depositDefault,
       variants: Array.isArray(p?.variants)
         ? p.variants.map((v: any) => ({
-            size: String(v?.size ?? ""),
-            color: String(v?.color ?? ""),
-            _id: v?._id
-          }))
+          size: String(v?.size ?? ""),
+          color: String(v?.color ?? ""),
+          _id: v?._id
+        }))
         : []
     };
   };
@@ -103,11 +103,15 @@ const OrdersDashboard = () => {
       .filter((v: Variant) => v.size && v.color);
 
   const [newOrder, setNewOrder] = useState({
-    userId: "",
+    customerName: "",
+    customerPhone: "",
+    customerAddress: "",
+    bankAccount: "",
+    bankName: "",
     total: 0,
     paymentMethod: "Tiền mặt",
-
-    shippingMethod: "Nhận tại cửa hàng", 
+    status: "delivered",
+    shippingMethod: "Nhận tại cửa hàng",
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
 
@@ -128,10 +132,10 @@ const OrdersDashboard = () => {
       const normalizedProducts = Array.isArray(productData)
         ? productData
         : Array.isArray(productData?.data?.products)
-        ? productData.data.products
-        : Array.isArray(productData?.products)
-        ? productData.products
-        : [];
+          ? productData.data.products
+          : Array.isArray(productData?.products)
+            ? productData.products
+            : [];
 
       setProducts(normalizedProducts.map(normalizeProduct).filter((p: Product) => p._id));
     } catch (err) {
@@ -216,10 +220,14 @@ const OrdersDashboard = () => {
       setShowModal(false);
       fetchData();
       setNewOrder({
-        userId: "",
+        customerName: "",
+        customerPhone: "",
+        customerAddress: "",
+        bankAccount: "",
+        bankName: "",
         total: 0,
         paymentMethod: "Tiền mặt",
-
+        status: "delivered",
         shippingMethod: "Nhận tại cửa hàng",
         startDate: new Date().toISOString().split('T')[0],
         endDate: new Date().toISOString().split('T')[0],
@@ -280,7 +288,7 @@ const OrdersDashboard = () => {
               <tr key={order._id} className="hover:bg-gray-50 transition">
 
                 <td className="p-4 font-mono text-sm text-blue-600 font-semibold">{order._id?.slice(-6).toUpperCase()}</td>
-                <td className="p-4 text-sm ">{order.userId?.name || "Khách tại quầy"}</td>
+                <td className="p-4 text-sm ">{order.customerName || order.userId?.name || "Khách tại quầy"}</td>
                 <td className="p-4 text-sm ">{(order.total ?? 0).toLocaleString()}đ</td>
 
                 <td className="p-4 text-sm text-gray-600">{order.paymentMethod || "Nhận tại cửa hàng"}</td>
@@ -314,9 +322,27 @@ const OrdersDashboard = () => {
             <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Đơn thuê tại quầy</h2>
 
             <form onSubmit={handleCreateOrder} className="space-y-4 text-sm">
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">ID Khách hàng</label>
-                <input type="text" required placeholder="Dán ID khách..." className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.userId} onChange={(e) => setNewOrder({ ...newOrder, userId: e.target.value })} />
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Họ và tên</label>
+                  <input type="text" required placeholder="Nhập họ và tên..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerName} onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Số điện thoại</label>
+                  <input type="tel" required placeholder="Nhập số điện thoại..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerPhone} onChange={(e) => setNewOrder({ ...newOrder, customerPhone: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Địa chỉ</label>
+                  <input type="text" required placeholder="Nhập địa chỉ..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerAddress} onChange={(e) => setNewOrder({ ...newOrder, customerAddress: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Số tài khoản</label>
+                  <input type="text" placeholder="Nhập số tài khoản..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.bankAccount} onChange={(e) => setNewOrder({ ...newOrder, bankAccount: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Ngân hàng</label>
+                  <input type="text" placeholder="Nhập tên ngân hàng..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.bankName} onChange={(e) => setNewOrder({ ...newOrder, bankName: e.target.value })} />
+                </div>
               </div>
 
               <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
@@ -343,10 +369,10 @@ const OrdersDashboard = () => {
                       const rawVariants = Array.isArray(detail?.data?.variants) && detail.data.variants.length > 0
                         ? detail.data.variants
                         : Array.isArray(detail?.data?.product?.variants) && detail.data.product.variants.length > 0
-                        ? detail.data.product.variants
-                        : Array.isArray(detail?.variants) && detail.variants.length > 0
-                        ? detail.variants
-                        : [];
+                          ? detail.data.product.variants
+                          : Array.isArray(detail?.variants) && detail.variants.length > 0
+                            ? detail.variants
+                            : [];
 
                       const mappedVariants = normalizeVariants(rawVariants);
 
