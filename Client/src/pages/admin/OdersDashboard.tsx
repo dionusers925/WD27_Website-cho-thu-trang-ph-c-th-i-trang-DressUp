@@ -32,6 +32,8 @@ interface OrderItem {
 
 const OrdersDashboard = () => {
   const [orders, setOrders] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [hasAccount, setHasAccount] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,6 +44,8 @@ const OrdersDashboard = () => {
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [currentSize, setCurrentSize] = useState("");
   const [currentColor, setCurrentColor] = useState("");
+  const [searchProductTerm, setSearchProductTerm] = useState("");
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
 
   const normalizeProduct = (p: any): Product => {
     const rentalTiers = Array.isArray(p?.rentalTiers)
@@ -108,6 +112,7 @@ const OrdersDashboard = () => {
     customerAddress: "",
     bankAccount: "",
     bankName: "",
+    userId: "",
     total: 0,
     paymentMethod: "Tiền mặt",
     status: "delivered",
@@ -120,13 +125,14 @@ const OrdersDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [ordersRes, productsRes] = await Promise.all([
+      const [ordersRes, productsRes, usersRes] = await Promise.all([
         axios.get("http://localhost:3000/orders"),
-
-        axios.get("http://localhost:3000/api/products")
+        axios.get("http://localhost:3000/api/products"),
+        axios.get("http://localhost:3000/users").catch(() => ({ data: [] }))
       ]);
 
       setOrders(ordersRes.data);
+      setUsers(usersRes.data || []);
 
       const productData = productsRes.data as any;
       const normalizedProducts = Array.isArray(productData)
@@ -199,6 +205,8 @@ const OrdersDashboard = () => {
     setCurrentProduct(null);
     setCurrentSize("");
     setCurrentColor("");
+    setSearchProductTerm("");
+    setShowProductDropdown(false);
   };
 
   const removeItemFromOrder = (indexToRemove: number) => {
@@ -225,6 +233,7 @@ const OrdersDashboard = () => {
         customerAddress: "",
         bankAccount: "",
         bankName: "",
+        userId: "",
         total: 0,
         paymentMethod: "Tiền mặt",
         status: "delivered",
@@ -234,6 +243,11 @@ const OrdersDashboard = () => {
         items: []
 
       });
+      setCurrentProduct(null);
+      setCurrentSize("");
+      setCurrentColor("");
+      setSearchProductTerm("");
+      setShowProductDropdown(false);
     } catch (err) {
       alert("❌ Lỗi hệ thống.");
     } finally {
@@ -248,6 +262,27 @@ const OrdersDashboard = () => {
       cancelled: "bg-red-100 text-red-800",
     };
     return styles[status] || "bg-gray-100 text-gray-800";
+  };
+
+  const handlePhoneChange = (phone: string) => {
+    let updatedOrder = { ...newOrder, customerPhone: phone, userId: "" };
+    
+    if (hasAccount && phone.length >= 8) {
+      const foundUser = users.find((u: any) => u.phone === phone);
+      if (foundUser) {
+        updatedOrder.userId = foundUser._id;
+        updatedOrder.customerName = foundUser.name || foundUser.fullName || updatedOrder.customerName;
+        
+        const userOrders = orders.filter((o: any) => o.userId?._id === foundUser._id || o.userId === foundUser._id || o.customerPhone === phone);
+        if (userOrders.length > 0) {
+          const lastOrder: any = userOrders[0];
+          updatedOrder.customerAddress = lastOrder.customerAddress || updatedOrder.customerAddress;
+          updatedOrder.bankName = lastOrder.bankName || updatedOrder.bankName;
+          updatedOrder.bankAccount = lastOrder.bankAccount || updatedOrder.bankAccount;
+        }
+      }
+    }
+    setNewOrder(updatedOrder);
   };
 
   return (
@@ -322,14 +357,30 @@ const OrdersDashboard = () => {
             <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Đơn thuê tại quầy</h2>
 
             <form onSubmit={handleCreateOrder} className="space-y-4 text-sm">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Loại khách hàng</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={hasAccount} onChange={() => setHasAccount(true)} className="accent-blue-600 w-4 h-4" />
+                    <span className="font-semibold text-gray-700">Đã có tài khoản</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={!hasAccount} onChange={() => { setHasAccount(false); setNewOrder(prev => ({ ...prev, userId: "" })); }} className="accent-blue-600 w-4 h-4" />
+                    <span className="font-semibold text-gray-700">Chưa có tài khoản</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="col-span-2">
+                <div className="col-span-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Số điện thoại</label>
+                  <input type="tel" required placeholder="Nhập số điện thoại..." className={`w-full p-2 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${hasAccount && newOrder.userId ? "border-green-300 ring-1 ring-green-300 bg-green-50" : "border-gray-200"}`} value={newOrder.customerPhone} onChange={(e) => handlePhoneChange(e.target.value)} />
+                  {hasAccount && newOrder.userId && <p className="text-xs text-green-600 mt-1">✓ Đã tìm thấy khách hàng</p>}
+                  {hasAccount && newOrder.customerPhone && newOrder.customerPhone.length >= 8 && !newOrder.userId && <p className="text-xs text-yellow-600 mt-1">Không tìm thấy khách hàng</p>}
+                </div>
+                <div className="col-span-1">
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Họ và tên</label>
                   <input type="text" required placeholder="Nhập họ và tên..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerName} onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Số điện thoại</label>
-                  <input type="tel" required placeholder="Nhập số điện thoại..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerPhone} onChange={(e) => setNewOrder({ ...newOrder, customerPhone: e.target.value })} />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Địa chỉ</label>
@@ -349,67 +400,95 @@ const OrdersDashboard = () => {
                 <label className="block text-xs font-bold text-blue-800 mb-2 uppercase">Chọn đồ thuê</label>
 
 
-                <select
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded-lg mb-3 outline-none focus:ring-2 focus:ring-blue-500"
-                  value={currentProduct?._id || ""}
+                <div className="relative mb-3">
+                  <input
+                    type="text"
+                    placeholder="Nhập tên sản phẩm để tìm..."
+                    className="w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    value={searchProductTerm}
+                    onChange={(e) => {
+                       setSearchProductTerm(e.target.value);
+                       setShowProductDropdown(true);
+                       if (!e.target.value) {
+                          setCurrentProduct(null);
+                          setCurrentSize("");
+                          setCurrentColor("");
+                       }
+                    }}
+                    onFocus={() => setShowProductDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowProductDropdown(false), 200)}
+                  />
+                  {showProductDropdown && (
+                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto mt-1 top-full">
+                      {products.filter(p => !searchProductTerm || p.name.toLowerCase().includes(searchProductTerm.toLowerCase())).length > 0 ? (
+                        products.filter(p => !searchProductTerm || p.name.toLowerCase().includes(searchProductTerm.toLowerCase())).map(p => (
+                          <li
+                            key={p._id}
+                            className="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0 text-sm transition-colors"
+                            onClick={async () => {
+                              setSearchProductTerm(p.name);
+                              setShowProductDropdown(false);
+                              
+                              const id = p._id;
+                              const prod = p;
+                              if (!id || !prod) {
+                                setCurrentProduct(null);
+                                setCurrentSize("");
+                                setCurrentColor("");
+                                return;
+                              }
 
-                  onChange={async (e) => {
-                    const id = e.target.value;
-                    const prod = products.find(p => p._id === id) as Product | undefined;
-                    if (!id || !prod) {
-                      setCurrentProduct(null);
-                      setCurrentSize("");
-                      setCurrentColor("");
-                      return;
-                    }
+                              try {
+                                const detailRes = await axios.get(`http://localhost:3000/api/products/${id}`);
+                                const detail = detailRes.data as any;
+                                const rawVariants = Array.isArray(detail?.data?.variants) && detail.data.variants.length > 0
+                                  ? detail.data.variants
+                                  : Array.isArray(detail?.data?.product?.variants) && detail.data.product.variants.length > 0
+                                    ? detail.data.product.variants
+                                    : Array.isArray(detail?.variants) && detail.variants.length > 0
+                                      ? detail.variants
+                                      : [];
 
-                    try {
-                      const detailRes = await axios.get(`http://localhost:3000/api/products/${id}`);
-                      const detail = detailRes.data as any;
-                      const rawVariants = Array.isArray(detail?.data?.variants) && detail.data.variants.length > 0
-                        ? detail.data.variants
-                        : Array.isArray(detail?.data?.product?.variants) && detail.data.product.variants.length > 0
-                          ? detail.data.product.variants
-                          : Array.isArray(detail?.variants) && detail.variants.length > 0
-                            ? detail.variants
-                            : [];
+                                const mappedVariants = normalizeVariants(rawVariants);
 
-                      const mappedVariants = normalizeVariants(rawVariants);
+                                const merged: Product = {
+                                  ...prod,
+                                  variants: mappedVariants
+                                };
 
-                      const merged: Product = {
-                        ...prod,
-                        variants: mappedVariants
-                      };
+                                setCurrentProduct(merged);
+                                if (mappedVariants.length === 0) {
+                                  setCurrentSize("");
+                                  setCurrentColor("");
+                                  alert("Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.");
+                                  return;
+                                }
+                                const sizes = Array.from(new Set(merged.variants.map(v => v.size)));
+                                setCurrentSize(sizes[0] || "");
+                                const colorsForSize = merged.variants.filter(v => v.size === sizes[0]);
 
-                      setCurrentProduct(merged);
-                      if (mappedVariants.length === 0) {
-                        setCurrentSize("");
-                        setCurrentColor("");
-                        alert("Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.");
-                        return;
-                      }
-                      const sizes = Array.from(new Set(merged.variants.map(v => v.size)));
-                      setCurrentSize(sizes[0] || "");
-                      const colorsForSize = merged.variants.filter(v => v.size === sizes[0]);
-
-                      setCurrentColor(colorsForSize[0]?.color || "");
-                    } catch (err) {
-                      console.error("Lỗi lấy chi tiết sản phẩm:", err);
-                      alert("Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.");
-                      setCurrentProduct(null);
-                      setCurrentSize("");
-                      setCurrentColor("");
-                    }
-                  }}
-                >
-                  <option value="">-- Click chọn sản phẩm --</option>
-
-                  {products.map(p => (
-                    <option key={p._id} value={p._id}>
-                      {p.name} (Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ)
-                    </option>
-                  ))}
-                </select>
+                                setCurrentColor(colorsForSize[0]?.color || "");
+                              } catch (err) {
+                                console.error("Lỗi lấy chi tiết sản phẩm:", err);
+                                alert("Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.");
+                                setCurrentProduct(null);
+                                setCurrentSize("");
+                                setCurrentColor("");
+                              }
+                            }}
+                          >
+                            <span className="font-semibold text-gray-800 block truncate">{p.name}</span>
+                            <span className="text-[11px] text-gray-500 font-medium">
+                              Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ
+                            </span>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="p-3 text-sm text-gray-500 text-center">Không tìm thấy sản phẩm...</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="text-[10px] text-gray-400 font-bold uppercase italic">Size</label>
