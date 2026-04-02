@@ -36,6 +36,25 @@ const actionColors: Record<string, string> = {
   adjust: "geekblue",
 };
 
+const actionLabel = (value?: string) => {
+  switch (value) {
+    case "initial":
+      return "Khởi tạo";
+    case "update":
+      return "Cập nhật";
+    case "added":
+      return "Thêm biến thể";
+    case "removed":
+      return "Xóa biến thể";
+    case "rent":
+      return "Cho thuê";
+    case "adjust":
+      return "Điều chỉnh";
+    default:
+      return value ?? "-";
+  }
+};
+
 const StockHistoryDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -189,7 +208,7 @@ const StockHistoryDashboard = () => {
         title: "Hành động",
         dataIndex: "action",
         render: (value: string) => (
-          <Tag color={actionColors[value] || "default"}>{value || "-"}</Tag>
+          <Tag color={actionColors[value] || "default"}>{actionLabel(value)}</Tag>
         ),
       },
       { title: "Ghi chú", dataIndex: "note" },

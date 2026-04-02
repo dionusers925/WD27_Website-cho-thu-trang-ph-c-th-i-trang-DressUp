@@ -178,6 +178,32 @@
   flex-wrap: wrap;
 }
 
+.product-variant-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.product-variant-summary-item {
+  border: 1px solid var(--product-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fffaf7;
+}
+
+.product-variant-summary-label {
+  font-size: 12px;
+  color: var(--product-muted);
+}
+
+.product-variant-summary-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--product-text);
+  margin-top: 4px;
+}
+
 .product-variants-attrs {
   display: none;
 }

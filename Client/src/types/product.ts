@@ -11,6 +11,8 @@ export interface ProductVariant {
   color: string;
   sku: string;
   stock?: number;
+  reservedStock?: number;
+  soldStock?: number;
   attributes?: VariantAttribute[];
 }
 

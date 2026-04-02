@@ -39,13 +39,17 @@ const statusLabel = (value?: string) => {
 const historyActionLabel = (value?: string) => {
   switch (value) {
     case "initial":
-      return "Tạo mới";
+      return "Khởi tạo";
     case "update":
       return "Cập nhật";
     case "added":
       return "Thêm biến thể";
     case "removed":
-      return "Xoá biến thể";
+      return "Xóa biến thể";
+    case "rent":
+      return "Cho thuê";
+    case "adjust":
+      return "Điều chỉnh";
     default:
       return value ?? "-";
   }
@@ -118,6 +122,26 @@ export default function ProductDetail() {
     () => (product?.variants ?? []).length,
     [product]
   );
+
+  const totalAvailable = useMemo(
+    () =>
+      (product?.variants ?? []).reduce(
+        (sum, v: any) => sum + (Number(v.stock ?? 0) || 0),
+        0
+      ),
+    [product]
+  );
+
+  const totalBorrowed = useMemo(
+    () =>
+      (product?.variants ?? []).reduce(
+        (sum, v: any) => sum + (Number(v.reservedStock ?? 0) || 0),
+        0
+      ),
+    [product]
+  );
+
+  const totalAll = totalAvailable + totalBorrowed;
 
   const historyColumns = [
     {
@@ -280,11 +304,39 @@ export default function ProductDetail() {
             {(product.variants ?? []).length === 0 && (
               <div className="product-variants-empty">Chưa có biến thể</div>
             )}
+            {(product.variants ?? []).length > 0 && (
+              <div className="product-variant-summary">
+                <div className="product-variant-summary-item">
+                  <div className="product-variant-summary-label">
+                    Tổng sản phẩm khách đang thuê
+                  </div>
+                  <div className="product-variant-summary-value">
+                    {totalBorrowed}
+                  </div>
+                </div>
+                <div className="product-variant-summary-item">
+                  <div className="product-variant-summary-label">
+                    Tổng sản phẩm còn lại sau khi cho thuê
+                  </div>
+                  <div className="product-variant-summary-value">
+                    {totalAvailable}
+                  </div>
+                </div>
+                <div className="product-variant-summary-item">
+                  <div className="product-variant-summary-label">
+                    Tổng sản phẩm (đang thuê + còn lại)
+                  </div>
+                  <div className="product-variant-summary-value">
+                    {totalAll}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="product-info-list">
               {(product.variants ?? []).map((v, index) => (
                 <div key={index}>
                   #{index + 1} {v.size || "-"} - {v.color || "-"} ({v.sku || "-"})
-                  - Số lượng: {v.stock ?? 0}
+                  - Đang mượn: {v.reservedStock ?? 0} - Còn lại: {v.stock ?? 0}
                 </div>
               ))}
             </div>
@@ -314,10 +366,12 @@ export default function ProductDetail() {
                 }}
                 style={{ width: 180 }}
                 options={[
-                  { value: "initial", label: "Tạo mới" },
+                  { value: "initial", label: "Khởi tạo" },
                   { value: "update", label: "Cập nhật" },
                   { value: "added", label: "Thêm biến thể" },
-                  { value: "removed", label: "Xoá biến thể" },
+                  { value: "removed", label: "Xóa biến thể" },
+                  { value: "rent", label: "Cho thuê" },
+                  { value: "adjust", label: "Điều chỉnh" },
                 ]}
               />
             </div>
