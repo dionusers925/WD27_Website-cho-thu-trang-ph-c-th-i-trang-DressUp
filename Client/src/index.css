@@ -1,8 +1,10 @@
-
 @import "tailwindcss";
 
+<<<<<<< HEAD
 
-:root {
+=======
+>>>>>>> 3ca7b2ef8a625dd7ffce70e96c189d6873c2fe8f
+/* :root {
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -23,6 +25,7 @@
 body {
   margin: 0;
   min-height: 100vh;
+  font-family: 'Inter', sans-serif;
   background-color: #f5f4f3;
 }
 
@@ -65,4 +68,4 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
-}
+} */

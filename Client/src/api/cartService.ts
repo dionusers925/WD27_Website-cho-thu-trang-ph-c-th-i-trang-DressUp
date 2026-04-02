@@ -19,11 +19,26 @@ export const clearCart = async () => {
   return axios.delete(`http://localhost:3000/api/cart`);
 };
 
-export const addToCart = async (productId: string, quantity = 1, days = 1) => {
+export const addToCart = async (
+  productId: string,
+  quantity = 1,
+  days = 1,
+  size?: string,
+  color?: string,
+) => {
   const res = await axios.post("http://localhost:3000/api/cart", {
     productId,
     quantity,
     days,
+    size,
+    color,
+  });
+  console.log("ADD TO CART:", {
+    productId,
+    quantity,
+    days,
+    size,
+    color,
   });
 
   return res.data;

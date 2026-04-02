@@ -13,7 +13,7 @@ router.get("/cart", (req, res) => {
 
 router.post("/cart", async (req, res) => {
   try {
-    const { productId, quantity, days } = req.body;
+    const { productId, quantity, days, size, color } = req.body;
 
     const product = await Product.findById(productId);
 
@@ -29,18 +29,27 @@ router.post("/cart", async (req, res) => {
       ? tier.price
       : (rentalPrices?.[0]?.price || 0) * days;
 
-    const existingItem = cart.items.find((i: any) => i._id === productId);
+    const existingItem = cart.items.find(
+      (i: any) =>
+        i.productId === productId &&
+        i.size === size &&
+        i.color === color &&
+        i.days === days,
+    );
 
     if (existingItem) {
       existingItem.quantity += quantity || 1;
     } else {
       const item = {
-        _id: product._id.toString(),
+        _id: crypto.randomUUID(),
+        productId: product._id.toString(),
         name: product.name,
         price: rentalPrice,
-        days: days,
+        days,
         quantity: quantity || 1,
         image: product.images?.[0] || "",
+        size,
+        color,
       };
 
       cart.items.push(item);

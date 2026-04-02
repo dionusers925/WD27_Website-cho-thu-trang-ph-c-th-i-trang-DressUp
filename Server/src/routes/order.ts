@@ -1,4 +1,4 @@
-﻿import express from "express";
+import express from "express";
 import mongoose from "mongoose";
 import Order from "../models/Order";
 import Variant from "../models/variant.model";
@@ -17,6 +17,7 @@ const allowedStatuses = [
   "confirmed",
   "shipped",
   "delivered",
+  "fee_incurred",
   "completed",
   "cancelled",
 ];
@@ -28,12 +29,12 @@ const normalizeValue = (value: any) =>
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[̀-ͯ]/g, "");
 
 const buildVariantKey = (productId: any, size: any, color: any) =>
   `${String(productId)}::${normalizeValue(size)}::${normalizeValue(color)}`;
 
-// Lấy danh sách đơn hàng
+// L?y danh s?ch ??n h?ng
 orderRouter.get("/", async (_req, res) => {
   try {
     const orders = await Order.find()
@@ -42,16 +43,16 @@ orderRouter.get("/", async (_req, res) => {
       .sort({ createdAt: -1 });
     res.json(orders);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi Server" });
+    res.status(500).json({ message: "L?i Server" });
   }
 });
 
-// Lấy chi tiết đơn hàng
+// L?y chi ti?t ??n h?ng
 orderRouter.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
+      return res.status(400).json({ message: "ID ??n h?ng kh?ng h?p l?" });
     }
 
     const order = await Order.findById(id)
@@ -59,16 +60,16 @@ orderRouter.get("/:id", async (req, res) => {
       .populate("items.productId", "name price images");
 
     if (!order) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+      return res.status(404).json({ message: "Kh?ng t?m th?y ??n h?ng" });
     }
 
     res.json(order);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi Server" });
+    res.status(500).json({ message: "L?i Server" });
   }
 });
 
-// Tạo đơn hàng mới
+// T?o ??n h?ng m?i
 orderRouter.post("/", async (req, res) => {
   try {
     const {
@@ -81,12 +82,17 @@ orderRouter.post("/", async (req, res) => {
       lateDays,
       damageFee,
       penaltyNote,
+      overdueDays,
+      damageErrors,
+      lostItems,
       items,
       startDate,
       endDate,
       customerName,
       customerPhone,
       customerAddress,
+      bankName,
+      bankAccount,
       note,
     } = req.body;
 
@@ -115,7 +121,9 @@ orderRouter.post("/", async (req, res) => {
       : [];
 
     if (normalizedItems.length === 0) {
-      return res.status(400).json({ message: "Đơn hàng phải có ít nhất 1 sản phẩm." });
+      return res
+        .status(400)
+        .json({ message: "??n h?ng ph?i c? ?t nh?t 1 s?n ph?m." });
     }
 
     const missingVariantInfo = normalizedItems.find(
@@ -123,7 +131,7 @@ orderRouter.post("/", async (req, res) => {
     );
     if (missingVariantInfo) {
       return res.status(400).json({
-        message: "Sản phẩm thuê phải có Size và Màu.",
+        message: "S?n ph?m thu? ph?i c? Size v? M?u.",
       });
     }
 
@@ -139,7 +147,6 @@ orderRouter.post("/", async (req, res) => {
       (sum: number, item: any) => sum + item.deposit * item.quantity,
       0
     );
-    const computedTotal = rentalSubtotal + depositTotal;
 
     const resolvedStatus =
       typeof status === "string" && allowedStatuses.includes(status)
@@ -151,23 +158,26 @@ orderRouter.post("/", async (req, res) => {
         ? paymentStatus
         : "pending";
 
-    let normalizedLateDays = Number(lateDays ?? 0) || 0;
+    let normalizedLateDays =
+      Number(lateDays ?? overdueDays ?? 0) || 0;
     const rentalPerDay = normalizedItems.reduce(
       (sum: number, item: any) => sum + item.price * item.quantity,
       0
     );
     let extraLateFee =
-      normalizedLateDays > 0
-        ? rentalPerDay * normalizedLateDays
-        : Number(lateFee ?? 0) || 0;
+      Number(lateFee ?? 0) ||
+      (normalizedLateDays > 0 ? rentalPerDay * normalizedLateDays : 0);
     let extraDamageFee = Number(damageFee ?? 0) || 0;
 
-    if (resolvedStatus !== "completed") {
+    const penaltyEnabled =
+      resolvedStatus === "completed" || resolvedStatus === "fee_incurred";
+    if (!penaltyEnabled) {
       normalizedLateDays = 0;
       extraLateFee = 0;
       extraDamageFee = 0;
     }
 
+    const computedTotal = rentalSubtotal + depositTotal;
     const computedTotalWithFees = computedTotal + extraLateFee + extraDamageFee;
 
     const orderTotal = Number(total);
@@ -263,14 +273,14 @@ orderRouter.post("/", async (req, res) => {
       if (!variant) {
         return res.status(400).json({
           message: item.variantId
-            ? "Không tìm thấy biến thể được chọn."
-            : `Không tìm thấy biến thể cho Size "${item.size}" và Màu "${item.color}".`,
+            ? "Kh?ng t?m th?y bi?n th? ???c ch?n."
+            : `Kh?ng t?m th?y bi?n th? cho Size "${item.size}" v? M?u "${item.color}".`,
         });
       }
       const available = Number(variant.stock ?? 0);
       if (available < item.quantity) {
         return res.status(400).json({
-          message: `Tồn kho không đủ cho "${variant.sku || variant.size + " - " + variant.color}".`,
+          message: `T?n kho kh?ng ?? cho "${variant.sku || variant.size + " - " + variant.color}".`,
         });
       }
       pendingUpdates.push({ variant, quantity: item.quantity });
@@ -299,7 +309,7 @@ orderRouter.post("/", async (req, res) => {
       if (!updated) {
         await rollbackStock();
         return res.status(400).json({
-          message: "Tồn kho không đủ, vui lòng kiểm tra lại.",
+          message: "T?n kho kh?ng ??, vui l?ng ki?m tra l?i.",
         });
       }
 
@@ -336,16 +346,21 @@ orderRouter.post("/", async (req, res) => {
       lateDays: normalizedLateDays,
       lateFee: extraLateFee,
       damageFee: extraDamageFee,
-      penaltyNote: resolvedStatus === "completed" ? penaltyNote || undefined : undefined,
+      penaltyNote: penaltyEnabled ? penaltyNote || undefined : undefined,
+      overdueDays: Number(overdueDays ?? normalizedLateDays) || 0,
+      damageErrors: Array.isArray(damageErrors) ? damageErrors : [],
+      lostItems: Array.isArray(lostItems) ? lostItems : [],
       customerName: customerName || undefined,
       customerPhone: customerPhone || undefined,
       customerAddress: customerAddress || undefined,
+      bankName: bankName || undefined,
+      bankAccount: bankAccount || undefined,
       note: note || undefined,
       shippingAddress: {
-        name: customerName || "Khách tại quầy",
+        name: customerName || "Kh?ch t?i qu?y",
         phone: customerPhone || undefined,
-        address: customerAddress || "Tại quầy",
-        city: "Tại quầy",
+        address: customerAddress || "T?i qu?y",
+        city: "T?i qu?y",
       },
     });
 
@@ -353,7 +368,7 @@ orderRouter.post("/", async (req, res) => {
       await newOrder.save();
     } catch (error) {
       await rollbackStock();
-      return res.status(400).json({ message: "Lỗi tạo đơn hàng" });
+      return res.status(400).json({ message: "L?i t?o ??n h?ng" });
     }
 
     try {
@@ -364,52 +379,82 @@ orderRouter.post("/", async (req, res) => {
       await rollbackStock();
       await Order.findByIdAndDelete(newOrder._id);
       await VariantStockHistory.deleteMany({ note: `Order: ${orderNumber}` });
-      return res.status(400).json({ message: "Không thể lưu lịch sử tồn kho." });
+      return res
+        .status(400)
+        .json({ message: "Kh?ng th? l?u l?ch s? t?n kho." });
     }
 
     res.status(201).json(newOrder);
   } catch (error: any) {
-    console.error("Lỗi Backend:", error);
-    res.status(400).json({ message: "Lỗi tạo đơn hàng", error: error.message });
+    console.error("L?i Backend:", error);
+    res.status(400).json({ message: "L?i t?o ??n h?ng", error: error.message });
   }
 });
 
-// Cập nhật trạng thái và phí phạt
-orderRouter.patch("/:id", async (req, res) => {
+const handleUpdateOrder = async (req: express.Request, res: express.Response) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
+      return res.status(400).json({ message: "ID ??n h?ng kh?ng h?p l?" });
     }
 
     const order = await Order.findById(id);
     if (!order) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+      return res.status(404).json({ message: "Kh?ng t?m th?y ??n h?ng" });
     }
 
     const updates: any = {};
+
     if (typeof req.body.status === "string") {
       if (!allowedStatuses.includes(req.body.status)) {
-        return res.status(400).json({ message: "Trạng thái không hợp lệ" });
+        return res.status(400).json({ message: "Tr?ng th?i kh?ng h?p l?" });
       }
       updates.status = req.body.status;
     }
 
     if (typeof req.body.paymentStatus === "string") {
       if (!allowedPaymentStatuses.includes(req.body.paymentStatus)) {
-        return res.status(400).json({ message: "Trạng thái thanh toán không hợp lệ" });
+        return res
+          .status(400)
+          .json({ message: "Tr?ng th?i thanh to?n kh?ng h?p l?" });
       }
       updates.paymentStatus = req.body.paymentStatus;
     }
 
     if (req.body.lateDays !== undefined) {
       updates.lateDays = Number(req.body.lateDays ?? 0) || 0;
+      updates.overdueDays = updates.lateDays;
     }
+
+    if (req.body.overdueDays !== undefined) {
+      updates.overdueDays = Number(req.body.overdueDays ?? 0) || 0;
+      if (updates.lateDays === undefined) {
+        updates.lateDays = updates.overdueDays;
+      }
+    }
+
+    if (req.body.lateFee !== undefined) {
+      updates.lateFee = Number(req.body.lateFee ?? 0) || 0;
+    }
+
     if (req.body.damageFee !== undefined) {
       updates.damageFee = Number(req.body.damageFee ?? 0) || 0;
     }
+
     if (req.body.penaltyNote !== undefined) {
       updates.penaltyNote = String(req.body.penaltyNote ?? "");
+    }
+
+    if (req.body.damageErrors !== undefined) {
+      updates.damageErrors = Array.isArray(req.body.damageErrors)
+        ? req.body.damageErrors
+        : [];
+    }
+
+    if (req.body.lostItems !== undefined) {
+      updates.lostItems = Array.isArray(req.body.lostItems)
+        ? req.body.lostItems
+        : [];
     }
 
     const start = order.startDate ?? new Date();
@@ -437,35 +482,68 @@ orderRouter.patch("/:id", async (req, res) => {
     }, 0);
 
     const targetStatus = updates.status ?? order.status;
+    const penaltyEnabled =
+      targetStatus === "completed" || targetStatus === "fee_incurred";
 
-    if (targetStatus !== "completed") {
+    if (!penaltyEnabled) {
       updates.lateDays = 0;
       updates.lateFee = 0;
       updates.damageFee = 0;
       updates.penaltyNote = "";
+      updates.overdueDays = 0;
+      updates.damageErrors = [];
+      updates.lostItems = [];
     }
 
-    const resolvedLateDays =
-      targetStatus === "completed"
-        ? updates.lateDays !== undefined
-          ? updates.lateDays
-          : Number(order.lateDays ?? 0) || 0
-        : 0;
+    const resolvedLateDays = penaltyEnabled
+      ? updates.lateDays !== undefined
+        ? updates.lateDays
+        : Number(order.lateDays ?? 0) || 0
+      : 0;
 
-    const lateFeeValue =
-      targetStatus === "completed" ? rentalPerDay * resolvedLateDays : 0;
+    let resolvedLateFee = 0;
+    if (penaltyEnabled) {
+      resolvedLateFee =
+        updates.lateFee !== undefined
+          ? updates.lateFee
+          : rentalPerDay * resolvedLateDays;
+    }
 
-    updates.lateFee = lateFeeValue;
+    const resolvedDamageFee = penaltyEnabled
+      ? updates.damageFee !== undefined
+        ? updates.damageFee
+        : Number(order.damageFee ?? 0) || 0
+      : 0;
+
+    const activeLostItems = Array.isArray(updates.lostItems)
+      ? updates.lostItems
+      : Array.isArray(order.lostItems)
+      ? order.lostItems
+      : [];
+
+    const lostDepositTotal = (order.items ?? []).reduce(
+      (sum: number, item: any) => {
+        const key = String(item?._id ?? "");
+        if (key && activeLostItems.includes(key)) {
+          return sum + Number(item.deposit ?? 0) * Number(item.quantity ?? 1);
+        }
+        return sum;
+      },
+      0
+    );
+
     updates.lateDays = resolvedLateDays;
+    updates.overdueDays = updates.overdueDays ?? resolvedLateDays;
+    updates.lateFee = resolvedLateFee;
+    updates.damageFee = resolvedDamageFee;
 
-    const damageFeeValue =
+    const feeTotal = resolvedLateFee + resolvedDamageFee + lostDepositTotal;
+    const nextTotal =
       targetStatus === "completed"
-        ? updates.damageFee !== undefined
-          ? updates.damageFee
-          : Number(order.damageFee ?? 0) || 0
-        : 0;
+        ? rentalSubtotal + feeTotal
+        : rentalSubtotal + depositTotal + feeTotal;
 
-    updates.total = rentalSubtotal + depositTotal + lateFeeValue + damageFeeValue;
+    updates.total = nextTotal;
 
     const updated = await Order.findByIdAndUpdate(id, updates, {
       returnDocument: "after",
@@ -473,8 +551,12 @@ orderRouter.patch("/:id", async (req, res) => {
 
     res.json(updated);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi Server" });
+    res.status(500).json({ message: "L?i Server" });
   }
-});
+};
+
+// C?p nh?t tr?ng th?i & ph?
+orderRouter.patch("/:id", handleUpdateOrder);
+orderRouter.put("/:id", handleUpdateOrder);
 
 export default orderRouter;

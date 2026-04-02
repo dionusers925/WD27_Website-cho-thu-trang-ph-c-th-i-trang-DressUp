@@ -6,7 +6,7 @@ const demoUser = "65c000000000000000000001";
 
 export const addToCart = async (req: Request, res: Response) => {
   try {
-    const { productId, quantity = 1, days } = req.body;
+    const { productId, quantity = 1, days = 1, size, color } = req.body;
 
     const product = await Product.findById(productId);
 
@@ -18,7 +18,9 @@ export const addToCart = async (req: Request, res: Response) => {
     const rentalPrices =
       (product as any).rentalPrices ?? (product as any).rentalTiers ?? [];
     const tier = rentalPrices.find((t: any) => t.days === days);
-    const price = tier?.price || 0;
+    const basePrice = rentalPrices?.[0]?.price ?? 0;
+    const price = tier?.price || basePrice * (days || 1);
+
 
     let cart = await Cart.findOne({ user: demoUser });
 
@@ -30,7 +32,11 @@ export const addToCart = async (req: Request, res: Response) => {
     }
 
     const existingItem = cart.items.find(
-      (i) => i.product.toString() === productId,
+      (i) =>
+        i.product.toString() === productId &&
+        i.size === size &&
+        i.color === color &&
+        i.days === days,
     );
 
     if (existingItem) {
@@ -40,6 +46,9 @@ export const addToCart = async (req: Request, res: Response) => {
         product: productId,
         quantity,
         price,
+        days,
+        size,
+        color,
       });
     }
 

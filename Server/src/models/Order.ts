@@ -1,4 +1,4 @@
-﻿import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IOrderItem {
   productId: mongoose.Types.ObjectId;
@@ -20,6 +20,8 @@ export interface IOrder extends Document {
   customerName?: string;
   customerPhone?: string;
   customerAddress?: string;
+  bankName?: string;
+  bankAccount?: string;
   note?: string;
 
   shippingAddress?: {
@@ -38,6 +40,9 @@ export interface IOrder extends Document {
   lateFee?: number;
   damageFee?: number;
   penaltyNote?: string;
+  overdueDays?: number;
+  damageErrors?: string[];
+  lostItems?: string[];
   total: number;
 
   paymentMethod: string;
@@ -48,6 +53,7 @@ export interface IOrder extends Document {
     | "confirmed"
     | "shipped"
     | "delivered"
+    | "fee_incurred"
     | "completed"
     | "cancelled";
 
@@ -80,6 +86,8 @@ const orderSchema: Schema = new Schema(
     customerName: String,
     customerPhone: String,
     customerAddress: String,
+    bankName: String,
+    bankAccount: String,
     note: String,
 
     shippingAddress: {
@@ -98,6 +106,9 @@ const orderSchema: Schema = new Schema(
     lateFee: { type: Number, default: 0 },
     damageFee: { type: Number, default: 0 },
     penaltyNote: { type: String },
+    overdueDays: { type: Number, default: 0 },
+    damageErrors: { type: [String], default: [] },
+    lostItems: { type: [String], default: [] },
     total: { type: Number, required: true },
 
     paymentMethod: { type: String, default: "cod" },
@@ -110,6 +121,7 @@ const orderSchema: Schema = new Schema(
         "confirmed",
         "shipped",
         "delivered",
+        "fee_incurred",
         "completed",
         "cancelled",
       ],

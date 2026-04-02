@@ -4,10 +4,20 @@ export interface RentalPrice {
   days: number;
   price: number;
 }
+interface RentalTier {
+  days: number;
+  price: number;
+}
+interface Variant {
+  size: string;
+  color: string;
+}
 
 export interface ProductDocument extends Document {
   name: string;
   slug: string;
+  rentalTiers: RentalTier[];
+  variants: Variant[];
   categoryId: mongoose.Types.ObjectId;
 
   description?: string;
@@ -36,6 +46,10 @@ const rentalPriceSchema = new Schema<RentalPrice>({
   days: Number,
   price: Number,
 });
+const rentalTierSchema = new Schema<RentalTier>({
+  days: Number,
+  price: Number,
+});
 
 const productSchema = new Schema<ProductDocument>(
   {
@@ -44,7 +58,7 @@ const productSchema = new Schema<ProductDocument>(
       required: true,
       trim: true,
     },
-
+    rentalTiers: [rentalTierSchema],
     slug: {
       type: String,
       required: true,
@@ -52,6 +66,12 @@ const productSchema = new Schema<ProductDocument>(
       trim: true,
       lowercase: true,
     },
+    variants: [
+      {
+        size: String,
+        color: String,
+      },
+    ],
 
     categoryId: {
       type: Schema.Types.ObjectId,
@@ -101,7 +121,7 @@ const productSchema = new Schema<ProductDocument>(
       default: "active",
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model<ProductDocument>("Product", productSchema);
