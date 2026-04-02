@@ -280,18 +280,36 @@ function HomePage() {
 
         <div className="grid grid-cols-12 gap-6">
           <div className="col-span-12 md:col-span-4 space-y-6">
-            <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000" />
-            <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000" />
+            <img
+              className="w-full h-[500px] object-cover rounded-xl"
+              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000"
+            />
+            <img
+              className="w-full h-[500px] object-cover rounded-xl"
+              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
+            />
           </div>
 
           <div className="col-span-12 md:col-span-4 space-y-6 md:pt-20">
-            <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000" />
-            <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000" />
+            <img
+              className="w-full h-[400px] object-cover rounded-xl"
+              src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000"
+            />
+            <img
+              className="w-full h-[400px] object-cover rounded-xl"
+              src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
+            />
           </div>
 
           <div className="col-span-12 md:col-span-4 space-y-6">
-            <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000" />
-            <img src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000" />
+            <img
+              className="w-full h-[500px] object-cover rounded-xl"
+              src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000"
+            />
+            <img
+              className="w-full h-[500px] object-cover rounded-xl"
+              src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000"
+            />
           </div>
         </div>
       </div>
