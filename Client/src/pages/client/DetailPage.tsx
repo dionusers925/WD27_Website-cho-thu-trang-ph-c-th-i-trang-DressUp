@@ -78,8 +78,11 @@ function DetailPage() {
         product._id,
         1,
         diffDays,
+        product.depositDefault,
+        rentalPrice,
+        totalPayment,
         selectedVariant.size,
-        selectedVariant.color,
+        selectedVariant.color || product.colorFamily,
       );
 
       navigate("/cart");
@@ -87,6 +90,7 @@ function DetailPage() {
       console.log("Lỗi thêm vào giỏ hàng:", error);
     }
   };
+  console.log("VARIANT:", selectedVariant);
   return (
     <div className="bg-white min-h-screen selection:bg-black selection:text-white">
       <div className="max-w-7xl mx-auto px-6 py-32">
@@ -304,13 +308,8 @@ function DetailPage() {
       </div>
       <ReviewList productId={id!} />
 
-<ReviewForm
-  productId={id!}
-  onSuccess={() => window.location.reload()}
-/>
+      <ReviewForm productId={id!} onSuccess={() => window.location.reload()} />
     </div>
-
-    
   );
 }
 

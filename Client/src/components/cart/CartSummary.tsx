@@ -1,13 +1,23 @@
 import { formatPrice } from "../../utils/formatPrice";
+import { rentalPriceSchema } from "./../../../../Server/src/validations/product.validation";
 
 type Props = {
   subtotal: number;
+  deposit: number;
+  total: number;
   count: number;
   onClear: () => void;
   onCheckout: () => void;
 };
 
-export default function CartSummary({ subtotal, count, onClear, onCheckout }: Props) {
+export default function CartSummary({
+  subtotal,
+  count,
+  deposit,
+  total,
+  onClear,
+  onCheckout,
+}: Props) {
   return (
     <div className="bg-white border border-gray-300 p-6">
       <h3 className="uppercase font-semibold mb-4">Tổng giỏ hàng</h3>
@@ -15,8 +25,22 @@ export default function CartSummary({ subtotal, count, onClear, onCheckout }: Pr
       <p className="text-sm mb-6">Đã chọn {count} sản phẩm</p>
 
       <div className="flex justify-between mb-3">
+        <span>Tiền cọc</span>
+        <span className="font-bold">{formatPrice(deposit)}</span>
+      </div>
+
+      <div className="flex justify-between mb-3">
+        <span>Tiền thuê</span>
+        <span className="font-bold">{formatPrice(subtotal)}</span>
+      </div>
+
+      {/* <p className="text-gray-600 mt-1">
+        {item.rentalPrice?.toLocaleString()}đ/{item.days} ngày thuê
+      </p> */}
+
+      <div className="flex justify-between mb-3">
         <span>Tạm tính</span>
-        <span>{formatPrice(subtotal)}</span>
+        <span>{formatPrice(total)}</span>
       </div>
 
       <div className="flex justify-between mb-4">
@@ -28,15 +52,15 @@ export default function CartSummary({ subtotal, count, onClear, onCheckout }: Pr
 
       <div className="flex justify-between font-semibold text-lg mb-6">
         <span>Tổng cộng</span>
-        <span className="text-[#c8a693]">{formatPrice(subtotal)}</span>
+        <span className="text-[#c8a693]">{formatPrice(total)}</span>
       </div>
 
       <button
-  onClick={onCheckout}
-  className="w-full bg-black text-white py-3 mt-4"
->
-  Thanh toán VNPAY
-</button>
+        onClick={onCheckout}
+        className="w-full bg-black text-white py-3 mt-4"
+      >
+        Thanh toán VNPAY
+      </button>
 
       <button
         onClick={onClear}

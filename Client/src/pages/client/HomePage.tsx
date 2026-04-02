@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
@@ -56,27 +54,27 @@ function HomePage() {
   const luxuryFont = { fontFamily: "Playfair Display, serif" };
 
   const isDown = useRef(false);
-const startX = useRef(0);
-const scrollLeftPos = useRef(0);
+  const startX = useRef(0);
+  const scrollLeftPos = useRef(0);
 
-const handleMouseDown = (e: React.MouseEvent) => {
-  isDown.current = true;
-  startX.current = e.pageX - (scrollRef.current?.offsetLeft || 0);
-  scrollLeftPos.current = scrollRef.current?.scrollLeft || 0;
-};
+  const handleMouseDown = (e: React.MouseEvent) => {
+    isDown.current = true;
+    startX.current = e.pageX - (scrollRef.current?.offsetLeft || 0);
+    scrollLeftPos.current = scrollRef.current?.scrollLeft || 0;
+  };
 
-const handleMouseLeave = () => (isDown.current = false);
-const handleMouseUp = () => (isDown.current = false);
+  const handleMouseLeave = () => (isDown.current = false);
+  const handleMouseUp = () => (isDown.current = false);
 
-const handleMouseMove = (e: React.MouseEvent) => {
-  if (!isDown.current) return;
-  e.preventDefault();
-  const x = e.pageX - (scrollRef.current?.offsetLeft || 0);
-  const walk = (x - startX.current) * 1.5;
-  if (scrollRef.current) {
-    scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
-  }
-};
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDown.current) return;
+    e.preventDefault();
+    const x = e.pageX - (scrollRef.current?.offsetLeft || 0);
+    const walk = (x - startX.current) * 1.5;
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
+    }
+  };
 
   return (
     <div className="bg-[#FDFBF9] text-[#2C2C2C] font-sans selection:bg-black selection:text-white">
@@ -138,7 +136,7 @@ const handleMouseMove = (e: React.MouseEvent) => {
                     : "https://placehold.co/600x800?text=DressUp";
 
                 const dailyTier = item.rentalTiers?.find(
-                  (t: any) => t.days === 1
+                  (t: any) => t.days === 1,
                 );
 
                 const displayPrice = dailyTier
@@ -206,70 +204,67 @@ const handleMouseMove = (e: React.MouseEvent) => {
 
       {/* ================= CATEGORY ================= */}
       <div className="max-w-7xl mx-auto px-6 mt-40 py-20 border-t border-gray-100">
-  <div className="mb-10">
-    <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
-      Danh mục
-    </span>
+        <div className="mb-10">
+          <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
+            Danh mục
+          </span>
 
-    <h2
-      className="text-4xl italic text-gray-900 mt-2"
-      style={luxuryFont}
-    >
-      — Khám phá theo phong cách
-    </h2>
-  </div>
+          <h2 className="text-4xl italic text-gray-900 mt-2" style={luxuryFont}>
+            — Khám phá theo phong cách
+          </h2>
+        </div>
 
-  <div className="relative">
-    {/* fade trái */}
-    <div className="absolute left-0 top-0 w-16 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-    
-    {/* fade phải */}
-    <div className="absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+        <div className="relative">
+          {/* fade trái */}
+          <div className="absolute left-0 top-0 w-16 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
 
-    <div
-      ref={scrollRef}
-      onMouseDown={handleMouseDown}
-      onMouseLeave={handleMouseLeave}
-      onMouseUp={handleMouseUp}
-      onMouseMove={handleMouseMove}
-      className="flex gap-6 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing snap-x snap-mandatory"
-    >
-      {categories.map((cat, index) => {
-        const fallbackImages = [
-          "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
-          "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
-          "https://images.unsplash.com/photo-1539109136881-3be0616acf4b",
-          "https://images.unsplash.com/photo-1509631179647-0177331693ae",
-        ];
+          {/* fade phải */}
+          <div className="absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
 
-        const img = fallbackImages[index % fallbackImages.length];
-
-        return (
-          <Link
-            key={cat._id}
-            to={`/catalog?category=${cat._id}`}
-            className="min-w-[250px] group snap-start"
+          <div
+            ref={scrollRef}
+            onMouseDown={handleMouseDown}
+            onMouseLeave={handleMouseLeave}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            className="flex gap-6 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing snap-x snap-mandatory"
           >
-            <div className="aspect-[3/4] overflow-hidden bg-gray-100 mb-4">
-              <img
-                src={`${img}?w=600`}
-                className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
-                alt={cat.name}
-              />
-            </div>
+            {categories.map((cat, index) => {
+              const fallbackImages = [
+                "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
+                "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
+                "https://images.unsplash.com/photo-1539109136881-3be0616acf4b",
+                "https://images.unsplash.com/photo-1509631179647-0177331693ae",
+              ];
 
-            <h3
-              className="text-lg italic text-gray-800 text-center"
-              style={luxuryFont}
-            >
-              {cat.name}
-            </h3>
-          </Link>
-        );
-      })}
-    </div>
-  </div>
-</div>
+              const img = fallbackImages[index % fallbackImages.length];
+
+              return (
+                <Link
+                  key={cat._id}
+                  to={`/catalog?category=${cat._id}`}
+                  className="min-w-[250px] group snap-start"
+                >
+                  <div className="aspect-[3/4] overflow-hidden bg-gray-100 mb-4">
+                    <img
+                      src={`${img}?w=600`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
+                      alt={cat.name}
+                    />
+                  </div>
+
+                  <h3
+                    className="text-lg italic text-gray-800 text-center"
+                    style={luxuryFont}
+                  >
+                    {cat.name}
+                  </h3>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
 
       {/* ================= GALLERY ================= */}
       <div className="max-w-7xl mx-auto px-6 py-40 border-t border-gray-50">
@@ -278,10 +273,7 @@ const handleMouseMove = (e: React.MouseEvent) => {
             Trưng bày xu hướng
           </span>
 
-          <h2
-            className="text-4xl italic text-gray-900 mt-2"
-            style={luxuryFont}
-          >
+          <h2 className="text-4xl italic text-gray-900 mt-2" style={luxuryFont}>
             — Làm mới phong cách của bạn.
           </h2>
         </div>

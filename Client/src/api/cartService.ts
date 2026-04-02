@@ -23,6 +23,9 @@ export const addToCart = async (
   productId: string,
   quantity = 1,
   days = 1,
+  deposit: number,
+  rentalPrice: number,
+  total: number,
   size?: string,
   color?: string,
 ) => {
@@ -32,13 +35,9 @@ export const addToCart = async (
     days,
     size,
     color,
-  });
-  console.log("ADD TO CART:", {
-    productId,
-    quantity,
-    days,
-    size,
-    color,
+    deposit,
+    rentalPrice,
+    total,
   });
 
   return res.data;

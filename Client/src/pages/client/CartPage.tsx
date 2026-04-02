@@ -71,45 +71,48 @@ export default function CartPage() {
 
   const selectedItems = items.filter((i) => selectedIds.has(i._id));
 
-  const subtotal = selectedItems.reduce(
-    (sum, item) => sum + (item.price || 0) * (item.quantity || 1),
-    0,
-  );
+  const totalDeposit = selectedItems.reduce((sum, item) => {
+    return sum + (item.deposit || 0) * (item.quantity || 1);
+  }, 0);
 
-  
+  const totalRental = selectedItems.reduce((sum, item) => {
+    return sum + (item.rentalPrice || 0) * (item.quantity || 1);
+  }, 0);
 
-const handleCheckout = async () => {
-  try {
-    const user = JSON.parse(localStorage.getItem("user") || "null") as any;
+  const total = totalDeposit + totalRental;
 
-    console.log("USER:", user);
-    console.log("USER ID SEND:", user._id);
+  const handleCheckout = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null") as any;
 
-    if (!user) {
-      alert("Bạn chưa đăng nhập");
-      return;
-    }
+      console.log("USER:", user);
+      console.log("USER ID SEND:", user._id);
 
-    const formattedItems = selectedItems.map((item) => ({
-      productId: item.productId || item._id,
-      quantity: item.quantity || 1,
-      price: item.price,
-    }));
-
-    const res = await axios.post(
-      "http://localhost:3000/api/payment/checkout",
-      {
-        userId: user._id,
-        total: subtotal,
-        items: formattedItems,
+      if (!user) {
+        alert("Bạn chưa đăng nhập");
+        return;
       }
-    );
 
-    window.location.href = res.data.paymentUrl;
-  } catch (error) {
-    console.error("Lỗi thanh toán", error);
-  }
-};
+      const formattedItems = selectedItems.map((item) => ({
+        productId: item.productId || item._id,
+        quantity: item.quantity || 1,
+        price: item.price,
+      }));
+
+      const res = await axios.post(
+        "http://localhost:3000/api/payment/checkout",
+        {
+          userId: user._id,
+          total: total,
+          items: formattedItems,
+        },
+      );
+
+      window.location.href = res.data.paymentUrl;
+    } catch (error) {
+      console.error("Lỗi thanh toán", error);
+    }
+  };
   return (
     <div className="max-w-7xl mx-auto grid grid-cols-12 gap-8 pt-28">
       <div className="col-span-8 bg-white border border-gray-300">
@@ -127,7 +130,9 @@ const handleCheckout = async () => {
 
       <div className="col-span-4">
         <CartSummary
-          subtotal={subtotal}
+          subtotal={totalRental}
+          deposit={totalDeposit}
+          total={total}
           count={selectedItems.length}
           onClear={handleClearCart}
           onCheckout={handleCheckout}
