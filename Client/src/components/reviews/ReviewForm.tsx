@@ -32,7 +32,7 @@ export default function ReviewForm({ productId, onSuccess }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto px-6 pb-24">
-      <h3 className="text-xl font-serif italic mb-6">Write a Review</h3>
+      <h3 className="text-xl font-medium italic mb-6">Viết đánh giá</h3>
 
       <div className="space-y-4">
         <select
@@ -54,12 +54,7 @@ export default function ReviewForm({ productId, onSuccess }: Props) {
           className="w-full border p-4 text-sm h-28"
         />
 
-        <button
-          onClick={submitReview}
-          
-        >
-          Submit Review
-        </button>
+        <button onClick={submitReview}>Gửi đánh giá</button>
       </div>
     </div>
   );

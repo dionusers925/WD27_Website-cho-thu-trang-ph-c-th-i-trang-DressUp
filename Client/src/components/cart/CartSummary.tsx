@@ -55,19 +55,21 @@ export default function CartSummary({
         <span className="text-[#c8a693]">{formatPrice(total)}</span>
       </div>
 
-      <button
-        onClick={onCheckout}
-        className="w-full bg-black text-white py-3 mt-4"
-      >
-        Thanh toán VNPAY
-      </button>
+      <div className="space-y-3">
+        <button
+          onClick={onCheckout}
+          className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition"
+        >
+          Thanh toán VNPAY
+        </button>
 
-      <button
-        onClick={onClear}
-        className="w-full border border-gray-300 py-3 hover:bg-gray-100 transition"
-      >
-        XÓA GIỎ HÀNG
-      </button>
+        <button
+          onClick={onClear}
+          className="w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-100 transition"
+        >
+          XÓA GIỎ HÀNG
+        </button>
+      </div>
     </div>
   );
 }

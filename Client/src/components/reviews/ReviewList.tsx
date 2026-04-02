@@ -28,7 +28,9 @@ export default function ReviewList({ productId }: Props) {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-20">
-      <h2 className="text-2xl font-serif italic mb-10">Customer Reviews</h2>
+      <h2 className="text-2xl font-medium italic mb-10">
+        Đánh giá của khách hàng
+      </h2>
 
       {reviews.map((r) => (
         <div key={r._id} className="border-b py-6">

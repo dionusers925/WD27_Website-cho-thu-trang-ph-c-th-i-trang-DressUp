@@ -120,7 +120,7 @@ function Footer() {
           <p className="text-[9px] text-gray-500 uppercase tracking-[0.3em]">
             © {currentYear} DRESSUP RENTAL. CONCEPT BY A RANDOM GUY.
           </p>
-          <div className="flex gap-10 text-[9px] text-gray-400 uppercase tracking-[0.3em]">
+          {/* <div className="flex gap-10 text-[9px] text-gray-400 uppercase tracking-[0.3em]">
             <a href="#" className="hover:text-white transition-colors">
               Instagram
             </a>
@@ -130,7 +130,7 @@ function Footer() {
             <a href="#" className="hover:text-white transition-colors">
               Pinterest
             </a>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>
