@@ -1,21 +1,41 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Card, Input, Modal, Select, Table, Tag, message, InputNumber } from "antd";
+import {
+  Button,
+  Card,
+  Input,
+  Modal,
+  Select,
+  Table,
+  Tag,
+  message,
+  InputNumber,
+  Radio,
+} from "antd";
 import { getProducts, getProduct } from "../../../services/product.service";
-import { getStockHistory, adjustStock } from "../../../services/stockHistory.service";
+import {
+  getStockHistory,
+  adjustStock,
+  processReturn,
+} from "../../../services/stockHistory.service";
 import { Product } from "../../../types/product";
 import "../products/product.css";
 
 type HistoryItem = {
   _id: string;
   productId?: { _id?: string; name?: string };
+  orderId?: string;
   sku?: string;
   size?: string;
   color?: string;
+  quantity?: number;
   oldStock?: number;
   newStock?: number;
   change?: number;
   action?: string;
   note?: string;
+  processed?: boolean;
+  decision?: string;
+  reason?: string;
   createdAt?: string;
 };
 
@@ -34,6 +54,7 @@ const actionColors: Record<string, string> = {
   removed: "red",
   rent: "purple",
   adjust: "geekblue",
+  returned: "cyan",
 };
 
 const actionLabel = (value?: string) => {
@@ -50,6 +71,8 @@ const actionLabel = (value?: string) => {
       return "Cho thuê";
     case "adjust":
       return "Điều chỉnh";
+    case "returned":
+      return "Đã trả";
     default:
       return value ?? "-";
   }
@@ -75,6 +98,14 @@ const StockHistoryDashboard = () => {
   const [adjustChange, setAdjustChange] = useState<number>(0);
   const [adjustNote, setAdjustNote] = useState("");
   const [variants, setVariants] = useState<Variant[]>([]);
+
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnTarget, setReturnTarget] = useState<HistoryItem | null>(null);
+  const [returnDecision, setReturnDecision] = useState<
+    "restock" | "discard"
+  >("restock");
+  const [returnReason, setReturnReason] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
 
   const fetchProducts = async () => {
     try {
@@ -131,7 +162,9 @@ const StockHistoryDashboard = () => {
       const res = await getProduct(productId);
       const data = res.data;
       const variantsData =
-        data?.data?.variants ?? data?.variants ?? data?.data?.product?.variants ?? [];
+        data?.data?.variants ??
+        data?.variants ??
+        data?.data?.product?.variants ?? [];
       setVariants(
         Array.isArray(variantsData)
           ? variantsData.map((v: any) => ({
@@ -174,6 +207,40 @@ const StockHistoryDashboard = () => {
     }
   };
 
+  const openReturnModal = (record: HistoryItem) => {
+    setReturnTarget(record);
+    setReturnDecision("restock");
+    setReturnReason("");
+    setReturnOpen(true);
+  };
+
+  const handleSubmitReturn = async () => {
+    if (!returnTarget) return;
+    if (returnDecision === "discard" && !returnReason.trim()) {
+      message.error("Vui lòng nhập lý do xóa");
+      return;
+    }
+    setReturnSubmitting(true);
+    try {
+      await processReturn({
+        historyId: returnTarget._id,
+        decision: returnDecision,
+        reason:
+          returnDecision === "discard" ? returnReason.trim() : undefined,
+      });
+      message.success("Đã cập nhật tồn kho");
+      setReturnOpen(false);
+      setReturnTarget(null);
+      fetchHistory();
+    } catch (error: any) {
+      const apiMessage =
+        error?.response?.data?.message || error?.message || "Lỗi xử lý";
+      message.error(apiMessage);
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -211,7 +278,23 @@ const StockHistoryDashboard = () => {
           <Tag color={actionColors[value] || "default"}>{actionLabel(value)}</Tag>
         ),
       },
-      { title: "Ghi chú", dataIndex: "note" },
+      {
+        title: "Ghi chú",
+        dataIndex: "note",
+        render: (value: string, record: HistoryItem) => (
+          <div className="flex items-center gap-2">
+            <span>{value || "-"}</span>
+            {record.action === "returned" && !record.processed && (
+              <Button size="small" type="link" onClick={() => openReturnModal(record)}>
+                Xử lý
+              </Button>
+            )}
+            {record.action === "returned" && record.processed && record.decision === "discard" && record.reason && (
+              <span className="text-xs text-red-500">Lý do: {record.reason}</span>
+            )}
+          </div>
+        ),
+      },
     ],
     []
   );
@@ -257,9 +340,10 @@ const StockHistoryDashboard = () => {
             options={[
               { value: "initial", label: "Khởi tạo" },
               { value: "update", label: "Cập nhật" },
-              { value: "added", label: "Thêm mới" },
+              { value: "added", label: "Thêm biến thể" },
               { value: "removed", label: "Xóa" },
-              { value: "rent", label: "Thuê" },
+              { value: "rent", label: "Cho thuê" },
+              { value: "returned", label: "Đã trả" },
               { value: "adjust", label: "Điều chỉnh" },
             ]}
             style={{ minWidth: 160 }}
@@ -340,6 +424,34 @@ const StockHistoryDashboard = () => {
             placeholder="Ghi chú"
             value={adjustNote}
             onChange={(e) => setAdjustNote(e.target.value)}
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        title="Xử lý trả hàng"
+        open={returnOpen}
+        onCancel={() => setReturnOpen(false)}
+        onOk={handleSubmitReturn}
+        confirmLoading={returnSubmitting}
+      >
+        <div className="space-y-3">
+          <div className="text-sm">
+            Bạn muốn xóa sản phẩm không?
+          </div>
+          <Radio.Group
+            value={returnDecision}
+            onChange={(e) => setReturnDecision(e.target.value)}
+          >
+            <Radio value="restock">Không xóa, trả lại kho</Radio>
+            <Radio value="discard">Xóa sản phẩm</Radio>
+          </Radio.Group>
+          <Input.TextArea
+            rows={3}
+            placeholder="Lý do xóa (nếu có)"
+            value={returnReason}
+            onChange={(e) => setReturnReason(e.target.value)}
+            disabled={returnDecision !== "discard"}
           />
         </div>
       </Modal>

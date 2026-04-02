@@ -26,14 +26,19 @@ export interface VariantStockHistory {
   _id: string;
   productId: string;
   variantId?: string;
+  orderId?: string;
   sku: string;
   size?: string;
   color?: string;
+  quantity?: number;
   oldStock: number;
   newStock: number;
   change: number;
   action?: string;
   note?: string;
+  processed?: boolean;
+  decision?: string;
+  reason?: string;
   createdAt?: string;
 }
 

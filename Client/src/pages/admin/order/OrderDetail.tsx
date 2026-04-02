@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -56,7 +56,7 @@ interface Order {
 }
 
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("vi-VN").format(value) + " ?";
+  new Intl.NumberFormat("vi-VN").format(value) + " đ";
 
 const formatDateTime = (value?: string) =>
   value ? new Date(value).toLocaleString("vi-VN") : "-";
@@ -78,22 +78,22 @@ const statusBadge = (status?: string) => {
 };
 
 const paymentStatusLabel = (value?: string) => {
-  if (!value) return "Ch?a thanh to?n";
-  if (value === "pending") return "Ch?a thanh to?n";
+  if (!value) return "Chưa thanh toán";
+  if (value === "pending") return "Chưa thanh toán";
   if (value === "paid" || value === "completed" || value === "success")
-    return "Ho?n th?nh";
+    return "Hoàn thành";
   return value;
 };
 
 const paymentBadge = (value?: string) => {
   const key = paymentStatusLabel(value);
-  if (key === "Ho?n th?nh") return "bg-green-100 text-green-800";
+  if (key === "Hoàn thành") return "bg-green-100 text-green-800";
   return "bg-gray-100 text-gray-800";
 };
 
 const paymentLabel = (value?: string) => {
   if (!value) return "-";
-  if (value === "cash" || value === "cod") return "Ti?n m?t";
+  if (value === "cash" || value === "cod") return "Tiền mặt";
   return value;
 };
 
@@ -151,7 +151,7 @@ const OrderDetail = () => {
         setPenaltyNote(data.penaltyNote || "");
       } catch (err: any) {
         const message =
-          err?.response?.data?.message || err?.message || "Kh?ng t?m th?y ??n h?ng";
+          err?.response?.data?.message || err?.message || "Không tìm thấy đơn hàng";
         setError(message);
       } finally {
         setLoading(false);
@@ -206,9 +206,9 @@ const OrderDetail = () => {
           ? (updated as any).lostItems
           : lostItemIds
       );
-      alert("C?p nh?t ??n h?ng th?nh c?ng!");
+      alert("Cập nhật đơn hàng thành công!");
     } catch (err) {
-      alert("Kh?ng th? l?u chi ph?. Vui l?ng ki?m tra l?i server.");
+      alert("Không thể lưu chi phí. Vui lòng kiểm tra lại server.");
     } finally {
       setIsUpdating(false);
     }
@@ -270,21 +270,23 @@ const OrderDetail = () => {
     order?.customerName ||
     (typeof order?.userId === "object" ? order?.userId?.name : undefined) ||
     order?.shippingAddress?.name ||
-    "Kh?ch t?i qu?y";
+    "Khách tại quầy";
 
   const customerPhone =
     order?.customerPhone ||
     order?.shippingAddress?.phone ||
-    (typeof order?.userId === "object" ? order?.userId?.email : "Ch?a c?p nh?t");
+    (typeof order?.userId === "object" ? order?.userId?.email : "Chưa cập nhật");
 
   const customerAddress =
-    order?.customerAddress || order?.shippingAddress?.address || "??n t?i qu?y / Kh?ng giao h?ng";
+    order?.customerAddress ||
+    order?.shippingAddress?.address ||
+    "Đơn tại quầy / Không giao hàng";
 
   if (loading) {
     return (
       <div className="p-8 bg-gray-50 min-h-screen font-sans">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-          ?ang t?i chi ti?t ??n h?ng...
+          Đang tải chi tiết đơn hàng...
         </div>
       </div>
     );
@@ -295,14 +297,14 @@ const OrderDetail = () => {
       <div className="p-8 bg-gray-50 min-h-screen font-sans">
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <div className="text-red-600 font-semibold">
-            {error || "Kh?ng t?m th?y ??n h?ng"}
+            {error || "Không tìm thấy đơn hàng"}
           </div>
           <button
             onClick={() => navigate("/admin/order")}
             className="mt-4 px-4 py-2 rounded-lg text-white font-semibold"
             style={{ backgroundColor: "#377abd" }}
           >
-            Quay l?i danh s?ch
+            Quay lại danh sách
           </button>
         </div>
       </div>
@@ -317,7 +319,7 @@ const OrderDetail = () => {
             onClick={() => navigate("/admin/order")}
             className="px-3 py-1 rounded-lg border border-gray-200 bg-white text-gray-600 hover:text-gray-800"
           >
-            ? Quay l?i
+            ← Quay lại
           </button>
         </div>
         <button
@@ -325,17 +327,17 @@ const OrderDetail = () => {
           disabled={isUpdating}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-all disabled:bg-gray-400"
         >
-          {isUpdating ? "?ang l?u..." : "L?u thay ??i"}
+          {isUpdating ? "Đang lưu..." : "Lưu thay đổi"}
         </button>
       </div>
 
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
-            ??n h?ng #{order.orderNumber || order._id}
+            Đơn hàng #{order.orderNumber || order._id}
           </h1>
           <div className="text-xs text-gray-500">
-            ??t h?ng l?c {formatDateTime(order.createdAt)}
+            Đặt hàng lúc {formatDateTime(order.createdAt)}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -344,13 +346,13 @@ const OrderDetail = () => {
             onChange={(e) => setStatus(e.target.value)}
             className={`px-3 py-1 rounded-full text-xs font-semibold outline-none cursor-pointer border-none shadow-sm ${statusBadge(status)}`}
           >
-            <option value="pending">Ch? x? l?</option>
-            <option value="confirmed">?? x?c nh?n</option>
-            <option value="shipped">?ang giao</option>
-            <option value="delivered">?? giao</option>
-            <option value="fee_incurred">Ph?t sinh ph?</option>
-            <option value="completed">Ho?n t?t</option>
-            <option value="cancelled">?? h?y</option>
+            <option value="pending">Chờ xử lý</option>
+            <option value="confirmed">Đã xác nhận</option>
+            <option value="shipped">Đang giao</option>
+            <option value="delivered">Đã giao</option>
+            <option value="fee_incurred">Phát sinh phí</option>
+            <option value="completed">Hoàn tất</option>
+            <option value="cancelled">Đã hủy</option>
           </select>
 
           <select
@@ -358,9 +360,9 @@ const OrderDetail = () => {
             onChange={(e) => setPaymentStatus(e.target.value)}
             className={`px-3 py-1 rounded-full text-xs font-semibold outline-none cursor-pointer border-none shadow-sm ${paymentBadge(paymentStatus)}`}
           >
-            <option value="pending">Ch?a thanh to?n</option>
-            <option value="paid">?? thanh to?n</option>
-            <option value="success">Ho?n th?nh</option>
+            <option value="pending">Chưa thanh toán</option>
+            <option value="paid">Đã thanh toán</option>
+            <option value="success">Hoàn thành</option>
           </select>
         </div>
       </div>
@@ -368,41 +370,43 @@ const OrderDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm lg:col-span-2">
           <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-3">
-            Th?ng tin kh?ch h?ng
+            Thông tin khách hàng
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
-              <div className="text-xs text-gray-400">Kh?ch h?ng</div>
+              <div className="text-xs text-gray-400">Khách hàng</div>
               <div className="font-semibold text-gray-800">{customerName}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-400">S? ?i?n tho?i</div>
+              <div className="text-xs text-gray-400">Số điện thoại</div>
               <div className="font-semibold text-gray-800">{customerPhone}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-400">??a ch?</div>
+              <div className="text-xs text-gray-400">Địa chỉ</div>
               <div className="font-semibold text-gray-800">{customerAddress}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-400">Ph??ng th?c giao</div>
-              <div className="font-semibold text-gray-800">??n thu? t?i qu?y / Kh?ng giao h?ng</div>
+              <div className="text-xs text-gray-400">Phương thức giao</div>
+              <div className="font-semibold text-gray-800">
+                Đơn thuê tại quầy / Không giao hàng
+              </div>
             </div>
             {order.bankName && (
               <div>
-                <div className="text-xs text-gray-400">Ng?n h?ng</div>
+                <div className="text-xs text-gray-400">Ngân hàng</div>
                 <div className="font-semibold text-gray-800">{order.bankName}</div>
               </div>
             )}
             {order.bankAccount && (
               <div>
-                <div className="text-xs text-gray-400">S? t?i kho?n</div>
+                <div className="text-xs text-gray-400">Số tài khoản</div>
                 <div className="font-semibold text-gray-800">{order.bankAccount}</div>
               </div>
             )}
           </div>
           {order.note && (
             <div className="mt-4 text-sm text-gray-700">
-              <div className="text-xs text-gray-400 mb-1">Ghi ch?</div>
+              <div className="text-xs text-gray-400 mb-1">Ghi chú</div>
               {order.note}
             </div>
           )}
@@ -410,11 +414,13 @@ const OrderDetail = () => {
 
         <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
           <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-4 font-bold">
-            Chi ph? ph?t sinh
+            Chi phí phát sinh
           </div>
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-gray-500 mb-2 block">Ph?t qu? ng?y</label>
+              <label className="text-xs font-bold text-gray-500 mb-2 block">
+                Phạt quá ngày
+              </label>
               <div className="flex gap-2">
                 <div className="relative w-1/3">
                   <input
@@ -429,36 +435,40 @@ const OrderDetail = () => {
                         setLateFee(Math.round(rentPerDay * days));
                       }
                     }}
-                    placeholder="S? ng?y"
+                    placeholder="Số ngày"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all pr-10"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold">ng?y</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold">
+                    ngày
+                  </span>
                 </div>
                 <div className="relative w-2/3">
                   <input
                     type="number"
                     value={lateFee === 0 ? "" : lateFee}
                     onChange={(e) => setLateFee(Number(e.target.value) || 0)}
-                    placeholder="Th?nh ti?n"
+                    placeholder="Thành tiền"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-semibold text-red-600 pr-8"
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">?</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                    đ
+                  </span>
                 </div>
               </div>
             </div>
 
             <div>
               <label className="text-xs font-bold text-gray-500 mb-2 block">
-                Ph?t ?? h? h?ng (Tr? ti?n c?c)
+                Phạt đồ hư hỏng (Trừ tiền cọc)
               </label>
 
               <div className="mb-3 grid grid-cols-1 gap-2 border border-gray-100 p-3 rounded-lg bg-gray-50/50">
                 {[
-                  { id: "stain", label: "V?t b?n kh? gi?t", fee: 30000 },
-                  { id: "tear_minor", label: "R?ch/x??c nh?", fee: 50000 },
-                  { id: "tear_major", label: "R?ch l?n/H?ng kh?a", fee: 100000 },
-                  { id: "burn", label: "Ch?y/Th?ng", fee: 200000 },
-                  { id: "lost_item", label: "M?t ??/Ph? ki?n", fee: 300000 },
+                  { id: "stain", label: "Vết bẩn khó giặt", fee: 30000 },
+                  { id: "tear_minor", label: "Rách/xước nhẹ", fee: 50000 },
+                  { id: "tear_major", label: "Rách lớn/Hỏng khóa", fee: 100000 },
+                  { id: "burn", label: "Cháy/Thủng", fee: 200000 },
+                  { id: "lost_item", label: "Mất đồ/Phụ kiện", fee: 300000 },
                 ].map((error) => (
                   <label
                     key={error.id}
@@ -486,7 +496,7 @@ const OrderDetail = () => {
                     />
                     <span className="text-gray-700 flex-1">{error.label}</span>
                     <span className="text-red-500 font-semibold text-xs border bg-white px-2 py-0.5 rounded">
-                      +{formatCurrency(error.fee).replace(" ?", "?")}
+                      +{formatCurrency(error.fee).replace(" đ", "đ")}
                     </span>
                   </label>
                 ))}
@@ -497,21 +507,23 @@ const OrderDetail = () => {
                   type="number"
                   value={damageFee === 0 ? "" : damageFee}
                   onChange={(e) => setDamageFee(Number(e.target.value) || 0)}
-                  placeholder="0 (Nh?p t? do ho?c ch?n l?i)"
+                  placeholder="0 (Nhập tự do hoặc chọn lại)"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-semibold text-red-600 pr-8"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-                  ?
+                  đ
                 </span>
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-500 mb-2 block">Ghi ch? ph?t</label>
+              <label className="text-xs font-bold text-gray-500 mb-2 block">
+                Ghi chú phạt
+              </label>
               <textarea
                 value={penaltyNote}
                 onChange={(e) => setPenaltyNote(e.target.value)}
-                placeholder="Ghi ch? th?m v? ph? ph?t sinh..."
+                placeholder="Ghi chú thêm về phí phát sinh..."
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all"
                 rows={2}
               />
@@ -519,11 +531,11 @@ const OrderDetail = () => {
           </div>
           <div className="h-px bg-gray-100 my-4"></div>
           <div className="flex items-center justify-between text-sm font-bold text-red-600 mb-3 bg-red-50 p-2 rounded-lg border border-red-100">
-            <span>T?ng l?i ph?t sinh (C?ng th?m):</span>
+            <span>Tổng lỗi phát sinh (Cộng thêm):</span>
             <span className="text-base">{formatCurrency(lateFee + damageFee)}</span>
           </div>
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>Ti?n thu? g?c:</span>
+            <span>Tiền thuê gốc:</span>
             <span className="font-medium text-gray-800">{formatCurrency(rentalSubtotal)}</span>
           </div>
         </div>
@@ -532,22 +544,24 @@ const OrderDetail = () => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="text-[10px] uppercase tracking-widest text-gray-400">
-                S?n ph?m ({items.length})
+                Sản phẩm ({items.length})
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Thu?: {formatDate(order.startDate)} - {formatDate(order.endDate)} ? {rentalDays} ng?y
+                Thuê: {formatDate(order.startDate)} - {formatDate(order.endDate)} · {rentalDays} ngày
               </div>
             </div>
           </div>
 
           {items.length === 0 ? (
-            <div className="text-sm text-gray-500">Kh?ng c? s?n ph?m trong ??n h?ng.</div>
+            <div className="text-sm text-gray-500">
+              Không có sản phẩm trong đơn hàng.
+            </div>
           ) : (
             <div className="space-y-3">
               {items.map((item, idx) => {
                 const product =
                   typeof item.productId === "object" ? item.productId : null;
-                const name = product?.name || item.name || "S?n ph?m";
+                const name = product?.name || item.name || "Sản phẩm";
                 const quantity = Number(item.quantity ?? 1);
                 const price = Number(item.price ?? 0);
                 const deposit = Number(item.deposit ?? 0);
@@ -571,7 +585,7 @@ const OrderDetail = () => {
                     <div className="flex items-start gap-3 flex-1">
                       <label
                         className="flex flex-col items-center gap-1 cursor-pointer pt-0.5"
-                        title="??nh d?u s?n ph?m b? m?t"
+                        title="Đánh dấu sản phẩm bị mất"
                       >
                         <input
                           type="checkbox"
@@ -580,7 +594,7 @@ const OrderDetail = () => {
                           className="w-4 h-4 accent-red-600 cursor-pointer"
                         />
                         <span className="text-[9px] text-red-500 font-bold uppercase leading-tight text-center">
-                          M?t
+                          Mất
                         </span>
                       </label>
 
@@ -596,16 +610,16 @@ const OrderDetail = () => {
                               className="ml-2 text-xs font-bold text-red-600 no-underline"
                               style={{ textDecoration: "none" }}
                             >
-                              ? M?t
+                              • Mất
                             </span>
                           )}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Size: {item.size || "-"} ? M?u: {item.color || "-"} ? SL: {quantity}
+                          Size: {item.size || "-"} · Màu: {item.color || "-"} · SL: {quantity}
                         </div>
                         {isLost && (
                           <div className="text-xs text-red-600 font-semibold mt-1 bg-red-100 px-2 py-0.5 rounded inline-block">
-                            Gi? c?c: {formatCurrency(deposit * quantity)}
+                            Giá cọc: {formatCurrency(deposit * quantity)}
                           </div>
                         )}
                       </div>
@@ -617,12 +631,12 @@ const OrderDetail = () => {
                           isLost ? "text-gray-400 line-through" : "text-gray-800"
                         }`}
                       >
-                        {formatCurrency(price)}/ng?y
+                        {formatCurrency(price)}/ngày
                       </div>
                       <div className={`text-xs mt-0.5 ${isLost ? "text-red-500 font-semibold" : "text-gray-500"}`}>
-                        C?c {formatCurrency(deposit)}
+                        Cọc {formatCurrency(deposit)}
                       </div>
-                      <div className="text-xs text-gray-400">T?ng {formatCurrency(itemTotal)}</div>
+                      <div className="text-xs text-gray-400">Tổng {formatCurrency(itemTotal)}</div>
                     </div>
                   </div>
                 );
@@ -633,16 +647,16 @@ const OrderDetail = () => {
 
         <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
           <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-3">
-            Thanh to?n
+            Thanh toán
           </div>
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>Ph??ng th?c</span>
+            <span>Phương thức</span>
             <span className="font-semibold text-gray-800 uppercase">
               {paymentLabel(order.paymentMethod)}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm text-gray-600 mt-2">
-            <span>Tr?ng th?i</span>
+            <span>Trạng thái</span>
             <span className="font-semibold text-gray-800">
               {paymentStatusLabel(paymentStatus)}
             </span>
@@ -650,26 +664,26 @@ const OrderDetail = () => {
 
           <div className="mt-4 rounded-xl bg-[#0f1b33] text-white p-4">
             <div className="flex items-center justify-between text-sm opacity-80">
-              <span>Ph? thu? + Ph?t</span>
+              <span>Phí thuê + Phạt</span>
               <span className="font-semibold">
                 {formatCurrency(rentalSubtotal + lateFee + damageFee)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm mt-2 opacity-80">
-              <span>Ti?n ??t c?c c?a kh?ch</span>
+              <span>Tiền đặt cọc của khách</span>
               <span className={`font-semibold ${status === "completed" ? "line-through opacity-50" : ""}`}>
                 {formatCurrency(depositTotal)}
               </span>
             </div>
             {lostDepositTotal > 0 && (
               <div className="flex items-center justify-between text-sm mt-2 text-red-400 font-semibold">
-                <span>?? Gi? c?c (s?n ph?m m?t)</span>
+                <span>Đã giữ cọc (sản phẩm mất)</span>
                 <span>+{formatCurrency(lostDepositTotal)}</span>
               </div>
             )}
             {status === "completed" && (
               <div className="flex items-center justify-between text-sm mt-2 text-emerald-400 font-semibold">
-                <span>Kh?ch nh?n l?i c?c (Sau khi tr?)</span>
+                <span>Khách nhận lại cọc (Sau khi trừ)</span>
                 <span>
                   {formatCurrency(
                     Math.max(0, depositTotal - lateFee - damageFee - lostDepositTotal)
@@ -680,7 +694,9 @@ const OrderDetail = () => {
             <div className="h-px bg-white/20 my-3"></div>
             <div className="flex items-center justify-between text-sm font-bold">
               <span>
-                {status === "completed" ? "T?NG TH?C THU DOANH THU" : "T?NG ??N (G?M C?C)"}
+                {status === "completed"
+                  ? "TỔNG THỰC THU DOANH THU"
+                  : "TỔNG ĐƠN (GỒM CỌC)"}
               </span>
               <span className="text-xl text-yellow-400">{formatCurrency(displayTotal)}</span>
             </div>

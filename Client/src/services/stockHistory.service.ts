@@ -18,3 +18,9 @@ export const adjustStock = (data: {
   change: number;
   note?: string;
 }) => axios.post(`${API_BASE_URL}/api/stock-adjust`, data);
+
+export const processReturn = (data: {
+  historyId: string;
+  decision: "restock" | "discard";
+  reason?: string;
+}) => axios.post(`${API_BASE_URL}/api/stock-return`, data);

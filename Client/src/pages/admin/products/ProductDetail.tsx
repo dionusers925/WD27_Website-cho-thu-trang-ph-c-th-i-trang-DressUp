@@ -50,6 +50,8 @@ const historyActionLabel = (value?: string) => {
       return "Cho thuê";
     case "adjust":
       return "Điều chỉnh";
+    case "returned":
+      return "Đã trả";
     default:
       return value ?? "-";
   }
@@ -371,6 +373,7 @@ export default function ProductDetail() {
                   { value: "added", label: "Thêm biến thể" },
                   { value: "removed", label: "Xóa biến thể" },
                   { value: "rent", label: "Cho thuê" },
+                  { value: "returned", label: "Đã trả" },
                   { value: "adjust", label: "Điều chỉnh" },
                 ]}
               />

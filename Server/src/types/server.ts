@@ -3,7 +3,9 @@ import path from "path";
 import { connectDB } from "./db";
 
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import cors from "cors";
+import User from "../models/User";
 
 // routes
 import userRoutes from "../routes/user";
@@ -22,7 +24,51 @@ import stockHistoryRouter from "../routes/stockHistory";
 
 const app = express();
 
-connectDB();
+const ensureAdmin = async () => {
+  const email = process.env.ADMIN_EMAIL || "admin@gmail.com";
+  const password = process.env.ADMIN_PASSWORD || "123456";
+  const name = process.env.ADMIN_NAME || "Admin";
+  const shouldReset =
+    (process.env.ADMIN_RESET_PASSWORD || "").toLowerCase() === "true";
+
+  try {
+    const existing = await User.findOne({ email });
+    const hash = await bcrypt.hash(password, 10);
+
+    if (!existing) {
+      await User.create({
+        email,
+        name,
+        password: hash,
+        role: "admin",
+      });
+      console.log(`Seeded admin user: ${email}`);
+      return;
+    }
+
+    let updated = false;
+    if (existing.role !== "admin") {
+      existing.role = "admin";
+      updated = true;
+    }
+    if (shouldReset) {
+      existing.password = hash;
+      updated = true;
+    }
+    if (updated) {
+      await existing.save();
+      console.log(`Updated admin user: ${email}`);
+    }
+  } catch (error) {
+    console.error("Ensure admin failed", error);
+  }
+};
+
+connectDB()
+  .then(() => ensureAdmin())
+  .catch((error) => {
+    console.error("MongoDB connect error", error);
+  });
 
 // middleware
 app.use(cors());
@@ -47,5 +93,5 @@ app.use("/api", cartRoutes);
 app.use("/api/auth", authRoutes);
 
 app.listen(3000, () => {
-  console.log("?? Server running on port 3000");
+  console.log("Server running on port 3000");
 });

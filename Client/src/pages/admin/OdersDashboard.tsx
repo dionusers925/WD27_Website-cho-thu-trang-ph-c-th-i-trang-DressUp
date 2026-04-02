@@ -382,11 +382,11 @@ const OrdersDashboard = () => {
             <form onSubmit={handleCreateOrder} className="space-y-4 text-sm">
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
                 <p className="text-[10px] font-bold text-gray-400 uppercase italic">
-                  Th?ng tin kh?ch h?ng
+                  Thông tin khách hàng
                 </p>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Lo?i kh?ch h?ng
+                    Loại khách hàng
                   </label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -397,7 +397,7 @@ const OrdersDashboard = () => {
                         className="accent-blue-600 w-4 h-4"
                       />
                       <span className="font-semibold text-gray-700">
-                        ?? c? t?i kho?n
+                        Đã có tài khoản
                       </span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -411,7 +411,7 @@ const OrdersDashboard = () => {
                         className="accent-blue-600 w-4 h-4"
                       />
                       <span className="font-semibold text-gray-700">
-                        Ch?a c? t?i kho?n
+                        Chưa có tài khoản
                       </span>
                     </label>
                   </div>
@@ -420,12 +420,12 @@ const OrdersDashboard = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-1">
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      S? ?i?n tho?i *
+                      Số điện thoại *
                     </label>
                     <input
                       type="tel"
                       required
-                      placeholder="Nh?p s? ?i?n tho?i..."
+                      placeholder="Nhập số điện thoại..."
                       className={`w-full p-2 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${
                         hasAccount && newOrder.userId
                           ? "border-green-300 ring-1 ring-green-300 bg-green-50"
@@ -436,7 +436,7 @@ const OrdersDashboard = () => {
                     />
                     {hasAccount && newOrder.userId && (
                       <p className="text-xs text-green-600 mt-1">
-                        ? ?? t?m th?y kh?ch h?ng
+                        Đã tìm thấy khách hàng
                       </p>
                     )}
                     {hasAccount &&
@@ -444,18 +444,18 @@ const OrdersDashboard = () => {
                       newOrder.customerPhone.length >= 8 &&
                       !newOrder.userId && (
                         <p className="text-xs text-yellow-600 mt-1">
-                          Kh?ng t?m th?y kh?ch h?ng
+                          Không tìm thấy khách hàng
                         </p>
                       )}
                   </div>
                   <div className="col-span-1">
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      H? v? t?n *
+                      Họ và tên *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="Nh?p h? v? t?n..."
+                      placeholder="Nhập họ và tên..."
                       className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       value={newOrder.customerName}
                       onChange={(e) =>
@@ -465,12 +465,12 @@ const OrdersDashboard = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      ??a ch? *
+                      Địa chỉ *
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="Nh?p ??a ch?..."
+                      placeholder="Nhập địa chỉ..."
                       className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       value={newOrder.customerAddress}
                       onChange={(e) =>
@@ -483,11 +483,11 @@ const OrdersDashboard = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      S? t?i kho?n
+                      Số tài khoản
                     </label>
                     <input
                       type="text"
-                      placeholder="Nh?p s? t?i kho?n..."
+                      placeholder="Nhập số tài khoản..."
                       className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       value={newOrder.bankAccount}
                       onChange={(e) =>
@@ -497,11 +497,11 @@ const OrdersDashboard = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Ng?n h?ng
+                      Ngân hàng
                     </label>
                     <input
                       type="text"
-                      placeholder="Nh?p t?n ng?n h?ng..."
+                      placeholder="Nhập tên ngân hàng..."
                       className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       value={newOrder.bankName}
                       onChange={(e) =>
@@ -520,7 +520,7 @@ const OrdersDashboard = () => {
                 <div className="relative mb-3">
                   <input
                     type="text"
-                    placeholder="Nh?p t?n s?n ph?m ?? t?m..."
+                    placeholder="Nhập tên sản phẩm để tìm..."
                     className="w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchProductTerm}
                     onChange={(e) => {
@@ -597,7 +597,7 @@ const OrdersDashboard = () => {
                                     setCurrentSize("");
                                     setCurrentColor("");
                                     alert(
-                                      "S?n ph?m n?y ch?a c? bi?n th? Size/M?u trong h? th?ng."
+                                      "Sản phẩm này chưa có biến thể Size/Màu trong hệ thống."
                                     );
                                     return;
                                   }
@@ -610,9 +610,9 @@ const OrdersDashboard = () => {
                                   );
                                   setCurrentColor(colorsForSize[0]?.color || "");
                                 } catch (err) {
-                                  console.error("L?i l?y chi ti?t s?n ph?m:", err);
+                                  console.error("Lỗi lấy chi tiết sản phẩm:", err);
                                   alert(
-                                    "Kh?ng l?y ???c chi ti?t s?n ph?m (size/m?u). Vui l?ng th? l?i."
+                                    "Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại."
                                   );
                                   setCurrentProduct(null);
                                   setCurrentSize("");
@@ -624,38 +624,14 @@ const OrdersDashboard = () => {
                                 {p.name}
                               </span>
                               <span className="text-[11px] text-gray-500 font-medium">
-                                Thu?: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}? - C?c: {(p.depositDefault ?? 0).toLocaleString()}?
+                                Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ
                               </span>
                             </li>
                           ))
                       ) : (
                         <li className="p-3 text-sm text-gray-500 text-center">
-                          Kh?ng t?m th?y s?n ph?m...
+                          Không tìm thấy sản phẩm...
                         </li>
-                      )}
-                    </ul>
-                  )}
-                </div>
-
-
-                                setCurrentColor(colorsForSize[0]?.color || "");
-                              } catch (err) {
-                                console.error("Lỗi lấy chi tiết sản phẩm:", err);
-                                alert("Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.");
-                                setCurrentProduct(null);
-                                setCurrentSize("");
-                                setCurrentColor("");
-                              }
-                            }}
-                          >
-                            <span className="font-semibold text-gray-800 block truncate">{p.name}</span>
-                            <span className="text-[11px] text-gray-500 font-medium">
-                              Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ
-                            </span>
-                          </li>
-                        ))
-                      ) : (
-                        <li className="p-3 text-sm text-gray-500 text-center">Không tìm thấy sản phẩm...</li>
                       )}
                     </ul>
                   )}

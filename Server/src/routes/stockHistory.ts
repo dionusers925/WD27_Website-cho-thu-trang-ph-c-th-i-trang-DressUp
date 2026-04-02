@@ -67,7 +67,9 @@ router.post("/stock-adjust", async (req, res) => {
 
     const delta = Number(change);
     if (!Number.isFinite(delta) || delta === 0) {
-      return res.status(400).json({ message: "Số lượng điều chỉnh không hợp lệ" });
+      return res
+        .status(400)
+        .json({ message: "Số lượng điều chỉnh không hợp lệ" });
     }
 
     const variant = await Variant.findById(variantId);
@@ -106,6 +108,73 @@ router.post("/stock-adjust", async (req, res) => {
         history,
       },
     });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+router.post("/stock-return", async (req, res) => {
+  try {
+    const { historyId, decision, reason } = req.body;
+    if (!historyId || !mongoose.Types.ObjectId.isValid(String(historyId))) {
+      return res.status(400).json({ message: "Lịch sử không hợp lệ" });
+    }
+
+    const normalizedDecision = decision === "discard" ? "discard" : "restock";
+
+    const history = await VariantStockHistory.findById(historyId);
+    if (!history) {
+      return res.status(404).json({ message: "Không tìm thấy lịch sử" });
+    }
+
+    if (history.action !== "returned") {
+      return res.status(400).json({ message: "Lịch sử không hợp lệ" });
+    }
+
+    if (history.processed) {
+      return res.status(400).json({ message: "Lịch sử đã được xử lý" });
+    }
+
+    const qty = Number(history.quantity ?? 0);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({ message: "Số lượng không hợp lệ" });
+    }
+
+    const variant = await Variant.findById(history.variantId);
+    if (!variant) {
+      return res.status(404).json({ message: "Không tìm thấy biến thể" });
+    }
+
+    const currentStock = Number(variant.stock ?? 0);
+    const currentReserved = Number(variant.reservedStock ?? 0);
+
+    if (normalizedDecision === "restock") {
+      const newStock = currentStock + qty;
+      variant.stock = newStock;
+      variant.reservedStock = Math.max(0, currentReserved - qty);
+      await variant.save();
+
+      history.oldStock = currentStock;
+      history.newStock = newStock;
+      history.change = qty;
+    } else {
+      variant.reservedStock = Math.max(0, currentReserved - qty);
+      await variant.save();
+
+      history.oldStock = currentStock;
+      history.newStock = currentStock;
+      history.change = 0;
+    }
+
+    history.processed = true;
+    history.decision = normalizedDecision;
+    if (reason) {
+      history.reason = String(reason).trim();
+    }
+
+    await history.save();
+
+    res.json({ success: true, data: history });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server" });
   }
