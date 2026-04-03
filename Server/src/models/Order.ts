@@ -24,10 +24,17 @@ export interface IOrder extends Document {
   note?: string;
 
   shippingAddress?: {
+    address?: string;
     name?: string;
     phone?: string;
-    address?: string;
     city?: string;
+    receiverName?: string;
+    receiverPhone?: string;
+    line1?: string;
+    ward?: string;
+    district?: string;
+    province?: string;
+    country?: string;
   };
 
   startDate?: Date;
@@ -91,10 +98,13 @@ const orderSchema: Schema = new Schema(
     note: String,
 
     shippingAddress: {
-      name: String,
-      phone: String,
-      address: String,
-      city: String,
+      receiverName: String,
+      receiverPhone: String,
+      line1: String,
+      ward: String,
+      district: String,
+      province: String,
+      country: String,
     },
 
     startDate: Date,
