@@ -38,6 +38,7 @@ export interface ProductDocument extends Document {
   depositPrice?: number;
 
   rentalPrices?: RentalPrice[];
+  depositDefault: number;
 
   status?: string;
 }
@@ -57,6 +58,10 @@ const productSchema = new Schema<ProductDocument>(
       type: String,
       required: true,
       trim: true,
+    },
+    depositDefault: {
+      type: Number,
+      default: 0,
     },
     rentalTiers: [rentalTierSchema],
     slug: {
