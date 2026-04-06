@@ -24,6 +24,8 @@ interface Order {
     _id?: string;
     name?: string;
     email?: string;
+    fullName?: string;
+    phone?: string;
   } | string;
   total?: number;
   subtotal?: number;
@@ -38,9 +40,13 @@ interface Order {
   customerPhone?: string;
   customerAddress?: string;
   note?: string;
-  lateFee?: number;      // Thêm trường phạt quá hạn
-  damageFee?: number;    // Thêm trường phạt hư hỏng
+  lateFee?: number;
+  damageFee?: number;
   shippingAddress?: {
+    address?: string;
+    name?: string;
+    phone?: string;
+    city?: string;
     receiverName?: string;
     receiverPhone?: string;
     line1?: string;
@@ -272,18 +278,19 @@ const OrderDetail = () => {
 
   const customerName =
     order?.customerName ||
-    (typeof order?.userId === "object" ? order?.userId?.name : undefined) ||
+    (typeof order?.userId === "object" ? (order?.userId?.fullName || order?.userId?.name) : undefined) ||
     order?.shippingAddress?.receiverName ||
     "Khách tại quầy";
 
   const customerPhone =
     order?.customerPhone ||
     order?.shippingAddress?.receiverPhone ||
-    (typeof order?.userId === "object" ? order?.userId?.email : "Chưa cập nhật");
+    (typeof order?.userId === "object" ? (order?.userId?.phone || order?.userId?.email) : "Chưa cập nhật");
 
   const buildAddress = (sa?: any) => {
-    if (!sa || !sa.line1) return null;
-    return [sa.line1, sa.ward, sa.district, sa.province].filter(Boolean).join(", ");
+    if (!sa) return null;
+    const parts = [sa.line1 || sa.address, sa.ward, sa.district, sa.province || sa.city].filter(Boolean);
+    return parts.length > 0 ? parts.join(", ") : null;
   };
 
   const customerAddress =

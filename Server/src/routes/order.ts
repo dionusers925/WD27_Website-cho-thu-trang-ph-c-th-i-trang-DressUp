@@ -14,7 +14,7 @@ const calcRentalDays = (start: Date, end: Date) => {
 orderRouter.get("/", async (_req, res) => {
   try {
     const orders = await Order.find()
-      .populate("userId", "name email")
+      .populate("userId", "name fullName email phone")
       .populate("items.productId", "name price images")
       .sort({ createdAt: -1 });
     res.json(orders);
@@ -32,7 +32,7 @@ orderRouter.get("/:id", async (req, res) => {
     }
 
     const order = await Order.findById(id)
-      .populate("userId", "name email")
+      .populate("userId", "name fullName email phone")
       .populate("items.productId", "name price images");
 
     if (!order) {
@@ -126,6 +126,11 @@ orderRouter.post("/", async (req, res) => {
         address: customerAddress || "Tại quầy",
         city: "Tại quầy",
       },
+      statusHistory: [{
+        status: status || "pending",
+        date: new Date(),
+        updatedBy: "Hệ thống / Người dùng",
+      }],
     });
 
     await newOrder.save();
@@ -139,25 +144,40 @@ orderRouter.post("/", async (req, res) => {
 orderRouter.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const { lateFee, damageFee, status, paymentStatus, overdueDays, damageErrors, lostItems } = req.body;
+    const { lateFee, damageFee, status, paymentStatus, overdueDays, damageErrors, lostItems, updatedBy } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "ID không hợp lệ" });
     }
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      id,
-      {
+    const currentOrder = await Order.findById(id);
+    if (!currentOrder) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    const updateQuery: any = {
+      $set: {
         lateFee: Number(lateFee) || 0,
         damageFee: Number(damageFee) || 0,
-        status,
-        paymentStatus,
+        status: status || currentOrder.status,
+        paymentStatus: paymentStatus || currentOrder.paymentStatus,
         overdueDays: overdueDays !== undefined ? Number(overdueDays) : undefined,
         damageErrors: Array.isArray(damageErrors) ? damageErrors : undefined,
         lostItems: Array.isArray(lostItems) ? lostItems : undefined,
-      },
-      { new: true }
-    );
+      }
+    };
+
+    if (status && currentOrder.status !== status) {
+      updateQuery.$push = {
+        statusHistory: {
+          status,
+          date: new Date(),
+          updatedBy: updatedBy || "Hệ thống",
+        }
+      };
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(id, updateQuery, { new: true });
 
     if (!updatedOrder) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });

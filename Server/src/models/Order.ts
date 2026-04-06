@@ -142,6 +142,7 @@ const orderSchema: Schema = new Schema(
       {
         status: String,
         date: { type: Date, default: Date.now },
+        updatedBy: String,
       },
     ],
   },
