@@ -35,6 +35,7 @@ const OrdersDashboard = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [hasAccount, setHasAccount] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -131,7 +132,11 @@ const OrdersDashboard = () => {
         axios.get("http://localhost:3000/users").catch(() => ({ data: [] }))
       ]);
 
-      setOrders(ordersRes.data);
+      const ordersData = ordersRes.data || [];
+      const sortedOrders = ordersData.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setOrders(sortedOrders);
       setUsers(usersRes.data || []);
 
       const productData = productsRes.data as any;
@@ -255,13 +260,15 @@ const OrdersDashboard = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: any = {
-      completed: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      cancelled: "bg-red-100 text-red-800",
+  const formatStatus = (status: string) => {
+    const statusMap: any = {
+      pending: { text: "Chờ xử lý", style: "bg-yellow-100 text-yellow-800" },
+      delivered: { text: "Đã giao hàng", style: "bg-blue-100 text-blue-800" },
+      completed: { text: "Hoàn thành", style: "bg-green-100 text-green-800" },
+      cancelled: { text: "Đã hủy", style: "bg-red-100 text-red-800" },
+      fee_incurred: { text: "Phát sinh phí", style: "bg-orange-100 text-orange-800" },
     };
-    return styles[status] || "bg-gray-100 text-gray-800";
+    return statusMap[status || 'pending'] || { text: status, style: "bg-gray-100 text-gray-800" };
   };
 
   const handlePhoneChange = (phone: string) => {
@@ -293,8 +300,10 @@ const OrdersDashboard = () => {
           <h1 className="text-2xl font-bold text-gray-800">Quản lý đơn hàng DressUp</h1>
         </div>
         <div className="flex items-center gap-4">
+          <button onClick={() => setShowHistoryModal(true)} className="text-gray-700 bg-white border border-gray-300 px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-sm transition-all active:scale-95 hover:bg-gray-50">
+            Lịch sử tạo đơn
+          </button>
           <button onClick={() => setShowModal(true)} style={{ backgroundColor: '#1e3a8a' }} className="text-white px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-lg transition-all active:scale-95">
-
             <span className="text-xl">+</span> Tạo đơn trực tiếp
           </button>
           <span className="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-lg text-sm font-bold border border-blue-200">
@@ -309,6 +318,7 @@ const OrdersDashboard = () => {
             <tr>
 
               <th className="p-4 text-sm font-semibold text-gray-600">Mã đơn</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Ngày tạo</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Khách hàng</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Tổng tiền</th>
 
@@ -323,13 +333,18 @@ const OrdersDashboard = () => {
               <tr key={order._id} className="hover:bg-gray-50 transition">
 
                 <td className="p-4 font-mono text-sm text-blue-600 font-semibold">{order._id?.slice(-6).toUpperCase()}</td>
+                <td className="p-4 text-sm text-gray-600">
+                  {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN", {
+                    hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric"
+                  }) : "N/A"}
+                </td>
                 <td className="p-4 text-sm ">{order.customerName || order.userId?.name || "Khách tại quầy"}</td>
                 <td className="p-4 text-sm ">{(order.total ?? 0).toLocaleString()}đ</td>
 
                 <td className="p-4 text-sm text-gray-600">{order.paymentMethod || "Nhận tại cửa hàng"}</td>
                 <td className="p-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(order.status)}`}>
-                    {order.status || 'pending'}
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${formatStatus(order.status).style}`}>
+                    {formatStatus(order.status).text}
                   </span>
                 </td>
                 <td className="p-4 text-sm ">
@@ -549,6 +564,52 @@ const OrdersDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-4xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center border-b pb-4 mb-6">
+              <h2 className="text-xl font-bold text-gray-800">Lịch sử tạo đơn hàng</h2>
+              <button onClick={() => setShowHistoryModal(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl">✕</button>
+            </div>
+            
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-gray-100 border-b border-gray-200">
+                  <tr>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Mã đơn</th>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Ngày tạo</th>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Khách hàng</th>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Loại đơn</th>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Tổng tiền</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {orders.map((order: any) => (
+                    <tr key={order._id} className="hover:bg-gray-50">
+                      <td className="p-3 font-mono text-sm text-blue-600">{order._id?.slice(-6).toUpperCase()}</td>
+                      <td className="p-3 text-sm text-gray-600">
+                        {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN", {
+                          hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric"
+                        }) : "N/A"}
+                      </td>
+                      <td className="p-3 text-sm">{order.customerName || order.userId?.name || "Khách tại quầy"}</td>
+                      <td className="p-3">
+                        {order.paymentMethod === "Tiền mặt" || order.customerName ? (
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">Tại quầy</span>
+                        ) : (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">Online</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-sm font-medium">{(order.total ?? 0).toLocaleString()}đ</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
