@@ -19,13 +19,22 @@ export interface IOrder extends Document {
   customerName?: string;
   customerPhone?: string;
   customerAddress?: string;
+  bankName?: string;
+  bankAccount?: string;
   note?: string;
 
   shippingAddress?: {
+    address?: string;
     name?: string;
     phone?: string;
-    address?: string;
     city?: string;
+    receiverName?: string;
+    receiverPhone?: string;
+    line1?: string;
+    ward?: string;
+    district?: string;
+    province?: string;
+    country?: string;
   };
 
   startDate?: Date;
@@ -34,10 +43,11 @@ export interface IOrder extends Document {
   subtotal: number;
   serviceFee: number;
 
-
   lateFee: number;
   damageFee: number;
-
+  overdueDays?: number;
+  damageErrors?: string[];
+  lostItems?: string[];
 
   total: number;
 
@@ -49,8 +59,11 @@ export interface IOrder extends Document {
   | "confirmed"
   | "shipped"
   | "delivered"
+  | "fee_incurred"
   | "completed"
   | "cancelled";
+
+  vnpTransactionNo?: string; // 👈 THÊM DÒNG NÀY
 
   createdAt: Date;
   updatedAt: Date;
@@ -80,13 +93,18 @@ const orderSchema: Schema = new Schema(
     customerName: String,
     customerPhone: String,
     customerAddress: String,
+    bankName: String,
+    bankAccount: String,
     note: String,
 
     shippingAddress: {
-      name: String,
-      phone: String,
-      address: String,
-      city: String,
+      receiverName: String,
+      receiverPhone: String,
+      line1: String,
+      ward: String,
+      district: String,
+      province: String,
+      country: String,
     },
 
     startDate: Date,
@@ -95,10 +113,11 @@ const orderSchema: Schema = new Schema(
     subtotal: { type: Number, default: 0 },
     serviceFee: { type: Number, default: 0 },
 
-    // --- THÊM MỚI VÀO SCHEMA ---
     lateFee: { type: Number, default: 0 },
     damageFee: { type: Number, default: 0 },
-    // ---------------------------
+    overdueDays: { type: Number, default: 0 },
+    damageErrors: { type: [String], default: [] },
+    lostItems: { type: [String], default: [] },
 
     total: { type: Number, required: true },
 
@@ -112,16 +131,20 @@ const orderSchema: Schema = new Schema(
         "confirmed",
         "shipped",
         "delivered",
+        "fee_incurred",
         "completed",
         "cancelled",
       ],
       default: "pending",
     },
 
+    vnpTransactionNo: { type: String, default: "" }, // 👈 THÊM DÒNG NÀY
+
     statusHistory: [
       {
         status: String,
         date: { type: Date, default: Date.now },
+        updatedBy: String,
       },
     ],
   },

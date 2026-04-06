@@ -31,7 +31,10 @@ interface OrderItem {
 
 const OrdersDashboard = () => {
   const [orders, setOrders] = useState([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [hasAccount, setHasAccount] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -40,6 +43,8 @@ const OrdersDashboard = () => {
   const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [currentSize, setCurrentSize] = useState("");
   const [currentColor, setCurrentColor] = useState("");
+  const [searchProductTerm, setSearchProductTerm] = useState("");
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
 
   const normalizeProduct = (p: any): Product => {
     const rentalTiers = Array.isArray(p?.rentalTiers)
@@ -108,6 +113,7 @@ const OrdersDashboard = () => {
     customerAddress: "",
     bankAccount: "",
     bankName: "",
+    userId: "",
     total: 0,
     paymentMethod: "Tiền mặt",
 
@@ -122,13 +128,20 @@ const OrdersDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [ordersRes, productsRes] = await Promise.all([
+      const [ordersRes, productsRes, usersRes] = await Promise.all([
         axios.get("http://localhost:3000/orders"),
 
         axios.get("http://localhost:3000/api/products"),
+        axios.get("http://localhost:3000/users").catch(() => ({ data: [] }))
+
       ]);
 
-      setOrders(ordersRes.data);
+      const ordersData = ordersRes.data || [];
+      const sortedOrders = ordersData.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setOrders(sortedOrders);
+      setUsers(usersRes.data || []);
 
       const productData = productsRes.data as any;
       const normalizedProducts = Array.isArray(productData)
@@ -199,6 +212,8 @@ const OrdersDashboard = () => {
     setCurrentProduct(null);
     setCurrentSize("");
     setCurrentColor("");
+    setSearchProductTerm("");
+    setShowProductDropdown(false);
   };
 
   const removeItemFromOrder = (indexToRemove: number) => {
@@ -226,6 +241,7 @@ const OrdersDashboard = () => {
         customerAddress: "",
         bankAccount: "",
         bankName: "",
+        userId: "",
         total: 0,
         paymentMethod: "Tiền mặt",
         status: "delivered",
@@ -234,6 +250,11 @@ const OrdersDashboard = () => {
         endDate: new Date().toISOString().split("T")[0],
         items: [],
       });
+      setCurrentProduct(null);
+      setCurrentSize("");
+      setCurrentColor("");
+      setSearchProductTerm("");
+      setShowProductDropdown(false);
     } catch (err) {
       alert("❌ Lỗi hệ thống.");
     } finally {
@@ -241,13 +262,36 @@ const OrdersDashboard = () => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const styles: any = {
-      completed: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      cancelled: "bg-red-100 text-red-800",
+  const formatStatus = (status: string) => {
+    const statusMap: any = {
+      pending: { text: "Chờ xử lý", style: "bg-yellow-100 text-yellow-800" },
+      delivered: { text: "Đã giao hàng", style: "bg-blue-100 text-blue-800" },
+      completed: { text: "Hoàn thành", style: "bg-green-100 text-green-800" },
+      cancelled: { text: "Đã hủy", style: "bg-red-100 text-red-800" },
+      fee_incurred: { text: "Phát sinh phí", style: "bg-orange-100 text-orange-800" },
     };
-    return styles[status] || "bg-gray-100 text-gray-800";
+    return statusMap[status || 'pending'] || { text: status, style: "bg-gray-100 text-gray-800" };
+  };
+
+  const handlePhoneChange = (phone: string) => {
+    let updatedOrder = { ...newOrder, customerPhone: phone, userId: "" };
+    
+    if (hasAccount && phone.length >= 8) {
+      const foundUser = users.find((u: any) => u.phone === phone);
+      if (foundUser) {
+        updatedOrder.userId = foundUser._id;
+        updatedOrder.customerName = foundUser.name || foundUser.fullName || updatedOrder.customerName;
+        
+        const userOrders = orders.filter((o: any) => o.userId?._id === foundUser._id || o.userId === foundUser._id || o.customerPhone === phone);
+        if (userOrders.length > 0) {
+          const lastOrder: any = userOrders[0];
+          updatedOrder.customerAddress = lastOrder.customerAddress || updatedOrder.customerAddress;
+          updatedOrder.bankName = lastOrder.bankName || updatedOrder.bankName;
+          updatedOrder.bankAccount = lastOrder.bankAccount || updatedOrder.bankAccount;
+        }
+      }
+    }
+    setNewOrder(updatedOrder);
   };
 
   return (
@@ -259,11 +303,11 @@ const OrdersDashboard = () => {
           </h1>
         </div>
         <div className="flex items-center gap-4">
-          <button
-            onClick={() => setShowModal(true)}
-            style={{ backgroundColor: "#1e3a8a" }}
-            className="text-white px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-lg transition-all active:scale-95"
-          >
+
+          <button onClick={() => setShowHistoryModal(true)} className="text-gray-700 bg-white border border-gray-300 px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-sm transition-all active:scale-95 hover:bg-gray-50">
+            Lịch sử tạo đơn
+          </button>
+          <button onClick={() => setShowModal(true)} style={{ backgroundColor: '#1e3a8a' }} className="text-white px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-lg transition-all active:scale-95">
             <span className="text-xl">+</span> Tạo đơn trực tiếp
           </button>
           <span className="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-lg text-sm font-bold border border-blue-200">
@@ -286,15 +330,17 @@ const OrdersDashboard = () => {
                 Tổng tiền
               </th>
 
-              <th className="p-4 text-sm font-semibold text-gray-600">
-                Thanh toán
-              </th>
-              <th className="p-4 text-sm font-semibold text-gray-600">
-                Trạng thái
-              </th>
-              <th className="p-4 text-sm font-semibold text-gray-600">
-                Thao tác
-              </th>
+
+              <th className="p-4 text-sm font-semibold text-gray-600">Mã đơn</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Ngày tạo</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Khách hàng</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Tổng tiền</th>
+
+              <th className="p-4 text-sm font-semibold text-gray-600">Thanh toán</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Trạng thái</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Thao tác</th>
+
+
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -312,15 +358,20 @@ const OrdersDashboard = () => {
 
 
                 <td className="p-4 font-mono text-sm text-blue-600 font-semibold">{order._id?.slice(-6).toUpperCase()}</td>
+                <td className="p-4 text-sm text-gray-600">
+                  {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN", {
+                    hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric"
+                  }) : "N/A"}
+                </td>
                 <td className="p-4 text-sm ">{order.customerName || order.userId?.name || "Khách tại quầy"}</td>
                 <td className="p-4 text-sm ">{(order.total ?? 0).toLocaleString()}đ</td>
 
                 <td className="p-4 text-sm text-gray-600">{order.paymentMethod || "Nhận tại cửa hàng"}</td>
                 <td className="p-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(order.status)}`}
-                  >
-                    {order.status || "pending"}
+
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${formatStatus(order.status).style}`}>
+                    {formatStatus(order.status).text}
+
                   </span>
                 </td>
                 <td className="p-4 text-sm ">
@@ -349,14 +400,30 @@ const OrdersDashboard = () => {
             </h2>
 
             <form onSubmit={handleCreateOrder} className="space-y-4 text-sm">
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Loại khách hàng</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={hasAccount} onChange={() => setHasAccount(true)} className="accent-blue-600 w-4 h-4" />
+                    <span className="font-semibold text-gray-700">Đã có tài khoản</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" checked={!hasAccount} onChange={() => { setHasAccount(false); setNewOrder(prev => ({ ...prev, userId: "" })); }} className="accent-blue-600 w-4 h-4" />
+                    <span className="font-semibold text-gray-700">Chưa có tài khoản</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="col-span-2">
+                <div className="col-span-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Số điện thoại</label>
+                  <input type="tel" required placeholder="Nhập số điện thoại..." className={`w-full p-2 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${hasAccount && newOrder.userId ? "border-green-300 ring-1 ring-green-300 bg-green-50" : "border-gray-200"}`} value={newOrder.customerPhone} onChange={(e) => handlePhoneChange(e.target.value)} />
+                  {hasAccount && newOrder.userId && <p className="text-xs text-green-600 mt-1">✓ Đã tìm thấy khách hàng</p>}
+                  {hasAccount && newOrder.customerPhone && newOrder.customerPhone.length >= 8 && !newOrder.userId && <p className="text-xs text-yellow-600 mt-1">Không tìm thấy khách hàng</p>}
+                </div>
+                <div className="col-span-1">
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Họ và tên</label>
                   <input type="text" required placeholder="Nhập họ và tên..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerName} onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Số điện thoại</label>
-                  <input type="tel" required placeholder="Nhập số điện thoại..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerPhone} onChange={(e) => setNewOrder({ ...newOrder, customerPhone: e.target.value })} />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Địa chỉ</label>
@@ -378,88 +445,98 @@ const OrdersDashboard = () => {
                   Chọn đồ thuê
                 </label>
 
-                <select
-                  className="w-full p-2.5 bg-white border border-gray-200 rounded-lg mb-3 outline-none focus:ring-2 focus:ring-blue-500"
-                  value={currentProduct?._id || ""}
+                <div className="relative mb-3">
+                  <input
+                    type="text"
+                    placeholder="Nhập tên sản phẩm để tìm..."
+                    className="w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+                    value={searchProductTerm}
+                    onChange={(e) => {
+                       setSearchProductTerm(e.target.value);
+                       setShowProductDropdown(true);
+                       if (!e.target.value) {
+                          setCurrentProduct(null);
+                          setCurrentSize("");
+                          setCurrentColor("");
+                       }
+                    }}
+                    onFocus={() => setShowProductDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowProductDropdown(false), 200)}
+                  />
+                  {showProductDropdown && (
+                    <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto mt-1 top-full">
+                      {products.filter(p => !searchProductTerm || p.name.toLowerCase().includes(searchProductTerm.toLowerCase())).length > 0 ? (
+                        products.filter(p => !searchProductTerm || p.name.toLowerCase().includes(searchProductTerm.toLowerCase())).map(p => (
+                          <li
+                            key={p._id}
+                            className="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0 text-sm transition-colors"
+                            onClick={async () => {
+                              setSearchProductTerm(p.name);
+                              setShowProductDropdown(false);
+                              
+                              const id = p._id;
+                              const prod = p;
+                              if (!id || !prod) {
+                                setCurrentProduct(null);
+                                setCurrentSize("");
+                                setCurrentColor("");
+                                return;
+                              }
 
-                  onChange={async (e) => {
-                    const id = e.target.value;
-                    const prod = products.find((p) => p._id === id) as
-                      | Product
-                      | undefined;
+                              try {
+                                const detailRes = await axios.get(`http://localhost:3000/api/products/${id}`);
+                                const detail = detailRes.data as any;
+                                const rawVariants = Array.isArray(detail?.data?.variants) && detail.data.variants.length > 0
+                                  ? detail.data.variants
+                                  : Array.isArray(detail?.data?.product?.variants) && detail.data.product.variants.length > 0
+                                    ? detail.data.product.variants
+                                    : Array.isArray(detail?.variants) && detail.variants.length > 0
+                                      ? detail.variants
+                                      : [];
 
-                    if (!id || !prod) {
-                      setCurrentProduct(null);
-                      setCurrentSize("");
-                      setCurrentColor("");
-                      return;
-                    }
-
-                    try {
-                      const detailRes = await axios.get(
-                        `http://localhost:3000/api/products/${id}`,
-                      );
-                      const detail = detailRes.data as any;
-
-                      const rawVariants = Array.isArray(detail?.data?.variants) && detail.data.variants.length > 0
-                        ? detail.data.variants
-                        : Array.isArray(detail?.data?.product?.variants) && detail.data.product.variants.length > 0
-                          ? detail.data.product.variants
-                          : Array.isArray(detail?.variants) && detail.variants.length > 0
-                            ? detail.variants
-                            : [];
-
-                      const mappedVariants = normalizeVariants(rawVariants);
-
-                      const merged: Product = {
-                        ...prod,
-                        variants: mappedVariants,
-                      };
-
-                      setCurrentProduct(merged);
-
-                      if (mappedVariants.length === 0) {
-                        setCurrentSize("");
-                        setCurrentColor("");
-                        alert(
-                          "Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.",
-                        );
-                        return;
-                      }
-
-                      const sizes = Array.from(
-                        new Set(merged.variants.map((v) => v.size)),
-                      );
-                      setCurrentSize(sizes[0] || "");
+                                const mappedVariants = normalizeVariants(rawVariants);
 
 
-                      const colorsForSize = merged.variants.filter(
-                        (v) => v.size === sizes[0],
-                      );
-                      setCurrentColor(colorsForSize[0]?.color || "");
-                    } catch (err) {
-                      console.error("Lỗi lấy chi tiết sản phẩm:", err);
-                      alert(
-                        "Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.",
-                      );
-                      setCurrentProduct(null);
-                      setCurrentSize("");
-                      setCurrentColor("");
-                    }
-                  }}
-                >
-                  <option value="">-- Click chọn sản phẩm --</option>
+                                const merged: Product = {
+                                  ...prod,
+                                  variants: mappedVariants
+                                };
 
-                  {products.map((p) => (
-                    <option key={p._id} value={p._id}>
 
-                      {p.name} (Thuê:{" "}
-                      {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ -
-                      Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ)
+                                setCurrentProduct(merged);
+                                if (mappedVariants.length === 0) {
+                                  setCurrentSize("");
+                                  setCurrentColor("");
+                                  alert("Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.");
+                                  return;
+                                }
+                                const sizes = Array.from(new Set(merged.variants.map(v => v.size)));
+                                setCurrentSize(sizes[0] || "");
+                                const colorsForSize = merged.variants.filter(v => v.size === sizes[0]);
 
-                    </option>
-                  ))}
-                </select>
+                                setCurrentColor(colorsForSize[0]?.color || "");
+                              } catch (err) {
+                                console.error("Lỗi lấy chi tiết sản phẩm:", err);
+                                alert("Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.");
+                                setCurrentProduct(null);
+                                setCurrentSize("");
+                                setCurrentColor("");
+                              }
+                            }}
+                          >
+                            <span className="font-semibold text-gray-800 block truncate">{p.name}</span>
+                            <span className="text-[11px] text-gray-500 font-medium">
+                              Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ
+                            </span>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="p-3 text-sm text-gray-500 text-center">Không tìm thấy sản phẩm...</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
 
@@ -587,6 +664,52 @@ const OrdersDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-4xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center border-b pb-4 mb-6">
+              <h2 className="text-xl font-bold text-gray-800">Lịch sử tạo đơn hàng</h2>
+              <button onClick={() => setShowHistoryModal(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl">✕</button>
+            </div>
+            
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-gray-100 border-b border-gray-200">
+                  <tr>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Mã đơn</th>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Ngày tạo</th>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Khách hàng</th>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Loại đơn</th>
+                    <th className="p-3 text-sm font-semibold text-gray-600">Tổng tiền</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {orders.map((order: any) => (
+                    <tr key={order._id} className="hover:bg-gray-50">
+                      <td className="p-3 font-mono text-sm text-blue-600">{order._id?.slice(-6).toUpperCase()}</td>
+                      <td className="p-3 text-sm text-gray-600">
+                        {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN", {
+                          hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric"
+                        }) : "N/A"}
+                      </td>
+                      <td className="p-3 text-sm">{order.customerName || order.userId?.name || "Khách tại quầy"}</td>
+                      <td className="p-3">
+                        {order.paymentMethod === "Tiền mặt" || order.customerName ? (
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">Tại quầy</span>
+                        ) : (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">Online</span>
+                        )}
+                      </td>
+                      <td className="p-3 text-sm font-medium">{(order.total ?? 0).toLocaleString()}đ</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

@@ -55,8 +55,7 @@ export default function LoginPage() {
 
       <div className="w-[420px] bg-[#d2ada0] rounded-2xl p-4 shadow-xl text-white">
         <div className="text-center mb-6">
-          <h1 className="text-4xl font-serif">your</h1>
-          <p className="tracking-[6px] text-sm">DRESS</p>
+          <h1 className="text-4xl font-serif">DressUp</h1>
         </div>
 
         <h2 className="text-2xl font-semibold text-center">
@@ -78,7 +77,7 @@ export default function LoginPage() {
             />
 
             {errors.email && (
-              <p className="text-red-200 text-xs mt-1">{errors.email}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
             )}
           </div>
 
@@ -92,7 +91,7 @@ export default function LoginPage() {
             />
 
             {errors.password && (
-              <p className="text-red-200 text-xs mt-1">{errors.password}</p>
+              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
             )}
           </div>
 
@@ -101,21 +100,21 @@ export default function LoginPage() {
           </p>
 
           {errors.api && (
-            <p className="text-red-300 text-sm text-center">{errors.api}</p>
+            <p className="text-red-500 text-sm text-center">{errors.api}</p>
           )}
 
           <button
             onClick={handleLogin}
-            className="w-full py-3 bg-[#8b5a4a] rounded-lg hover:bg-[#75473a]"
+            className="w-full py-3 bg-[#b5654b] rounded-lg hover:bg-[#75473a]"
           >
             Đăng nhập
           </button>
 
-          <div className="flex items-center gap-3 text-xs my-2">
+          {/* <div className="flex items-center gap-3 text-xs my-2">
             <div className="flex-1 h-[1px] bg-white/30"></div>
             hoặc tiếp tục với
             <div className="flex-1 h-[1px] bg-white/30"></div>
-          </div>
+          </div> */}
 
           {/* <div className="flex justify-center gap-4">
           <button className="bg-white text-black px-5 py-2 rounded-lg">

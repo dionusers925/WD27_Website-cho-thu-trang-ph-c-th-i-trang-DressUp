@@ -78,6 +78,9 @@ function DetailPage() {
         product._id,
         1,
         diffDays,
+        product.depositDefault,
+        rentalPrice,
+        totalPayment,
         selectedVariant.size,
         selectedVariant.color || product.colorFamily,
       );
@@ -87,6 +90,7 @@ function DetailPage() {
       console.log("Lỗi thêm vào giỏ hàng:", error);
     }
   };
+  // console.log("VARIANT:", selectedVariant);
   return (
     <div className="bg-white min-h-screen selection:bg-black selection:text-white">
       <div className="max-w-7xl mx-auto px-6 py-32">
@@ -124,7 +128,7 @@ function DetailPage() {
             <div className="space-y-6">
               <div className="space-y-3">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
-                  Color
+                  Màu
                 </h4>
                 <div className="flex items-center gap-3">
                   <div
@@ -173,7 +177,7 @@ function DetailPage() {
             <div className="space-y-10">
               <div className="flex justify-between items-center">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
-                  Rental Period
+                  Thời gian thuê
                 </h4>
                 <div className="flex gap-2">
                   {[1, 3, 7].map((d) => (
@@ -195,7 +199,7 @@ function DetailPage() {
               <div className="grid grid-cols-2 gap-12 relative">
                 <div className="relative group">
                   <label className="text-[8px] uppercase tracking-[0.2em] text-gray-400 absolute -top-5 left-0 font-bold">
-                    Start Date
+                    Ngày bắt đầu
                   </label>
                   <input
                     type="date"
@@ -206,7 +210,7 @@ function DetailPage() {
                 </div>
                 <div className="relative group">
                   <label className="text-[8px] uppercase tracking-[0.2em] text-gray-400 absolute -top-5 left-0 font-bold">
-                    End Date
+                    Ngày kết thúc
                   </label>
                   <input
                     type="date"
@@ -223,21 +227,19 @@ function DetailPage() {
 
             <div className="bg-[#F9F7F5] p-8 space-y-5">
               <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
-                <span>Security Deposit (Tiền cọc)</span>
+                <span>Tiền cọc</span>
                 <span className="text-black font-bold">
                   {product.depositDefault?.toLocaleString()} VNĐ
                 </span>
               </div>
               <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
-                <span>Rental Fee ({diffDays} days)</span>
+                <span>Ngày thuê ({diffDays} days)</span>
                 <span className="text-black font-bold">
                   {rentalPrice.toLocaleString()} VNĐ
                 </span>
               </div>
               <div className="pt-4 border-t border-gray-200/50 flex justify-between items-baseline">
-                <span className="font-serif italic text-2xl">
-                  Total Amount:
-                </span>
+                <span className="font-bold italic text-2xl">Tổng số tiền:</span>
                 <div className="text-right">
                   <p className="text-3xl font-bold">
                     {totalPayment.toLocaleString()} VNĐ
@@ -296,7 +298,7 @@ function DetailPage() {
                     : "bg-black text-white hover:bg-gray-900"
                 }`}
               >
-                Confirm Rental
+                Thêm vào giỏ hàng
               </button>
             </div>
           </div>

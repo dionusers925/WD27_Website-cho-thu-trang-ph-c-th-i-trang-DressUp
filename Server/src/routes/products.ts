@@ -1,28 +1,32 @@
-import express from "express"
+import express from "express";
+import { verifyToken } from "../middleware/auth";
+import { isAdmin } from "../middleware/isAdmin";
 
 import {
+  createProduct,
+  getProducts,
+  getProductDetail,
+  getVariantStockHistory,
+  updateProduct,
+  deleteProduct,
+} from "../controllers/product.controller";
 
-createProduct,
-getProducts,
-getProductDetail,
-getVariantStockHistory,
-updateProduct,
-deleteProduct
+const router = express.Router();
 
-} from "../controllers/product.controller"
+router.get("/", getProducts);
 
-const router = express.Router()
+router.get("/:id/variant-history", getVariantStockHistory);
 
-router.get("/", getProducts)
+router.get("/:id", getProductDetail);
 
-router.get("/:id/variant-history", getVariantStockHistory)
+router.post("/", createProduct);
 
-router.get("/:id", getProductDetail)
+router.put("/:id", updateProduct);
 
-router.post("/", createProduct)
+router.delete("/:id", deleteProduct);
 
-router.put("/:id", updateProduct)
+router.post("/", verifyToken, isAdmin, createProduct);
+router.put("/:id", verifyToken, isAdmin, updateProduct);
+router.delete("/:id", verifyToken, isAdmin, deleteProduct);
 
-router.delete("/:id", deleteProduct)
-
-export default router
+export default router;

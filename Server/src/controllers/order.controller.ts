@@ -4,7 +4,7 @@ import Order from "../models/Order";
 export const getOrderById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const order = await Order.findById(id).populate("userId", "name email");
+    const order = await Order.findById(id).populate("userId", "name fullName email phone");
 
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
@@ -33,7 +33,7 @@ export const updateOrder = async (req: Request, res: Response) => {
         paymentStatus
       },
       { new: true }
-    ).populate("userId", "name email");
+    ).populate("userId", "name fullName email phone");
 
     if (!updatedOrder) {
       return res.status(404).json({ message: "Cập nhật thất bại, không tìm thấy đơn hàng" });

@@ -6,7 +6,7 @@ const demoUser = "65c000000000000000000001";
 
 export const addToCart = async (req: Request, res: Response) => {
   try {
-    const { productId, quantity = 1, days = 1, size, color } = req.body;
+    const { productId, quantity = 1, days = 1 } = req.body;
 
     const product = await Product.findById(productId);
 
@@ -30,11 +30,7 @@ export const addToCart = async (req: Request, res: Response) => {
     }
 
     const existingItem = cart.items.find(
-      (i) =>
-        i.product.toString() === productId &&
-        i.size === size &&
-        i.color === color &&
-        i.days === days,
+      (i) => i.product.toString() === productId && i.days === days,
     );
 
     if (existingItem) {
@@ -45,8 +41,6 @@ export const addToCart = async (req: Request, res: Response) => {
         quantity,
         price,
         days,
-        size,
-        color,
       });
     }
 

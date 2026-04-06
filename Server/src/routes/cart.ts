@@ -27,6 +27,10 @@ router.post("/cart", async (req, res) => {
       ? tier.price
       : (product.rentalTiers?.[0]?.price || 0) * days;
 
+    const deposit = product.depositDefault || 0;
+
+    const total = deposit + rentalPrice;
+
     const existingItem = cart.items.find(
       (i: any) =>
         i.productId === productId &&
@@ -43,6 +47,9 @@ router.post("/cart", async (req, res) => {
         productId: product._id.toString(),
         name: product.name,
         price: rentalPrice,
+        rentalPrice,
+        deposit,
+        total,
         days,
         quantity: quantity || 1,
         image: product.images?.[0] || "",

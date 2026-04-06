@@ -95,8 +95,7 @@ export default function RegisterPage() {
       </Link>
 
       <div className="text-center mb-6">
-        <h1 className="text-4xl font-serif">your</h1>
-        <p className="tracking-[6px] text-sm">DRESS</p>
+        <h1 className="text-4xl font-serif">DressUp</h1>
       </div>
 
       <h2 className="text-2xl font-semibold text-center">Tạo tài khoản</h2>
@@ -118,7 +117,7 @@ export default function RegisterPage() {
             }}
           />
           {errors.email && (
-            <p className="text-red-200 text-xs mt-1">{errors.email}</p>
+            <p className="text-red-500 text-xs mt-1">{errors.email}</p>
           )}
         </div>
 
@@ -134,7 +133,7 @@ export default function RegisterPage() {
             }}
           />
           {errors.name && (
-            <p className="text-red-200 text-xs mt-1">{errors.name}</p>
+            <p className="text-red-500 text-xs mt-1">{errors.name}</p>
           )}
         </div>
 
@@ -150,7 +149,7 @@ export default function RegisterPage() {
             }}
           />
           {errors.phone && (
-            <p className="text-red-200 text-xs mt-1">{errors.phone}</p>
+            <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
           )}
         </div>
 
@@ -167,7 +166,7 @@ export default function RegisterPage() {
             }}
           />
           {errors.password && (
-            <p className="text-red-200 text-xs mt-1">{errors.password}</p>
+            <p className="text-red-500 text-xs mt-1">{errors.password}</p>
           )}
         </div>
 
@@ -187,7 +186,7 @@ export default function RegisterPage() {
             }}
           />
           {errors.confirmPassword && (
-            <p className="text-red-200 text-xs mt-1">
+            <p className="text-red-500 text-xs mt-1">
               {errors.confirmPassword}
             </p>
           )}
@@ -195,12 +194,12 @@ export default function RegisterPage() {
 
         {/* API ERROR */}
         {errors.api && (
-          <p className="text-red-200 text-sm text-center">{errors.api}</p>
+          <p className="text-red-500 text-sm text-center">{errors.api}</p>
         )}
 
         <button
           onClick={handleRegister}
-          className="w-full py-3 bg-[#7d4b3b] rounded-lg hover:bg-[#6a3e30]"
+          className="w-full py-3 bg-[#b5654b] rounded-lg hover:bg-[#6a3e30]"
         >
           Tạo tài khoản
         </button>

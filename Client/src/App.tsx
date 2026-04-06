@@ -20,6 +20,7 @@ import DetailPage from "./pages/client/DetailPage";
 import PolicyPage from "./pages/client/PolicyPage";
 import CartPage from "./pages/client/CartPage";
 import ProductsPage from "./pages/client/ProductsPage";
+import CheckoutPage from "./pages/client/CheckoutCart";
 import LayoutClient from "./layouts/client/LayoutClient";
 
 import AuthLayout from "./layouts/AuthLayout";
@@ -42,7 +43,7 @@ function App() {
     // ADMIN
     {
       path: "/admin",
-      Component: ProtectedRoute, // giữ bảo vệ route
+      Component: ProtectedRoute,
       children: [
         {
           path: "",
@@ -85,6 +86,7 @@ function App() {
         { path: "policy", Component: PolicyPage },
         { path: "catalog", Component: ProductsPage },
         { path: "cart", Component: CartPage },
+        { path: "checkout", Component: CheckoutPage }, 
       ],
     },
 

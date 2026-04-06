@@ -33,13 +33,14 @@ export default function CartItem({
         <div className="flex gap-6 text-sm text-gray-500 mt-1">
           <span>Size: {item.size}</span>
 
-          <span>Màu: {item.colorFamily || "Không có"}</span>
-
+          <span>Màu: {item.color || "Không có"}</span>
         </div>
 
         <p>{item.days} Ngày thuê</p>
 
-        <p className="text-gray-600 mt-1">{item.price?.toLocaleString()} đ</p>
+        <p className="text-gray-600 mt-1">
+          {item.rentalPrice?.toLocaleString()}đ/{item.days} ngày thuê
+        </p>
 
         {/* <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
           <span>Security Deposit (Tiền cọc)</span>
