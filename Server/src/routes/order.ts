@@ -10,7 +10,7 @@ const calcRentalDays = (start: Date, end: Date) => {
   return diffDays > 0 ? diffDays : 1;
 };
 
-// Lấy danh sách đơn hàng
+// Lấy danh sách đơn hàng (admin)
 orderRouter.get("/", async (_req, res) => {
   try {
     const orders = await Order.find()
@@ -23,8 +23,10 @@ orderRouter.get("/", async (_req, res) => {
   }
 });
 
-// Lấy lịch sử đơn hàng của user hiện tại
+
+// Lấy lịch sử đơn hàng của user
 orderRouter.get("/my-orders", async (req, res) => {
+  
   try {
     const userId = req.query.userId as string;
     
@@ -64,6 +66,8 @@ orderRouter.get("/:id", async (req, res) => {
     res.status(500).json({ message: "Lỗi Server" });
   }
 });
+
+
 
 // Tạo đơn hàng mới
 orderRouter.post("/", async (req, res) => {

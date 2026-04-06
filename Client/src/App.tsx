@@ -15,6 +15,7 @@ import ProductEdit from "./pages/admin/products/ProductEdit";
 import ProductDetail from "./pages/admin/products/ProductDetail";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
 
+
 import HomePage from "./pages/client/HomePage";
 import DetailPage from "./pages/client/DetailPage";
 import PolicyPage from "./pages/client/PolicyPage";
@@ -22,6 +23,7 @@ import CartPage from "./pages/client/CartPage";
 import ProductsPage from "./pages/client/ProductsPage";
 import CheckoutPage from "./pages/client/CheckoutCart";
 import LayoutClient from "./layouts/client/LayoutClient";
+import OrderHistory from "./pages/client/OrderHistory";
 
 import AuthLayout from "./layouts/AuthLayout";
 import RegisterPage from "./layouts/RegisterPage";
@@ -87,6 +89,7 @@ function App() {
         { path: "catalog", Component: ProductsPage },
         { path: "cart", Component: CartPage },
         { path: "checkout", Component: CheckoutPage }, 
+        { path: "orders", Component: OrderHistory },
       ],
     },
 

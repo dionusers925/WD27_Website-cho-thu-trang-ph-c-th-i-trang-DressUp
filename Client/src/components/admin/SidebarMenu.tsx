@@ -13,7 +13,7 @@ type MenuItem = Required<MenuProps>["items"][number];
 const SidebarMenu = () => {
   const items: MenuItem[] = [
     {
-      key: "dashboard",
+      key: "/",
       icon: <DashboardOutlined />,
       label: "Dashboard",
     },
