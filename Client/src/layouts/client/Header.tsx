@@ -53,6 +53,9 @@ function Header() {
         <a href="/policy" className="hover:opacity-50 transition-all">
           Hướng dẫn mua hàng
         </a>
+        <Link to="/orders" className="hover:text-blue-600 transition">
+          Lịch sử đơn hàng
+        </Link>
       </nav>
 
       {/* Icons bên phải */}

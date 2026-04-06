@@ -10,7 +10,7 @@ const calcRentalDays = (start: Date, end: Date) => {
   return diffDays > 0 ? diffDays : 1;
 };
 
-// Lấy danh sách đơn hàng
+// Lấy danh sách đơn hàng (admin)
 orderRouter.get("/", async (_req, res) => {
   try {
     const orders = await Order.find()
@@ -20,6 +20,28 @@ orderRouter.get("/", async (_req, res) => {
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: "Lỗi Server" });
+  }
+});
+
+
+// Lấy lịch sử đơn hàng của user
+orderRouter.get("/my-orders", async (req, res) => {
+  
+  try {
+    const userId = req.query.userId as string;
+    
+    if (!userId) {
+      return res.status(400).json({ message: "Thiếu userId" });
+    }
+    
+    const orders = await Order.find({ userId: userId })
+      .populate("items.productId", "name images price")
+      .sort({ createdAt: -1 });
+    
+    res.json(orders);
+  } catch (error) {
+    console.error("Lỗi lấy lịch sử đơn hàng:", error);
+    res.status(500).json({ message: "Lỗi server" });
   }
 });
 
@@ -45,6 +67,8 @@ orderRouter.get("/:id", async (req, res) => {
   }
 });
 
+
+
 // Tạo đơn hàng mới
 orderRouter.post("/", async (req, res) => {
   try {
@@ -62,6 +86,7 @@ orderRouter.post("/", async (req, res) => {
       bankAccount,
       note,
       status,
+      vnpTransactionNo, 
     } = req.body;
 
     const demoUserId = "65c000000000000000000001";
@@ -120,11 +145,12 @@ orderRouter.post("/", async (req, res) => {
       bankName: bankName || undefined,
       bankAccount: bankAccount || undefined,
       note: note || undefined,
+      vnpTransactionNo: vnpTransactionNo || undefined, 
       shippingAddress: {
-        name: customerName || "Khách tại quầy",
-        phone: customerPhone || undefined,
-        address: customerAddress || "Tại quầy",
-        city: "Tại quầy",
+      name: paymentMethod === "vnpay" ? (customerName || "Khách online") : "Khách tại quầy",
+      phone: paymentMethod === "vnpay" ? (customerPhone || undefined) : undefined,
+      address: paymentMethod === "vnpay" ? (customerAddress || "Không có địa chỉ") : "Tại quầy",
+      city: paymentMethod === "vnpay" ? "Online" : "Tại quầy",
       },
       statusHistory: [{
         status: status || "pending",
