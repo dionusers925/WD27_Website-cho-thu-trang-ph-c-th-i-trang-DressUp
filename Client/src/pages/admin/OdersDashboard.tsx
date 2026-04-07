@@ -266,6 +266,7 @@ const OrdersDashboard = () => {
       delivered: { text: "Đã giao hàng", style: "bg-blue-100 text-blue-800" },
       completed: { text: "Hoàn thành", style: "bg-green-100 text-green-800" },
       cancelled: { text: "Đã hủy", style: "bg-red-100 text-red-800" },
+      confirmed: { text: "Xác nhận", style: "bg-indigo-100 text-indigo-800" },
       fee_incurred: { text: "Phát sinh phí", style: "bg-orange-100 text-orange-800" },
     };
     return statusMap[status || 'pending'] || { text: status, style: "bg-gray-100 text-gray-800" };
