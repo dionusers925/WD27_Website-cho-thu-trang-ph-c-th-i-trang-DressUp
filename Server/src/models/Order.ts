@@ -63,7 +63,10 @@ export interface IOrder extends Document {
   | "completed"
   | "cancelled";
 
-  vnpTransactionNo?: string; // 👈 THÊM DÒNG NÀY
+  vnpTransactionNo?: string;
+
+  statusHistory?: { status: string; updatedBy?: string; date: Date }[];
+  paymentStatusHistory?: { status: string; updatedBy?: string; date: Date }[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -141,6 +144,14 @@ const orderSchema: Schema = new Schema(
     vnpTransactionNo: { type: String, default: "" }, // 👈 THÊM DÒNG NÀY
 
     statusHistory: [
+      {
+        status: String,
+        date: { type: Date, default: Date.now },
+        updatedBy: String,
+      },
+    ],
+
+    paymentStatusHistory: [
       {
         status: String,
         date: { type: Date, default: Date.now },

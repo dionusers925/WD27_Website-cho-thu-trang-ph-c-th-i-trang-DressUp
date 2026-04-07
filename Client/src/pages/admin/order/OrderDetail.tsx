@@ -39,6 +39,8 @@ interface Order {
   customerName?: string;
   customerPhone?: string;
   customerAddress?: string;
+  bankAccount?: string;
+  bankName?: string;
   note?: string;
   lateFee?: number;
   damageFee?: number;
@@ -60,6 +62,11 @@ interface Order {
     updatedBy?: string;
     date: string;
   }[];
+  paymentStatusHistory?: {
+    status: string;
+    updatedBy?: string;
+    date: string;
+  }[];
 }
 
 const formatCurrency = (value: number) =>
@@ -76,6 +83,8 @@ const statusBadge = (status?: string) => {
   const styles: Record<string, string> = {
     completed: "bg-green-100 text-green-800",
     delivered: "bg-yellow-100 text-yellow-800",
+    returning: "bg-indigo-100 text-indigo-800",
+    returned: "bg-teal-100 text-teal-800",
     pending: "bg-yellow-100 text-yellow-800",
     cancelled: "bg-red-100 text-red-800",
     confirmed: "bg-blue-100 text-blue-800",
@@ -88,13 +97,16 @@ const statusBadge = (status?: string) => {
 const paymentStatusLabel = (value?: string) => {
   if (!value) return "Chưa thanh toán";
   if (value === "pending") return "Chưa thanh toán";
-  if (value === "paid" || value === "completed" || value === "success") return "Hoàn thành";
+  if (value === "paid") return "Đã thanh toán";
+  if (value === "deposit_returned") return "Đã hoàn cọc";
+  if (value === "completed" || value === "success") return "Hoàn thành";
   return value;
 };
 
 const paymentBadge = (value?: string) => {
-  const key = paymentStatusLabel(value);
-  if (key === "Hoàn thành") return "bg-green-100 text-green-800";
+  if (value === "paid") return "bg-green-100 text-green-800";
+  if (value === "deposit_returned") return "bg-teal-100 text-teal-800";
+  if (value === "completed" || value === "success") return "bg-emerald-100 text-emerald-800";
   return "bg-gray-100 text-gray-800";
 };
 
@@ -119,6 +131,8 @@ const getAvailableStatuses = (currentStatus?: string) => {
     "confirmed",
     "shipped",
     "delivered",
+    "returning",
+    "returned",
     "fee_incurred",
     "completed",
     "cancelled",
@@ -137,14 +151,16 @@ const getAvailableStatuses = (currentStatus?: string) => {
 const getAvailablePaymentStatuses = (currentStatus?: string) => {
   switch (currentStatus) {
     case "pending":
-      return ["pending", "paid", "success"];
+      return ["pending", "paid", "deposit_returned", "success"];
     case "paid":
-      return ["paid", "success"];
+      return ["paid", "deposit_returned", "success"];
+    case "deposit_returned":
+      return ["deposit_returned", "success"];
     case "success":
     case "completed":
       return [currentStatus];
     default:
-      return ["pending", "paid", "success"];
+      return ["pending", "paid", "deposit_returned", "success"];
   }
 };
 
@@ -369,6 +385,8 @@ const OrderDetail = () => {
             <option value="confirmed" disabled={!getAvailableStatuses(order.status).includes("confirmed")}>Đã xác nhận</option>
             <option value="shipped" disabled={!getAvailableStatuses(order.status).includes("shipped")}>Đang giao</option>
             <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao</option>
+            <option value="returning" disabled={!getAvailableStatuses(order.status).includes("returning")}>Đang trả đồ</option>
+            <option value="returned" disabled={!getAvailableStatuses(order.status).includes("returned")}>Đã nhận đồ</option>
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
             <option value="completed" disabled={!getAvailableStatuses(order.status).includes("completed")}>Hoàn tất</option>
             <option value="cancelled" disabled={!getAvailableStatuses(order.status).includes("cancelled")}>Đã hủy</option>
@@ -383,6 +401,7 @@ const OrderDetail = () => {
           >
             <option value="pending" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("pending")}>Chưa thanh toán</option>
             <option value="paid" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("paid")}>Đã thanh toán</option>
+            <option value="deposit_returned" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("deposit_returned")}>Đã hoàn cọc</option>
             <option value="success" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("success")}>Hoàn thành</option>
           </select>
         </div>
@@ -399,7 +418,7 @@ const OrderDetail = () => {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 Thông tin khách hàng
               </span>
-              <span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md text-[10px] font-bold border border-blue-100">ĐƠN TẠI QUẦY</span>
+
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
@@ -416,6 +435,30 @@ const OrderDetail = () => {
                 <div className="font-medium text-gray-700 leading-snug">{customerAddress}</div>
               </div>
             </div>
+
+            {(order.bankAccount || order.bankName) && (
+              <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                <div className="text-[10px] font-bold text-gray-400 uppercase mb-3 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                  Tài khoản ngân hàng (hoàn cọc)
+                </div>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  {order.bankName && (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
+                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Ngân hàng:</span>
+                      <span className="font-bold text-emerald-700">{order.bankName}</span>
+                    </div>
+                  )}
+                  {order.bankAccount && (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
+                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Số tài khoản:</span>
+                      <span className="font-bold text-emerald-700 tracking-wider">{order.bankAccount}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {order.note && (
               <div className="mt-5 pt-4 border-t border-dashed border-gray-200">
                 <div className="text-[10px] font-bold text-yellow-600 uppercase mb-1.5 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Ghi chú từ khách:</div>
@@ -539,9 +582,11 @@ const OrderDetail = () => {
                             history.status === 'confirmed' ? 'Đã xác nhận' :
                               history.status === 'shipped' ? 'Đang giao' :
                                 history.status === 'delivered' ? 'Đã giao' :
-                                  history.status === 'fee_incurred' ? 'Phát sinh phí' :
-                                    history.status === 'completed' ? 'Hoàn tất' :
-                                      history.status === 'cancelled' ? 'Đã hủy' : history.status}
+                                  history.status === 'returning' ? 'Đang trả đồ' :
+                                    history.status === 'returned' ? 'Đã nhận đồ' :
+                                      history.status === 'fee_incurred' ? 'Phát sinh phí' :
+                                        history.status === 'completed' ? 'Hoàn tất' :
+                                          history.status === 'cancelled' ? 'Đã hủy' : history.status}
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
                       </div>
@@ -670,11 +715,60 @@ const OrderDetail = () => {
               </div>
               <div className="text-right">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Trạng thái GD</div>
-                <div className={`font-bold text-sm ${paymentStatus === 'success' || paymentStatus === 'paid' ? 'text-green-600' : 'text-blue-600'}`}>
+                <div className={`font-bold text-sm ${
+                  paymentStatus === 'success' ? 'text-emerald-600' :
+                  paymentStatus === 'paid' ? 'text-green-600' :
+                  paymentStatus === 'deposit_returned' ? 'text-teal-600' :
+                  'text-blue-600'
+                }`}>
                   {paymentStatusLabel(paymentStatus)}
                 </div>
               </div>
             </div>
+
+            {/* BANNER HOÀN CỌC */}
+            {(paymentStatus === 'deposit_returned' || paymentStatus === 'success' || paymentStatus === 'completed') && (() => {
+              // Tìm entry hoàn cọc gần nhất trong paymentStatusHistory
+              const refundEntry = order.paymentStatusHistory
+                ? [...order.paymentStatusHistory].reverse().find(
+                    h => h.status === 'deposit_returned' || h.status === 'success' || h.status === 'completed'
+                  )
+                : undefined;
+              return (
+                <div className="mx-4 my-3 bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-start gap-3">
+                  <div className="w-9 h-9 bg-teal-100 rounded-full flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[11px] font-black text-teal-700 uppercase tracking-wider mb-1.5">Tiền cọ đã hoàn lại cho khách</div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-black text-teal-600">
+                        {formatCurrency(Math.max(0, depositTotal - damageFee - lostDepositTotal))}
+                      </span>
+                    </div>
+                    <div className="mt-2 space-y-1 text-[12px] text-teal-700/80 font-medium">
+                      <div className="flex justify-between">
+                        <span>Cọ ban đầu:</span>
+                        <span className="font-bold">{formatCurrency(depositTotal)}</span>
+                      </div>
+                      {(damageFee + lostDepositTotal) > 0 && (
+                        <div className="flex justify-between text-red-500">
+                          <span>Trừ khấu trừ (hư hỏng/mất đồ):</span>
+                          <span className="font-bold">- {formatCurrency(damageFee + lostDepositTotal)}</span>
+                        </div>
+                      )}
+                    </div>
+                    {refundEntry && (
+                      <div className="mt-3 pt-3 border-t border-teal-200 flex items-center gap-2 text-[11px] text-teal-600">
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        <span>Hoàn cọc bởi: <strong className="text-teal-800">{refundEntry.updatedBy || 'Hệ thống'}</strong></span>
+                        <span className="ml-auto text-teal-400 font-medium">{formatDateTime(refundEntry.date)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* PHẦN 1: TỔNG ĐƠN KHÁCH TRẢ BAN ĐẦU */}
             <div className="p-5 border-b border-gray-200 bg-white">
@@ -718,10 +812,10 @@ const OrderDetail = () => {
                   </div>
                 )}
 
-                {status === 'completed' && (
+                {(paymentStatus === 'deposit_returned' || status === 'completed') && (
                   <div className="flex justify-between items-center pt-2 mt-2 border-t border-white/10 text-emerald-300">
                     <span>Trả cọc khách (Còn lại):</span>
-                    <span className="font-bold">{formatCurrency(Math.max(0, depositTotal - lateFee - damageFee - lostDepositTotal))}</span>
+                    <span className="font-bold">{formatCurrency(Math.max(0, depositTotal - damageFee - lostDepositTotal))}</span>
                   </div>
                 )}
 

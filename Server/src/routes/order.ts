@@ -203,6 +203,17 @@ orderRouter.put("/:id", async (req, res) => {
       };
     }
 
+    if (paymentStatus && currentOrder.paymentStatus !== paymentStatus) {
+      updateQuery.$push = {
+        ...(updateQuery.$push || {}),
+        paymentStatusHistory: {
+          status: paymentStatus,
+          date: new Date(),
+          updatedBy: updatedBy || "Hệ thống",
+        }
+      };
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(id, updateQuery, { new: true });
 
     if (!updatedOrder) {
