@@ -27,11 +27,11 @@ const SidebarMenu = () => {
       label: "Quản lý danh mục",
       icon: <ProductOutlined />,
     },
-    {
-      key: "attributes",
-      label: "Quản lý thuộc tính",
-      icon: <TagsOutlined />,
-    },
+    // {
+    //   key: "attributes",
+    //   label: "Quản lý thuộc tính",
+    //   icon: <TagsOutlined />,
+    // },
     {
       key: "products",
       label: "Quản lý sản phẩm",

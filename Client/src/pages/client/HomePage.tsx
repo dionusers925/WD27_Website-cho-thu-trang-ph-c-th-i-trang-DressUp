@@ -271,52 +271,48 @@ function HomePage() {
       </div>
 
       {/* ================= GALLERY ================= */}
-      <div className="max-w-7xl mx-auto px-6 py-40 border-t border-gray-50">
-        <div className="text-center space-y-4 mb-20">
-          <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
-            Trưng bày xu hướng
-          </span>
+<div className="max-w-7xl mx-auto px-6 py-32 border-t border-gray-50">
+  <div className="text-center space-y-4 mb-20">
+    <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
+      Trưng bày xu hướng
+    </span>
 
-          <h2 className="text-4xl italic text-gray-900 mt-2" style={luxuryFont}>
-            — Làm mới phong cách của bạn.
-          </h2>
-        </div>
+    <h2 className="text-4xl italic text-gray-900 mt-2" style={luxuryFont}>
+      — Làm mới phong cách của bạn.
+    </h2>
+  </div>
 
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 md:col-span-4 space-y-6">
-            <img
-              className="w-full h-[500px] object-cover rounded-xl"
-              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000"
-            />
-            <img
-              className="w-full h-[500px] object-cover rounded-xl"
-              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
-            />
-          </div>
+  {/* GRID MỚI */}
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[200px]">
+    
+    {/* ảnh lớn */}
+    <img
+      className="w-full h-full object-cover rounded-xl md:row-span-3"
+      src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000"
+    />
 
-          <div className="col-span-12 md:col-span-4 space-y-6 md:pt-20">
-            <img
-              className="w-full h-[400px] object-cover rounded-xl"
-              src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000"
-            />
-            <img
-              className="w-full h-[400px] object-cover rounded-xl"
-              src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
-            />
-          </div>
+    {/* ảnh nhỏ */}
+    <img
+      className="w-full h-full object-cover rounded-xl"
+      src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000"
+    />
 
-          <div className="col-span-12 md:col-span-4 space-y-6">
-            <img
-              className="w-full h-[500px] object-cover rounded-xl"
-              src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000"
-            />
-            <img
-              className="w-full h-[500px] object-cover rounded-xl"
-              src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000"
-            />
-          </div>
-        </div>
-      </div>
+    <img
+      className="w-full h-full object-cover rounded-xl md:row-span-2"
+      src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000"
+    />
+
+    <img
+      className="w-full h-full object-cover rounded-xl md:row-span-2"
+      src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
+    />
+
+    <img
+      className="w-full h-full object-cover rounded-xl"
+      src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
+    />
+  </div>
+</div>
     </div>
   );
 }

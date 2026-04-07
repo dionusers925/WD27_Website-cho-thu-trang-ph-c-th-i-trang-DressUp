@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose"; // 👈 THÊM IMPORT
+import mongoose from "mongoose";
 import Order from "../models/Order";
 import Cart from "../models/Cart";
 import { createVnpayUrl } from "../services/vnpay.service";
@@ -12,7 +12,7 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
   try {
     console.log("BODY createPaymentUrl:", req.body);
 
-    const { userId, total, items, customerInfo, paymentMethod  } = req.body;
+    const { userId, total, items, customerInfo, paymentMethod, bankName, bankAccount, bankHolder } = req.body;
 
     if (!userId) {
       return res.status(400).json({ message: "Thiếu userId" });
@@ -25,6 +25,7 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
     if (!total || total <= 0) {
       return res.status(400).json({ message: "Số tiền không hợp lệ" });
     }
+    
 
     const tempOrderNumber = `TMP${Date.now()}`;
 
@@ -33,6 +34,9 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
       total,
       items,
       customerInfo,
+      bankName,
+      bankAccount,
+      bankHolder,
       createdAt: new Date(),
       processed: false,
       paymentMethod: paymentMethod || "vnpay",
@@ -107,6 +111,9 @@ export const paymentSuccess = async (req: Request, res: Response) => {
       customerName: tempData.customerInfo?.fullName || "",
       customerPhone: tempData.customerInfo?.phone || "",
       customerAddress: tempData.customerInfo?.address || "",
+      bankName: tempData.bankName || "",
+      bankAccount: tempData.bankAccount || "",
+      bankHolder: tempData.bankHolder || "",
       note: tempData.customerInfo?.note || "",
       vnpTransactionNo: vnp_TransactionNo,
     });
@@ -115,7 +122,6 @@ export const paymentSuccess = async (req: Request, res: Response) => {
       id: (order as any)._id,
       orderNumber: (order as any).orderNumber,
     });
-
 
     delete tempPayments[vnp_TxnRef];
 
