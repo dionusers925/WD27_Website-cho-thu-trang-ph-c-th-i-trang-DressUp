@@ -5,6 +5,10 @@ import mongoose from "mongoose";
 import path from "path";
 import { connectDB } from "./db";
 
+
+
+
+
 import "dotenv/config";
 import cors from "cors";
 
@@ -15,6 +19,7 @@ import orderRouter from "../routes/order";
 import costumeRoutes from "../routes/costumes";
 import cartRoutes from "../routes/cart";
 import productRouter from "../routes/product";
+
 import productRoutes from "../routes/products";
 import reviewRoutes from "../routes/review.route";
 
@@ -23,6 +28,11 @@ import paymentRoutes from "../routes/payment.routes";
 
 import attributeRouter from "../routes/attributes";
 import uploadRouter from "../routes/upload";
+
+
+
+
+
 
 const app = express();
 

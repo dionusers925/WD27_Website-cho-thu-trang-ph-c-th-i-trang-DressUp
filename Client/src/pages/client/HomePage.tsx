@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { type ICostume } from "../../types/product";
+import { type Product } from "../../types/product";
 
 /* ================= TYPES ================= */
 interface ICategory {
@@ -14,8 +14,12 @@ const API_URL = "http://localhost:3000";
 
 /* ================= COMPONENT ================= */
 function HomePage() {
-  const [costumes, setCostumes] = useState<ICostume[]>([]);
+
+
   const [categories, setCategories] = useState<ICategory[]>([]);
+
+  const [costumes, setCostumes] = useState<Product[]>([]);
+
   const [loading, setLoading] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);

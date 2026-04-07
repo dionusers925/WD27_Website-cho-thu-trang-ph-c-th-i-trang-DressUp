@@ -43,13 +43,11 @@ export interface IOrder extends Document {
   subtotal: number;
   serviceFee: number;
 
-
   lateFee: number;
   damageFee: number;
   overdueDays?: number;
   damageErrors?: string[];
   lostItems?: string[];
-
 
   total: number;
 
@@ -64,6 +62,8 @@ export interface IOrder extends Document {
   | "fee_incurred"
   | "completed"
   | "cancelled";
+
+  vnpTransactionNo?: string; // 👈 THÊM DÒNG NÀY
 
   createdAt: Date;
   updatedAt: Date;
@@ -137,6 +137,8 @@ const orderSchema: Schema = new Schema(
       ],
       default: "pending",
     },
+
+    vnpTransactionNo: { type: String, default: "" }, // 👈 THÊM DÒNG NÀY
 
     statusHistory: [
       {

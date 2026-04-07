@@ -1,11 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function PaymentResult() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [result, setResult] = useState<any>(null);
   const [countdown, setCountdown] = useState(5);
+  const hasCalled = useRef(false);
+
+  // Hàm xóa giỏ hàng trên client
+  const clearCartOnClient = () => {
+    // Xóa trong localStorage
+    localStorage.removeItem("cart");
+    localStorage.removeItem("cartItems");
+    
+    // Dispatch event để các component khác cập nhật
+    window.dispatchEvent(new Event("cartUpdated"));
+    
+    console.log("✅ Đã xóa giỏ hàng trên client");
+  };
 
   useEffect(() => {
     const responseCode = searchParams.get("vnp_ResponseCode");
@@ -13,16 +27,50 @@ export default function PaymentResult() {
     const amount = searchParams.get("vnp_Amount");
     const txnRef = searchParams.get("vnp_TxnRef");
 
-    if (responseCode === "00") {
-      setResult({
-        success: true,
-        transactionNo: transactionNo,
-        amount: Number(amount) / 100,
-        orderId: txnRef,
-      });
-    } else {
-      setResult({ success: false });
-    }
+    const processPayment = async () => {
+      if (hasCalled.current) {
+        console.log("Đã gọi API rồi, bỏ qua lần 2");
+        return;
+      }
+      hasCalled.current = true;
+
+      if (responseCode === "00") {
+        try {
+          const confirmResponse = await axios.post(
+            "http://localhost:3000/api/payment/payment-success",
+            {
+              vnp_TxnRef: txnRef,
+              vnp_ResponseCode: responseCode,
+              vnp_Amount: amount,
+              vnp_TransactionNo: transactionNo,
+            }
+          );
+
+          if (confirmResponse.data.success) {
+            console.log("Đã xác nhận thanh toán thành công");
+            
+            // 👉 XÓA GIỎ HÀNG NGAY SAU KHI THANH TOÁN THÀNH CÔNG
+            clearCartOnClient();
+            
+            setResult({
+              success: true,
+              transactionNo: transactionNo,
+              amount: Number(amount) / 100,
+              orderId: txnRef,
+            });
+          } else {
+            setResult({ success: false });
+          }
+        } catch (error) {
+          console.error("Lỗi xác nhận thanh toán:", error);
+          setResult({ success: false });
+        }
+      } else {
+        setResult({ success: false });
+      }
+    };
+
+    processPayment();
   }, [searchParams]);
 
   useEffect(() => {
@@ -80,7 +128,10 @@ export default function PaymentResult() {
             </div>
           </div>
           
-          <button onClick={() => navigate("/")} style={styles.button}>
+          <button onClick={() => {
+            clearCartOnClient();
+            navigate("/");
+          }} style={styles.button}>
             🏠 Về trang chủ
           </button>
         </div>
@@ -245,7 +296,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 };
 
-// Thêm animation cho spinner (thêm vào file CSS hoặc style tag)
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
   @keyframes spin {

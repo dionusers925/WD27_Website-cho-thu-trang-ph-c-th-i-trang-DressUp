@@ -1,0 +1,268 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+interface OrderItem {
+  productId: {
+    _id: string;
+    name: string;
+    images: string[];
+    price: number;
+  };
+  name?: string;
+  size?: string;
+  color?: string;
+  quantity: number;
+  price: number;
+  deposit: number;
+}
+
+interface Order {
+  _id: string;
+  orderNumber: string;
+  total: number;
+  status: "pending" | "confirmed" | "shipped" | "delivered" | "fee_incurred" | "completed" | "cancelled";
+  paymentMethod: string;
+  paymentStatus: string;
+  createdAt: string;
+  items: OrderItem[];
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+}
+
+export default function OrderHistory() {
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      console.log("👤 User từ localStorage:", user);
+    console.log("🆔 User ID:", user?._id);
+      if (!user) {
+        alert("Vui lòng đăng nhập");
+        navigate("/auth/login");
+        return;
+      }
+
+      const response = await axios.get(
+        `http://localhost:3000/orders/my-orders?userId=${user._id}`
+      );
+    
+      setOrders(response.data);
+    } catch (error) {
+      console.error("Lỗi lấy lịch sử đơn hàng:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    const statusMap: Record<string, { text: string; color: string }> = {
+      pending: { text: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50" },
+      confirmed: { text: "Đã xác nhận", color: "text-blue-600 bg-blue-50" },
+      shipped: { text: "Đang giao", color: "text-purple-600 bg-purple-50" },
+      delivered: { text: "Đã giao", color: "text-green-600 bg-green-50" },
+      fee_incurred: { text: "Phát sinh phí", color: "text-orange-600 bg-orange-50" },
+      completed: { text: "Hoàn thành", color: "text-green-600 bg-green-50" },
+      cancelled: { text: "Đã hủy", color: "text-red-600 bg-red-50" },
+    };
+    return statusMap[status] || { text: status, color: "text-gray-600 bg-gray-50" };
+  };
+
+  const getPaymentStatusText = (status: string) => {
+    return status === "paid" ? "Đã thanh toán" : "Chưa thanh toán";
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-28 flex justify-center items-center">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto pt-28 pb-12 px-4">
+      <h1 className="text-3xl font-bold text-gray-800 mb-8">Lịch sử đơn hàng</h1>
+
+      {orders.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-xl shadow-sm">
+          <p className="text-gray-500 text-lg">Bạn chưa có đơn hàng nào</p>
+          <button
+            onClick={() => navigate("/")}
+            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            Mua sắm ngay
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {orders.map((order) => {
+            const statusInfo = getStatusText(order.status);
+            return (
+              <div
+                key={order._id}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition"
+              >
+                {/* Header đơn hàng */}
+                <div className="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap justify-between items-center gap-2">
+                  <div>
+                    <span className="text-gray-500 text-sm">Mã đơn hàng</span>
+                    <p className="font-mono text-sm font-medium">{order.orderNumber}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm">Ngày đặt</span>
+                    <p className="text-sm">
+                      {new Date(order.createdAt).toLocaleDateString("vi-VN")}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm">Tổng tiền</span>
+                    <p className="text-lg font-bold text-red-600">
+                      {order.total.toLocaleString()}đ
+                    </p>
+                  </div>
+                  <div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                      {statusInfo.text}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500 text-sm">Thanh toán</span>
+                    <p className={`text-sm font-medium ${order.paymentStatus === "paid" ? "text-green-600" : "text-red-500"}`}>
+                      {getPaymentStatusText(order.paymentStatus)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSelectedOrder(order)}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    Xem chi tiết →
+                  </button>
+                </div>
+
+                {/* Danh sách sản phẩm */}
+                <div className="p-4 space-y-3">
+                  {order.items.slice(0, 2).map((item, idx) => (
+                    <div key={idx} className="flex gap-4">
+                      <img
+                        src={item.productId?.images?.[0] || "/placeholder.jpg"}
+                        alt={item.name || item.productId?.name}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-medium">{item.name || item.productId?.name}</h3>
+                        <div className="flex gap-4 text-sm text-gray-500 mt-1">
+                          <span>Số lượng: {item.quantity}</span>
+                          <span>Size: {item.size || "M"}</span>
+                          <span>Màu: {item.color || "Đen"}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{item.price.toLocaleString()}đ</p>
+                        <p className="text-sm text-gray-500">Tiền cọc: {item.deposit?.toLocaleString()}đ</p>
+                      </div>
+                    </div>
+                  ))}
+                  {order.items.length > 2 && (
+                    <p className="text-gray-400 text-sm text-center">
+                      + {order.items.length - 2} sản phẩm khác
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal chi tiết đơn hàng */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white p-4 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold">Chi tiết đơn hàng</h2>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-gray-500 text-sm">Mã đơn hàng</p>
+                  <p className="font-mono">{selectedOrder.orderNumber}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Ngày đặt</p>
+                  <p>{new Date(selectedOrder.createdAt).toLocaleString("vi-VN")}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Trạng thái</p>
+                  <p className={getStatusText(selectedOrder.status).color}>
+                    {getStatusText(selectedOrder.status).text}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 text-sm">Thanh toán</p>
+                  <p>{selectedOrder.paymentMethod === "vnpay" ? "VNPay" : "Tiền mặt"}</p>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3">Thông tin nhận hàng</h3>
+                <p><span className="text-gray-500">Người nhận:</span> {selectedOrder.customerName || "Khách hàng"}</p>
+                <p><span className="text-gray-500">SĐT:</span> {selectedOrder.customerPhone || "Chưa cập nhật"}</p>
+                <p><span className="text-gray-500">Địa chỉ:</span> {selectedOrder.customerAddress || "Chưa cập nhật"}</p>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3">Sản phẩm</h3>
+                <div className="space-y-3">
+                  {selectedOrder.items.map((item, idx) => (
+                    <div key={idx} className="flex gap-4 pb-3 border-b">
+                      <img
+                        src={item.productId?.images?.[0] || "/placeholder.jpg"}
+                        alt={item.name}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.name || item.productId?.name}</h4>
+                        <div className="flex gap-3 text-sm text-gray-500">
+                          <span>Số lượng: {item.quantity}</span>
+                          <span>Size: {item.size || "M"}</span>
+                          <span>Màu: {item.color || "Đen"}</span>
+                        </div>
+                        <p className="text-sm text-gray-500">Tiền cọc: {item.deposit?.toLocaleString()}đ</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-blue-600">{item.price.toLocaleString()}đ</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex justify-between py-2 font-bold text-lg">
+                  <span>Tổng cộng</span>
+                  <span className="text-blue-600">{selectedOrder.total.toLocaleString()}đ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
