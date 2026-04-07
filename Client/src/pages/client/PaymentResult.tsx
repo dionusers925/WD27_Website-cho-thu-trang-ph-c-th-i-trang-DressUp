@@ -9,16 +9,32 @@ export default function PaymentResult() {
   const [countdown, setCountdown] = useState(5);
   const hasCalled = useRef(false);
 
-  // Hàm xóa giỏ hàng trên client
-  const clearCartOnClient = () => {
-    // Xóa trong localStorage
-    localStorage.removeItem("cart");
-    localStorage.removeItem("cartItems");
-    
-    // Dispatch event để các component khác cập nhật
-    window.dispatchEvent(new Event("cartUpdated"));
-    
-    console.log("✅ Đã xóa giỏ hàng trên client");
+  // Hàm xóa giỏ hàng trên cả client và server
+  const clearCartOnClient = async () => {
+    try {
+      // Lấy user từ localStorage
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      
+      if (user && user._id) {
+        // Gọi API xóa cart trên Back-end
+        await axios.post("http://localhost:3000/api/cart/clear", {
+          userId: user._id
+        });
+        console.log("✅ Đã xóa giỏ hàng trên Back-end");
+      }
+      
+      // Xóa trong localStorage
+      localStorage.removeItem("cart");
+      localStorage.removeItem("cartItems");
+      sessionStorage.removeItem("cart");
+      
+      // Dispatch event để các component khác cập nhật
+      window.dispatchEvent(new Event("cartUpdated"));
+      
+      console.log("✅ Đã xóa giỏ hàng trên client");
+    } catch (error) {
+      console.error("Lỗi xóa giỏ hàng:", error);
+    }
   };
 
   useEffect(() => {
@@ -49,8 +65,8 @@ export default function PaymentResult() {
           if (confirmResponse.data.success) {
             console.log("Đã xác nhận thanh toán thành công");
             
-            // 👉 XÓA GIỎ HÀNG NGAY SAU KHI THANH TOÁN THÀNH CÔNG
-            clearCartOnClient();
+            // 👉 XÓA GIỎ HÀNG (CẢ CLIENT VÀ SERVER)
+            await clearCartOnClient();
             
             setResult({
               success: true,
@@ -128,8 +144,8 @@ export default function PaymentResult() {
             </div>
           </div>
           
-          <button onClick={() => {
-            clearCartOnClient();
+          <button onClick={async () => {
+            await clearCartOnClient();
             navigate("/");
           }} style={styles.button}>
             🏠 Về trang chủ

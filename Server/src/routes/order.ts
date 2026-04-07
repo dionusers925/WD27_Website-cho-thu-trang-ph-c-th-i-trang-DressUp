@@ -23,10 +23,8 @@ orderRouter.get("/", async (_req, res) => {
   }
 });
 
-
 // Lấy lịch sử đơn hàng của user
 orderRouter.get("/my-orders", async (req, res) => {
-  
   try {
     const userId = req.query.userId as string;
     
@@ -41,6 +39,55 @@ orderRouter.get("/my-orders", async (req, res) => {
     res.json(orders);
   } catch (error) {
     console.error("Lỗi lấy lịch sử đơn hàng:", error);
+    res.status(500).json({ message: "Lỗi server" });
+  }
+});
+
+// 👉 THÊM API TRẢ ĐỒ
+orderRouter.post("/:id/return", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ message: "Thiếu userId" });
+    }
+
+    // Tìm đơn hàng của user này
+    const order = await Order.findOne({ _id: id, userId: userId });
+    
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+
+    // Chỉ cho phép trả đồ khi đơn hàng đã giao (delivered)
+    if (order.status !== "delivered") {
+      return res.status(400).json({ 
+        message: "Chỉ có thể trả đồ khi đơn hàng đã được giao" 
+      });
+    }
+
+    // Cập nhật status
+    order.status = "returning";
+    (order as any).statusHistory.push({
+      status: "returning",
+      date: new Date(),
+      updatedBy: "Khách hàng",
+    });
+
+    await order.save();
+
+    res.json({ 
+      success: true, 
+      message: "Đã gửi yêu cầu trả đồ thành công", 
+      order 
+    });
+  } catch (error) {
+    console.error("Lỗi trả đồ:", error);
     res.status(500).json({ message: "Lỗi server" });
   }
 });
@@ -67,8 +114,6 @@ orderRouter.get("/:id", async (req, res) => {
   }
 });
 
-
-
 // Tạo đơn hàng mới
 orderRouter.post("/", async (req, res) => {
   try {
@@ -84,6 +129,7 @@ orderRouter.post("/", async (req, res) => {
       customerAddress,
       bankName,
       bankAccount,
+      bankHolder,
       note,
       status,
       vnpTransactionNo, 
@@ -144,13 +190,14 @@ orderRouter.post("/", async (req, res) => {
       customerAddress: customerAddress || undefined,
       bankName: bankName || undefined,
       bankAccount: bankAccount || undefined,
+      bankHolder: bankHolder || undefined,
       note: note || undefined,
       vnpTransactionNo: vnpTransactionNo || undefined, 
       shippingAddress: {
-      name: paymentMethod === "vnpay" ? (customerName || "Khách online") : "Khách tại quầy",
-      phone: paymentMethod === "vnpay" ? (customerPhone || undefined) : undefined,
-      address: paymentMethod === "vnpay" ? (customerAddress || "Không có địa chỉ") : "Tại quầy",
-      city: paymentMethod === "vnpay" ? "Online" : "Tại quầy",
+        name: paymentMethod === "vnpay" ? (customerName || "Khách online") : "Khách tại quầy",
+        phone: paymentMethod === "vnpay" ? (customerPhone || undefined) : undefined,
+        address: paymentMethod === "vnpay" ? (customerAddress || "Không có địa chỉ") : "Tại quầy",
+        city: paymentMethod === "vnpay" ? "Online" : "Tại quầy",
       },
       statusHistory: [{
         status: status || "pending",

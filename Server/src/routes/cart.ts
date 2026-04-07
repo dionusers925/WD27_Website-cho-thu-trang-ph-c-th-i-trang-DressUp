@@ -1,5 +1,6 @@
 import { Router } from "express";
 import Product from "../models/Product";
+import crypto from "crypto";
 
 const router = Router();
 
@@ -66,6 +67,7 @@ router.post("/cart", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 router.put("/cart/:id", (req, res) => {
   const { id } = req.params;
   const { quantity } = req.body;
@@ -92,6 +94,13 @@ router.delete("/cart/:id", (req, res) => {
 router.delete("/cart", (req, res) => {
   cart.items = [];
   res.json(cart);
+});
+
+// 👉 THÊM ROUTE NÀY ĐỂ XÓA GIỎ HÀNG
+router.post("/cart/clear", (req, res) => {
+  cart.items = [];
+  console.log("✅ Đã xóa giỏ hàng (RAM)");
+  res.json({ success: true, message: "Đã xóa giỏ hàng" });
 });
 
 export default router;

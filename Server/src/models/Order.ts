@@ -21,6 +21,7 @@ export interface IOrder extends Document {
   customerAddress?: string;
   bankName?: string;
   bankAccount?: string;
+  bankHolder?: string;
   note?: string;
 
   shippingAddress?: {
@@ -55,18 +56,19 @@ export interface IOrder extends Document {
   paymentStatus: string;
 
   status:
-  | "pending"
-  | "confirmed"
-  | "shipped"
-  | "delivered"
-  | "fee_incurred"
-  | "completed"
-  | "cancelled";
+    | "pending"
+    | "confirmed"
+    | "shipped"
+    | "delivered"
+    | "returning"        
+    | "fee_incurred"
+    | "completed"
+    | "cancelled";
 
   vnpTransactionNo?: string;
 
-  statusHistory?: { status: string; updatedBy?: string; date: Date }[];
-  paymentStatusHistory?: { status: string; updatedBy?: string; date: Date }[];
+  statusHistory?: Array<{ status: string; updatedBy?: string; date: Date }>;
+  paymentStatusHistory?: Array<{ status: string; updatedBy?: string; date: Date }>;
 
   createdAt: Date;
   updatedAt: Date;
@@ -98,6 +100,7 @@ const orderSchema: Schema = new Schema(
     customerAddress: String,
     bankName: String,
     bankAccount: String,
+    bankHolder: String,
     note: String,
 
     shippingAddress: {
@@ -134,6 +137,7 @@ const orderSchema: Schema = new Schema(
         "confirmed",
         "shipped",
         "delivered",
+        "returning",   
         "fee_incurred",
         "completed",
         "cancelled",
@@ -141,7 +145,7 @@ const orderSchema: Schema = new Schema(
       default: "pending",
     },
 
-    vnpTransactionNo: { type: String, default: "" }, // 👈 THÊM DÒNG NÀY
+    vnpTransactionNo: { type: String, default: "" },
 
     statusHistory: [
       {

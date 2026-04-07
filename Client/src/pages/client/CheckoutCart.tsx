@@ -17,6 +17,9 @@ export default function CheckoutPage() {
     phone: "",
     address: "",
     note: "",
+    bankName: "",      
+    bankAccount: "",  
+    bankHolder: "", 
   });
 
   useEffect(() => {
@@ -79,6 +82,25 @@ export default function CheckoutPage() {
       alert("Vui lòng nhập địa chỉ");
       return false;
     }
+
+    // 👉 VALIDATE BẮT BUỘC THÔNG TIN NGÂN HÀNG
+    if (!formData.bankName.trim()) {
+      alert("Vui lòng nhập tên ngân hàng để nhận hoàn cọc");
+      return false;
+    }
+    if (!formData.bankAccount.trim()) {
+      alert("Vui lòng nhập số tài khoản ngân hàng");
+      return false;
+    }
+    if (!formData.bankHolder.trim()) {
+      alert("Vui lòng nhập tên chủ tài khoản");
+      return false;
+    }
+    if (!/^\d{8,20}$/.test(formData.bankAccount)) {
+      alert("Số tài khoản phải từ 8-20 chữ số");
+      return false;
+    }
+
     return true;
   };
 
@@ -114,6 +136,9 @@ export default function CheckoutPage() {
           total: total,
           items: formattedItems,
           customerInfo: formData,
+          bankName: formData.bankName,
+          bankAccount: formData.bankAccount,
+          bankHolder: formData.bankHolder,
           paymentMethod: "vnpay",
         }
       );
@@ -211,9 +236,58 @@ export default function CheckoutPage() {
                 />
               </div>
 
+              {/* 👉 THÊM DẤU * CHO CÁC FIELD NGÂN HÀNG */}
+              <div className="border-t pt-4 mt-2">
+                <h3 className="font-semibold text-gray-800 mb-4">Thông tin nhận hoàn cọc</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Tên ngân hàng <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="bankName"
+                      value={formData.bankName}
+                      onChange={handleInputChange}
+                      placeholder="VD: Vietcombank, Techcombank, MB Bank..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Số tài khoản <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="bankAccount"
+                      value={formData.bankAccount}
+                      onChange={handleInputChange}
+                      placeholder="Số tài khoản ngân hàng"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Chủ tài khoản <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="bankHolder"
+                      value={formData.bankHolder}
+                      onChange={handleInputChange}
+                      placeholder="Tên chủ tài khoản"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-gray-700 font-medium mb-2">
-                  Ghi chú (không bắt buộc)
+                  Ghi chú
                 </label>
                 <textarea
                   name="note"
