@@ -90,7 +90,7 @@ function DetailPage() {
       console.log("Lỗi thêm vào giỏ hàng:", error);
     }
   };
-  // console.log("VARIANT:", selectedVariant);
+
   return (
     <div className="bg-white min-h-screen selection:bg-black selection:text-white">
       <div className="max-w-7xl mx-auto px-6 py-32">
@@ -120,7 +120,7 @@ function DetailPage() {
               <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400 font-bold">
                 {product.brand}
               </span>
-              <h1 className="text-5xl font-serif italic mt-4 text-gray-900 leading-tight">
+              <h1 className="text-5xl font italic mt-4 text-gray-900 leading-tight">
                 {product.name}
               </h1>
             </div>
@@ -162,11 +162,10 @@ function DetailPage() {
                   <button
                     key={idx}
                     onClick={() => setSelectedVariant(variant)}
-                    className={`min-w-[60px] px-4 py-3 text-[10px] tracking-widest uppercase border transition-all duration-300 ${
-                      selectedVariant === variant
-                        ? "border-black bg-black text-white shadow-lg"
-                        : "border-gray-100 text-gray-400 hover:border-black hover:text-black"
-                    }`}
+                    className={`min-w-[60px] px-4 py-3 text-[10px] tracking-widest uppercase border transition-all duration-300 ${selectedVariant === variant
+                      ? "border-black bg-black text-white shadow-lg"
+                      : "border-gray-100 text-gray-400 hover:border-black hover:text-black"
+                      }`}
                   >
                     {variant.size}
                   </button>
@@ -184,11 +183,10 @@ function DetailPage() {
                     <button
                       key={d}
                       onClick={() => quickSelectDays(d)}
-                      className={`text-[9px] px-4 py-1.5 border uppercase tracking-widest transition-all duration-300 ${
-                        diffDays === d
-                          ? "border-black bg-black text-white"
-                          : "border-gray-100 text-gray-400 hover:border-black hover:text-black"
-                      }`}
+                      className={`text-[9px] px-4 py-1.5 border uppercase tracking-widest transition-all duration-300 ${diffDays === d
+                        ? "border-black bg-black text-white"
+                        : "border-gray-100 text-gray-400 hover:border-black hover:text-black"
+                        }`}
                     >
                       {d} Day{d > 1 ? "s" : ""}
                     </button>
@@ -292,11 +290,10 @@ function DetailPage() {
               <button
                 onClick={handleConfirmRental}
                 disabled={diffDays <= 0 || !isAgreed}
-                className={`w-full py-6 text-[10px] uppercase tracking-[0.5em] transition-all shadow-xl ${
-                  diffDays <= 0 || !isAgreed
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-black text-white hover:bg-gray-900"
-                }`}
+                className={`w-full py-6 text-[10px] uppercase tracking-[0.5em] transition-all shadow-xl ${diffDays <= 0 || !isAgreed
+                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-900"
+                  }`}
               >
                 Thêm vào giỏ hàng
               </button>
