@@ -1,9 +1,16 @@
 @import "tailwindcss";
 
-<<<<<<< HEAD
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
-=======
->>>>>>> 3ca7b2ef8a625dd7ffce70e96c189d6873c2fe8f
+.product-title-clamp {
+  line-height: 1.4;
+  min-height: 2.8em;
+}
 /* :root {
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   line-height: 1.5;

@@ -190,9 +190,18 @@ export default function ProductForm({
             <Form.Item name="status">
               <Select
                 options={[
-                  { label: "Hoạt động", value: "active" },
-                  { label: "Lưu trữ", value: "draft" },
-                  { label: "Ngưng", value: "archived" },
+                  {
+                    label: "Hoạt động - Cho thuê bình thường",
+                    value: "active",
+                  },
+                  {
+                    label: "Tạm ngừng - Chưa cho thuê",
+                    value: "draft",
+                  },
+                  {
+                    label: "Lưu trữ - Ẩn luôn, không dùng nữa",
+                    value: "archived",
+                  },
                 ]}
               />
             </Form.Item>

@@ -32,9 +32,15 @@ const conditionLabel = (value?: string) => {
 };
 const statusLabel = (value?: string) => {
   if (value === "active") return "Hoạt động";
-  if (value === "draft") return "Lưu trữ";
-  if (value === "archived") return "Ngưng";
+  if (value === "draft") return "Tạm ngừng";
+  if (value === "archived") return "Lưu trữ";
   return value ?? "-";
+};
+const statusColor = (value?: string) => {
+  if (value === "active") return "green";
+  if (value === "draft") return "orange";
+  if (value === "archived") return "default";
+  return "default";
 };
 const historyActionLabel = (value?: string) => {
   switch (value) {
@@ -279,7 +285,9 @@ export default function ProductDetail() {
             <div className="product-info-row">
               <span>Trạng thái:</span>
               <span>
-                <Tag color="geekblue">{statusLabel(product.status)}</Tag>
+                <Tag color={statusColor(product.status)}>
+                  {statusLabel(product.status)}
+                </Tag>
               </span>
             </div>
           </Card>

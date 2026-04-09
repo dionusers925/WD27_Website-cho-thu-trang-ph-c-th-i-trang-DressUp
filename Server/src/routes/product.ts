@@ -6,7 +6,7 @@ const product = express.Router();
 // Lấy danh sách sản phẩm
 product.get("/", async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find({ status: { $ne: "archived" } });
     res.json(products);
   } catch (error) {
     res.status(500).json({ message: "Lỗi lấy sản phẩm" });
@@ -18,7 +18,7 @@ product.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
 
-    if (!product) {
+    if (!product || product.status === "archived") {
       return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
     }
 

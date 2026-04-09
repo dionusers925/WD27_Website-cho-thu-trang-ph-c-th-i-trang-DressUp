@@ -34,7 +34,10 @@ function HomePage() {
           : Array.isArray(payload?.products)
             ? payload.products
             : [];
-        setCostumes(items);
+        const visibleItems = items.filter(
+          (item: any) => item?.status !== "archived",
+        );
+        setCostumes(visibleItems);
         setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
       } catch (err) {
         console.error("Lỗi API:", err);
@@ -149,9 +152,9 @@ const handleMouseMove = (e: React.MouseEvent) => {
                             "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=600";
                         }}
                       />
-                      {item.status !== "active" && (
-                        <div className="absolute top-4 right-4 bg-black text-white text-[8px] px-3 py-1 uppercase tracking-widest">
-                          Rented
+                      {item.status === "draft" && (
+                        <div className="absolute top-4 right-4 bg-amber-100 text-amber-700 text-[8px] px-3 py-1 uppercase tracking-widest border border-amber-200">
+                          Táº¡m ngÆ°ng
                         </div>
                       )}
                     </div>

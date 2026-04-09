@@ -44,9 +44,9 @@ const statusColor = (value?: string) => {
 };
 const statusLabel = (value?: string) => {
   if (value === "active") return "Hoạt động";
-  if (value === "draft") return "Lưu trữ";
-  if (value === "archived") return "Ngưng";
-  return "Lưu trữ";
+  if (value === "draft") return "Tạm ngừng";
+  if (value === "archived") return "Lưu trữ";
+  return "Tạm ngừng";
 };
 
 const ProductDashboard = () => {
