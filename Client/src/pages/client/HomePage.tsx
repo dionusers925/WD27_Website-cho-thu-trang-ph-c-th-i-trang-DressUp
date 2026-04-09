@@ -286,22 +286,15 @@ const handleMouseMove = (e: React.MouseEvent) => {
           </div>
           <div className="gallery-item gallery-item-4">
             <img
-              src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
+              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
               alt="Lookbook 04"
               className="w-full h-full object-cover transition duration-700 hover:scale-105"
             />
           </div>
           <div className="gallery-item gallery-item-5">
             <img
-              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
+              src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
               alt="Lookbook 05"
-              className="w-full h-full object-cover transition duration-700 hover:scale-105"
-            />
-          </div>
-          <div className="gallery-item gallery-item-6">
-            <img
-              src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000"
-              alt="Lookbook 06"
               className="w-full h-full object-cover transition duration-700 hover:scale-105"
             />
           </div>
