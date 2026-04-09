@@ -262,18 +262,48 @@ const handleMouseMove = (e: React.MouseEvent) => {
             — Làm mới phong cách của bạn.
           </h2>
         </div>
-        <div className="grid grid-cols-12 gap-6">
-          <div className="col-span-12 md:col-span-4 space-y-6">
-            <img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000" />
-            <img src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000" />
+        <div className="gallery-grid">
+          <div className="gallery-item gallery-item-1">
+            <img
+              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000"
+              alt="Lookbook 01"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
           </div>
-          <div className="col-span-12 md:col-span-4 space-y-6 md:pt-20">
-            <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000" />
-            <img src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000" />
+          <div className="gallery-item gallery-item-2">
+            <img
+              src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000"
+              alt="Lookbook 02"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
           </div>
-          <div className="col-span-12 md:col-span-4 space-y-6">
-            <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000" />
-            <img src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000" />
+          <div className="gallery-item gallery-item-3">
+            <img
+              src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000"
+              alt="Lookbook 03"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
+          </div>
+          <div className="gallery-item gallery-item-4">
+            <img
+              src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
+              alt="Lookbook 04"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
+          </div>
+          <div className="gallery-item gallery-item-5">
+            <img
+              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
+              alt="Lookbook 05"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
+          </div>
+          <div className="gallery-item gallery-item-6">
+            <img
+              src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=1000"
+              alt="Lookbook 06"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
           </div>
         </div>
       </div>
