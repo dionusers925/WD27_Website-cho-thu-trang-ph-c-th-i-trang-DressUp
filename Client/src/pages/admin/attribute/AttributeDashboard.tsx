@@ -19,7 +19,7 @@ import {
   updateAttribute,
   deleteAttribute,
 } from "../../../services/attribute.service";
-import { Attribute } from "../../../types/attribute";
+import type { Attribute } from "../../../types/attribute";
 import "../products/product.css";
 
 const slugify = (text: string) =>

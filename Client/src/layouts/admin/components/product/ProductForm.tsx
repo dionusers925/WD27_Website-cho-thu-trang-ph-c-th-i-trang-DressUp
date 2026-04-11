@@ -7,12 +7,12 @@
   Row,
   Select,
 } from "antd";
-import { ICategory } from "../../../../types/category";
+import type { ICategory } from "../../../../types/category";
 import RentalPriceInput from "./RentalPriceInput";
 import ProductVariants from "./ProductVariants";
 import ProductImages from "./ProductImages";
 import RichTextEditor from "./RichTextEditor";
-import { Attribute } from "../../../../types/attribute";
+import type { Attribute } from "../../../../types/attribute";
 
 type Props = {
   categories: ICategory[];

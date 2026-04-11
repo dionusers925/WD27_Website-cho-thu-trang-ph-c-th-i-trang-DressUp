@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button, Card, Col, Image, Input, Row, Select, Table, Tag, message } from "antd";
 import { ArrowLeftOutlined, EditOutlined } from "@ant-design/icons";
 import { getProduct, getProductVariantHistory } from "../../../services/product.service";
-import { Product, VariantStockHistory } from "../../../types/product";
+import type { Product, VariantStockHistory } from "../../../types/product";
 import "./product.css";
 
 const formatCurrency = (value: number) =>

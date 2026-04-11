@@ -4,10 +4,16 @@ import dayjs from "dayjs";
 export default function ProductAvailabilityCalendar({ bookings }: any) {
 
   const getListData = (value: any) => {
-
-    return bookings.filter((b: any) =>
-      dayjs(value).isBetween(b.startDate, b.endDate, "day", "[]")
-    );
+    const selectedDay = dayjs(value);
+    return bookings.filter((b: any) => {
+      const startDay = dayjs(b.startDate);
+      const endDay = dayjs(b.endDate);
+      return (
+        selectedDay.isSame(startDay, "day") ||
+        selectedDay.isSame(endDay, "day") ||
+        (selectedDay.isAfter(startDay, "day") && selectedDay.isBefore(endDay, "day"))
+      );
+    });
   };
 
   const dateCellRender = (value: any) => {

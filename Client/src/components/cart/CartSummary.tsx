@@ -1,5 +1,4 @@
 import { formatPrice } from "../../utils/formatPrice";
-import { rentalPriceSchema } from "./../../../../Server/src/validations/product.validation";
 
 type Props = {
   subtotal: number;

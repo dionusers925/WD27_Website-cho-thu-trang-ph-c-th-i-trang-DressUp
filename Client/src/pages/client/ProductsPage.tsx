@@ -402,7 +402,7 @@ function ProductsPage() {
                         .map((v: any) => v.size)
                         .filter(Boolean),
                     ),
-                  );
+                  ) as string[];
 
                   const statusMeta =
                     item.status === "active"
@@ -498,7 +498,7 @@ function ProductsPage() {
 
                           {sizes.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-2">
-                              {sizes.slice(0, 4).map((size) => (
+                              {sizes.slice(0, 4).map((size: string) => (
                                 <span
                                   key={size}
                                   className="text-[9px] uppercase tracking-widest px-2 py-1 border border-gray-200 rounded-full text-gray-500"

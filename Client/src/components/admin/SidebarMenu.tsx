@@ -1,7 +1,6 @@
 import {
   DashboardOutlined,
   ProductOutlined,
-  TagsOutlined,
   MessageOutlined,
   FundOutlined,
 } from "@ant-design/icons";

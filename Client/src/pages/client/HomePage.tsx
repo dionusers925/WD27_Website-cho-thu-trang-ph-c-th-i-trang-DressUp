@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type MouseEvent } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 import { type ICostume } from "../../types/product";
@@ -49,24 +49,18 @@ function HomePage() {
     window.scrollTo(0, 0);
   }, []);
   /* ================= SCROLL CATEGORY ================= */
-  const scrollLeft = () => {
-    scrollRef.current?.scrollBy({ left: -300, behavior: "smooth" });
-  };
-  const scrollRight = () => {
-    scrollRef.current?.scrollBy({ left: 300, behavior: "smooth" });
-  };
   const luxuryFont = { fontFamily: "Playfair Display, serif" };
   const isDown = useRef(false);
 const startX = useRef(0);
 const scrollLeftPos = useRef(0);
-const handleMouseDown = (e: React.MouseEvent) => {
+const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
   isDown.current = true;
   startX.current = e.pageX - (scrollRef.current?.offsetLeft || 0);
   scrollLeftPos.current = scrollRef.current?.scrollLeft || 0;
 };
 const handleMouseLeave = () => (isDown.current = false);
 const handleMouseUp = () => (isDown.current = false);
-const handleMouseMove = (e: React.MouseEvent) => {
+const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
   if (!isDown.current) return;
   e.preventDefault();
   const x = e.pageX - (scrollRef.current?.offsetLeft || 0);
@@ -165,7 +159,12 @@ const handleMouseMove = (e: React.MouseEvent) => {
                       {item.name}
                     </h3>
                     <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest">
-                      {item.brand?.name || "Designer"}
+                      {(() => {
+                        const rawBrand = (item as any).brand;
+                        return typeof rawBrand === "object"
+                          ? rawBrand?.name || "Designer"
+                          : rawBrand || "Designer";
+                      })()}
                     </p>
                     <p className="text-[10px] text-gray-900 mt-3 uppercase tracking-[0.2em] font-medium">
                       {displayPrice.toLocaleString()} VNĐ

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button, Input, InputNumber, Select, Space, Tag, message } from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
-import { Attribute } from "../../../../types/attribute";
+import type { Attribute } from "../../../../types/attribute";
 
 type VariantAttribute = {
   attributeId?: string;

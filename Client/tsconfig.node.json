@@ -7,7 +7,7 @@
     "types": ["node"],
     "skipLibCheck": true,
 
-    "rootDir": "src",
+    "rootDir": ".",
 
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "app.ts", "vite.config.ts"]
+  "include": ["app.ts", "vite.config.ts"]
 }

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom"; // 👈 THÊM IMPORT
 import CartItem from "../../components/cart/CartItem";
 import CartSummary from "../../components/cart/CartSummary";
-import axios from "axios";
 import {
   getCart,
   updateCartItem,

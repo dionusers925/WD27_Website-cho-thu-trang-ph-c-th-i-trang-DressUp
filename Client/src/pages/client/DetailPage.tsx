@@ -154,7 +154,7 @@ function DetailPage() {
       : baseColor
         ? [baseColor]
         : [];
-    return Array.from(new Set(merged));
+    return Array.from(new Set(merged)) as string[];
   }, [variants, product]);
 
   const sizeOptions = useMemo(() => {
@@ -163,7 +163,7 @@ function DetailPage() {
       : variants;
     return Array.from(
       new Set(pool.map((variant: any) => variant?.size).filter(Boolean)),
-    );
+    ) as string[];
   }, [variants, selectedColor]);
 
   const images = useMemo(() => {

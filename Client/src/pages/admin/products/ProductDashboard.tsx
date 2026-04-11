@@ -13,7 +13,7 @@ import {
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { getProducts, deleteProduct } from "../../../services/product.service";
-import { Product } from "../../../types/product";
+import type { Product } from "../../../types/product";
 import "./product.css";
 
 const formatCurrency = (value: number) =>

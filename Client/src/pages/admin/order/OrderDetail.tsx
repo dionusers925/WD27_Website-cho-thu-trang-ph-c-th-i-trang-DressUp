@@ -2,6 +2,8 @@
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+
 interface OrderItem {
   _id?: string;
   productId?: {
@@ -129,7 +131,7 @@ const OrderDetail = () => {
       setLoading(true);
       setError("");
       try {
-        const res = await axios.get(`http://localhost:3000/orders/${id}`);
+        const res = await axios.get(`${API_BASE_URL}/orders/${id}`);
         const data = res.data as Order;
         setOrder(data);
 
@@ -183,7 +185,7 @@ const OrderDetail = () => {
         payload.lateDays = Number(overdueDays) || 0;
       }
 
-      const res = await axios.put(`http://localhost:3000/orders/${id}`, payload);
+      const res = await axios.put(`${API_BASE_URL}/orders/${id}`, payload);
       const updated = res.data as Order;
       setOrder(updated);
       setStatus(updated.status || status);

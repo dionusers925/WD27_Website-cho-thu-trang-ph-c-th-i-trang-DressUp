@@ -6,8 +6,8 @@ import ProductForm from "../../../layouts/admin/components/product/ProductForm";
 import { getProduct, updateProduct } from "../../../services/product.service";
 import { getCategories } from "../../../services/category.service";
 import { getAttributes } from "../../../services/attribute.service";
-import { ICategory } from "../../../types/category";
-import { Attribute } from "../../../types/attribute";
+import type { ICategory } from "../../../types/category";
+import type { Attribute } from "../../../types/attribute";
 import "./product.css";
 
 const slugify = (text: string) =>
