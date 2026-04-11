@@ -18,8 +18,13 @@ export const createVnpayUrl = (
   order: any,
   ipAddr: string
 ) => {
-  const tmnCode = process.env.VNP_TMN_CODE!;
-  const secretKey = process.env.VNP_HASH_SECRET!;
+  const tmnCode = process.env.VNP_TMN_CODE;
+  const secretKey = process.env.VNP_HASH_SECRET;
+  if (!tmnCode || !secretKey) {
+    throw new Error(
+      "Missing VNPAY configuration. Please set VNP_TMN_CODE and VNP_HASH_SECRET in the server environment."
+    );
+  }
   const vnpUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
   // ✅ SỬA LỖI 1: thêm http://
   const returnUrl = "http://localhost:5173/payment-result";
@@ -50,10 +55,11 @@ export const createVnpayUrl = (
   let signData = "";
   sortedKeys.forEach((key, index) => {
     const value = vnp_Params[key];
+    const encodedValue = encodeURIComponent(String(value ?? ""));
     if (index === 0) {
-      signData += `${key}=${encodeURIComponent(value)}`;
+      signData += `${key}=${encodedValue}`;
     } else {
-      signData += `&${key}=${encodeURIComponent(value)}`;
+      signData += `&${key}=${encodedValue}`;
     }
   });
 

@@ -1,5 +1,6 @@
 ﻿import express from "express";
 import Attribute from "../models/attribute.model";
+import Variant from "../models/variant.model";
 import {
   createAttributeSchema,
   updateAttributeSchema,
@@ -124,11 +125,24 @@ router.put("/:id", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
   try {
-    const attribute = await Attribute.findByIdAndDelete(req.params.id);
+    const attribute = await Attribute.findById(req.params.id);
 
     if (!attribute) {
       return res.status(404).json({ message: "Không tìm thấy thuộc tính" });
     }
+
+    await Variant.updateMany(
+      { "attributes.attributeId": attribute._id },
+      {
+        $set: { "attributes.$[elem].attributeName": attribute.name },
+        $unset: { "attributes.$[elem].attributeId": "" },
+      },
+      {
+        arrayFilters: [{ "elem.attributeId": attribute._id }],
+      }
+    );
+
+    await Attribute.findByIdAndDelete(req.params.id);
 
     res.json({ message: "Xóa thành công" });
   } catch (error) {

@@ -12,17 +12,20 @@ import RentalPriceInput from "./RentalPriceInput";
 import ProductVariants from "./ProductVariants";
 import ProductImages from "./ProductImages";
 import RichTextEditor from "./RichTextEditor";
+import { Attribute } from "../../../../types/attribute";
 
 type Props = {
   categories: ICategory[];
   loadingCategories?: boolean;
   onSlugManualChange?: () => void;
+  attributes?: Attribute[];
 };
 
 export default function ProductForm({
   categories,
   loadingCategories,
   onSlugManualChange,
+  attributes = [],
 }: Props) {
   return (
     <div className="product-form">
@@ -177,7 +180,7 @@ export default function ProductForm({
                 },
               ]}
             >
-              <ProductVariants />
+              <ProductVariants attributes={attributes} />
             </Form.Item>
           </Card>
         </Col>
@@ -187,9 +190,18 @@ export default function ProductForm({
             <Form.Item name="status">
               <Select
                 options={[
-                  { label: "Hoạt động", value: "active" },
-                  { label: "Lưu trữ", value: "draft" },
-                  { label: "Ngưng", value: "archived" },
+                  {
+                    label: "Hoạt động - Cho thuê bình thường",
+                    value: "active",
+                  },
+                  {
+                    label: "Tạm ngừng - Chưa cho thuê",
+                    value: "draft",
+                  },
+                  {
+                    label: "Lưu trữ - Ẩn luôn, không dùng nữa",
+                    value: "archived",
+                  },
                 ]}
               />
             </Form.Item>

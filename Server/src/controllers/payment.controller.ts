@@ -58,9 +58,11 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
       paymentUrl,
       tempOrderNumber,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Lỗi tạo payment URL:", error);
-    return res.status(500).json({ message: "Lỗi server" });
+    const message =
+      error?.message || "Lỗi server";
+    return res.status(500).json({ message });
   }
 };
 

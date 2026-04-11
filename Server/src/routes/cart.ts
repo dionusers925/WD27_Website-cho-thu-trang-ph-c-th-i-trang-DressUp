@@ -22,11 +22,13 @@ router.post("/cart", async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    const tier = product.rentalTiers?.find((t: any) => t.days === days);
+    const rentalPrices =
+      (product as any).rentalPrices ?? (product as any).rentalTiers ?? [];
+    const tier = rentalPrices.find((t: any) => t.days === days);
 
     const rentalPrice = tier
       ? tier.price
-      : (product.rentalTiers?.[0]?.price || 0) * days;
+      : (rentalPrices?.[0]?.price || 0) * days;
 
     const deposit = product.depositDefault || 0;
 

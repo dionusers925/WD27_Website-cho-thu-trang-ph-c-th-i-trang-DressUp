@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IOrderItem {
   productId: mongoose.Types.ObjectId;
+  variantId?: mongoose.Types.ObjectId;
   name?: string;
   size?: string;
   color?: string;
@@ -43,13 +44,13 @@ export interface IOrder extends Document {
 
   subtotal: number;
   serviceFee: number;
-
-  lateFee: number;
-  damageFee: number;
+  lateDays?: number;
+  lateFee?: number;
+  damageFee?: number;
+  penaltyNote?: string;
   overdueDays?: number;
   damageErrors?: string[];
   lostItems?: string[];
-
   total: number;
 
   paymentMethod: string;
@@ -60,7 +61,7 @@ export interface IOrder extends Document {
     | "confirmed"
     | "shipped"
     | "delivered"
-    | "returning"        
+    | "returning"
     | "fee_incurred"
     | "completed"
     | "cancelled";
@@ -69,13 +70,11 @@ export interface IOrder extends Document {
 
   statusHistory?: Array<{ status: string; updatedBy?: string; date: Date }>;
   paymentStatusHistory?: Array<{ status: string; updatedBy?: string; date: Date }>;
-
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 const orderItemSchema = new Schema<IOrderItem>({
   productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+  variantId: { type: Schema.Types.ObjectId, ref: "Variant" },
   name: String,
   size: String,
   color: String,
@@ -118,13 +117,13 @@ const orderSchema: Schema = new Schema(
 
     subtotal: { type: Number, default: 0 },
     serviceFee: { type: Number, default: 0 },
-
+    lateDays: { type: Number, default: 0 },
     lateFee: { type: Number, default: 0 },
     damageFee: { type: Number, default: 0 },
+    penaltyNote: { type: String },
     overdueDays: { type: Number, default: 0 },
     damageErrors: { type: [String], default: [] },
     lostItems: { type: [String], default: [] },
-
     total: { type: Number, required: true },
 
     paymentMethod: { type: String, default: "cod" },

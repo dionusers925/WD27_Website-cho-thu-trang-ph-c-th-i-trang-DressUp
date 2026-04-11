@@ -1,85 +1,80 @@
+
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { type Product } from "../../types/product";
-
+import { type ICostume } from "../../types/product";
 /* ================= TYPES ================= */
 interface ICategory {
   _id: string;
   name: string;
 }
-
 /* ================= CONFIG ================= */
 const API_URL = "http://localhost:3000";
-
 /* ================= COMPONENT ================= */
 function HomePage() {
-
-
+  const [costumes, setCostumes] = useState<ICostume[]>([]);
   const [categories, setCategories] = useState<ICategory[]>([]);
-
-  const [costumes, setCostumes] = useState<Product[]>([]);
-
   const [loading, setLoading] = useState(true);
-
   const scrollRef = useRef<HTMLDivElement>(null);
-
   /* ================= FETCH DATA ================= */
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [productsRes, categoriesRes] = await Promise.all([
-          axios.get(`${API_URL}/products`),
-          axios.get(`${API_URL}/categories`),
-        ]);
-
-        setCostumes(productsRes.data);
-        setCategories(categoriesRes.data);
+        const productsRes = await axios
+          .get(`${API_URL}/api/products`)
+          .catch(() => axios.get(`${API_URL}/products`));
+        const categoriesRes = await axios
+          .get(`${API_URL}/categories`)
+          .catch(() => ({ data: [] }));
+        const payload = productsRes.data;
+        const items = Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data?.products)
+          ? payload.data.products
+          : Array.isArray(payload?.products)
+            ? payload.products
+            : [];
+        const visibleItems = items.filter(
+          (item: any) => item?.status !== "archived",
+        );
+        setCostumes(visibleItems);
+        setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
       } catch (err) {
         console.error("Lỗi API:", err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
     window.scrollTo(0, 0);
   }, []);
-
   /* ================= SCROLL CATEGORY ================= */
   const scrollLeft = () => {
     scrollRef.current?.scrollBy({ left: -300, behavior: "smooth" });
   };
-
   const scrollRight = () => {
     scrollRef.current?.scrollBy({ left: 300, behavior: "smooth" });
   };
-
   const luxuryFont = { fontFamily: "Playfair Display, serif" };
-
   const isDown = useRef(false);
-  const startX = useRef(0);
-  const scrollLeftPos = useRef(0);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    isDown.current = true;
-    startX.current = e.pageX - (scrollRef.current?.offsetLeft || 0);
-    scrollLeftPos.current = scrollRef.current?.scrollLeft || 0;
-  };
-
-  const handleMouseLeave = () => (isDown.current = false);
-  const handleMouseUp = () => (isDown.current = false);
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDown.current) return;
-    e.preventDefault();
-    const x = e.pageX - (scrollRef.current?.offsetLeft || 0);
-    const walk = (x - startX.current) * 1.5;
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
-    }
-  };
-
+const startX = useRef(0);
+const scrollLeftPos = useRef(0);
+const handleMouseDown = (e: React.MouseEvent) => {
+  isDown.current = true;
+  startX.current = e.pageX - (scrollRef.current?.offsetLeft || 0);
+  scrollLeftPos.current = scrollRef.current?.scrollLeft || 0;
+};
+const handleMouseLeave = () => (isDown.current = false);
+const handleMouseUp = () => (isDown.current = false);
+const handleMouseMove = (e: React.MouseEvent) => {
+  if (!isDown.current) return;
+  e.preventDefault();
+  const x = e.pageX - (scrollRef.current?.offsetLeft || 0);
+  const walk = (x - startX.current) * 1.5;
+  if (scrollRef.current) {
+    scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
+  }
+};
   return (
     <div className="bg-[#FDFBF9] text-[#2C2C2C] font-sans selection:bg-black selection:text-white">
       {/* ================= HERO ================= */}
@@ -88,27 +83,23 @@ function HomePage() {
           <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400 mb-6 block font-bold">
             Premium Rental
           </span>
-
           <h1
             className="text-5xl md:text-7xl mb-8 leading-[1.1] italic text-gray-900"
             style={luxuryFont}
           >
             — Your New <br /> Everyday Style.
           </h1>
-
           <p className="text-sm text-gray-500 mb-10 leading-relaxed font-light max-w-sm">
             DressUp mang đến những bộ trang phục thiết kế cao cấp, giúp bạn tỏa
             sáng trong mọi sự kiện quan trọng.
           </p>
         </div>
-
         <img
           src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070"
           className="absolute right-0 top-0 w-full md:w-2/3 h-full object-cover"
           alt="Hero Fashion"
         />
       </section>
-
       {/* ================= CATALOG ================= */}
       <section id="catalog" className="py-32 bg-white px-6">
         <div className="max-w-7xl mx-auto">
@@ -116,7 +107,6 @@ function HomePage() {
             <span className="text-[10px] tracking-[0.5em] text-gray-300 uppercase">
               Bộ sưu tập
             </span>
-
             <h2
               className="text-4xl italic text-gray-900 mt-2"
               style={luxuryFont}
@@ -124,7 +114,6 @@ function HomePage() {
               — Thiết kế dành cho mọi sở thích.
             </h2>
           </div>
-
           {loading ? (
             <div className="flex justify-center py-20">
               <p className="text-[10px] tracking-widest uppercase text-gray-400 animate-pulse">
@@ -138,15 +127,15 @@ function HomePage() {
                   item.images && item.images.length > 0
                     ? item.images[0]
                     : "https://placehold.co/600x800?text=DressUp";
-
-                const dailyTier = item.rentalTiers?.find(
-                  (t: any) => t.days === 1,
-                );
-
+                const rentalPrices = Array.isArray(item.rentalPrices)
+                  ? item.rentalPrices
+                  : Array.isArray(item.rentalTiers)
+                  ? item.rentalTiers
+                  : [];
+                const dailyTier = rentalPrices.find((t: any) => t.days === 1);
                 const displayPrice = dailyTier
                   ? dailyTier.price
-                  : item.depositDefault || 0;
-
+                  : item.depositPrice ?? item.depositDefault ?? 0;
                 return (
                   <Link
                     key={item._id}
@@ -163,25 +152,21 @@ function HomePage() {
                             "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=600";
                         }}
                       />
-
-                      {item.status !== "active" && (
-                        <div className="absolute top-4 right-4 bg-black text-white text-[8px] px-3 py-1 uppercase tracking-widest">
-                          Rented
+                      {item.status === "draft" && (
+                        <div className="absolute top-4 right-4 bg-amber-100 text-amber-700 text-[8px] px-3 py-1 uppercase tracking-widest border border-amber-200">
+                          Táº¡m ngÆ°ng
                         </div>
                       )}
                     </div>
-
                     <h3
                       className="text-xl italic text-gray-800"
                       style={luxuryFont}
                     >
                       {item.name}
                     </h3>
-
                     <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-widest">
                       {item.brand?.name || "Designer"}
                     </p>
-
                     <p className="text-[10px] text-gray-900 mt-3 uppercase tracking-[0.2em] font-medium">
                       {displayPrice.toLocaleString()} VNĐ
                       <span className="italic font-light text-gray-400">
@@ -194,7 +179,6 @@ function HomePage() {
               })}
             </div>
           )}
-
           <div className="mt-24 text-center">
             <Link
               to="/catalog"
@@ -205,116 +189,118 @@ function HomePage() {
           </div>
         </div>
       </section>
-
       {/* ================= CATEGORY ================= */}
       <div className="max-w-7xl mx-auto px-6 mt-40 py-20 border-t border-gray-100">
-        <div className="mb-10">
+  <div className="mb-10">
+    <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
+      Danh mục
+    </span>
+    <h2
+      className="text-4xl italic text-gray-900 mt-2"
+      style={luxuryFont}
+    >
+      — Khám phá theo phong cách
+    </h2>
+  </div>
+  <div className="relative">
+    {/* fade trái */}
+    <div className="absolute left-0 top-0 w-16 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
+    
+    {/* fade phải */}
+    <div className="absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
+    <div
+      ref={scrollRef}
+      onMouseDown={handleMouseDown}
+      onMouseLeave={handleMouseLeave}
+      onMouseUp={handleMouseUp}
+      onMouseMove={handleMouseMove}
+      className="flex gap-6 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing snap-x snap-mandatory"
+    >
+      {categories.map((cat, index) => {
+        const fallbackImages = [
+          "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
+          "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
+          "https://images.unsplash.com/photo-1539109136881-3be0616acf4b",
+          "https://images.unsplash.com/photo-1509631179647-0177331693ae",
+        ];
+        const img = fallbackImages[index % fallbackImages.length];
+        return (
+          <Link
+            key={cat._id}
+            to={`/catalog?category=${cat._id}`}
+            className="min-w-[250px] group snap-start"
+          >
+            <div className="aspect-[3/4] overflow-hidden bg-gray-100 mb-4">
+              <img
+                src={`${img}?w=600`}
+                className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
+                alt={cat.name}
+              />
+            </div>
+            <h3
+              className="text-lg italic text-gray-800 text-center"
+              style={luxuryFont}
+            >
+              {cat.name}
+            </h3>
+          </Link>
+        );
+      })}
+    </div>
+  </div>
+</div>
+      {/* ================= GALLERY ================= */}
+      <div className="max-w-7xl mx-auto px-6 py-40 border-t border-gray-50">
+        <div className="text-center space-y-4 mb-20">
           <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
-            Danh mục
+            Trưng bày xu hướng
           </span>
-
-          <h2 className="text-4xl italic text-gray-900 mt-2" style={luxuryFont}>
-            — Khám phá theo phong cách
+          <h2
+            className="text-4xl italic text-gray-900 mt-2"
+            style={luxuryFont}
+          >
+            — Làm mới phong cách của bạn.
           </h2>
         </div>
-
-        <div className="relative">
-          {/* fade trái */}
-          <div className="absolute left-0 top-0 w-16 h-full bg-gradient-to-r from-white to-transparent z-10 pointer-events-none" />
-
-          {/* fade phải */}
-          <div className="absolute right-0 top-0 w-16 h-full bg-gradient-to-l from-white to-transparent z-10 pointer-events-none" />
-
-          <div
-            ref={scrollRef}
-            onMouseDown={handleMouseDown}
-            onMouseLeave={handleMouseLeave}
-            onMouseUp={handleMouseUp}
-            onMouseMove={handleMouseMove}
-            className="flex gap-6 overflow-x-auto no-scrollbar cursor-grab active:cursor-grabbing snap-x snap-mandatory"
-          >
-            {categories.map((cat, index) => {
-              const fallbackImages = [
-                "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f",
-                "https://images.unsplash.com/photo-1490481651871-ab68de25d43d",
-                "https://images.unsplash.com/photo-1539109136881-3be0616acf4b",
-                "https://images.unsplash.com/photo-1509631179647-0177331693ae",
-              ];
-
-              const img = fallbackImages[index % fallbackImages.length];
-
-              return (
-                <Link
-                  key={cat._id}
-                  to={`/catalog?category=${cat._id}`}
-                  className="min-w-[250px] group snap-start"
-                >
-                  <div className="aspect-[3/4] overflow-hidden bg-gray-100 mb-4">
-                    <img
-                      src={`${img}?w=600`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-700"
-                      alt={cat.name}
-                    />
-                  </div>
-
-                  <h3
-                    className="text-lg italic text-gray-800 text-center"
-                    style={luxuryFont}
-                  >
-                    {cat.name}
-                  </h3>
-                </Link>
-              );
-            })}
+        <div className="gallery-grid">
+          <div className="gallery-item gallery-item-1">
+            <img
+              src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000"
+              alt="Lookbook 01"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
+          </div>
+          <div className="gallery-item gallery-item-2">
+            <img
+              src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000"
+              alt="Lookbook 02"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
+          </div>
+          <div className="gallery-item gallery-item-3">
+            <img
+              src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000"
+              alt="Lookbook 03"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
+          </div>
+          <div className="gallery-item gallery-item-4">
+            <img
+              src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
+              alt="Lookbook 04"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
+          </div>
+          <div className="gallery-item gallery-item-5">
+            <img
+              src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
+              alt="Lookbook 05"
+              className="w-full h-full object-cover transition duration-700 hover:scale-105"
+            />
           </div>
         </div>
       </div>
-
-      {/* ================= GALLERY ================= */}
-<div className="max-w-7xl mx-auto px-6 py-32 border-t border-gray-50">
-  <div className="text-center space-y-4 mb-20">
-    <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-bold">
-      Trưng bày xu hướng
-    </span>
-
-    <h2 className="text-4xl italic text-gray-900 mt-2" style={luxuryFont}>
-      — Làm mới phong cách của bạn.
-    </h2>
-  </div>
-
-  {/* GRID MỚI */}
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[200px]">
-    
-    {/* ảnh lớn */}
-    <img
-      className="w-full h-full object-cover rounded-xl md:row-span-3"
-      src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000"
-    />
-
-    {/* ảnh nhỏ */}
-    <img
-      className="w-full h-full object-cover rounded-xl"
-      src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1000"
-    />
-
-    <img
-      className="w-full h-full object-cover rounded-xl md:row-span-2"
-      src="https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1000"
-    />
-
-    <img
-      className="w-full h-full object-cover rounded-xl md:row-span-2"
-      src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=1000"
-    />
-
-    <img
-      className="w-full h-full object-cover rounded-xl"
-      src="https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=1000"
-    />
-  </div>
-</div>
     </div>
   );
 }
-
 export default HomePage;

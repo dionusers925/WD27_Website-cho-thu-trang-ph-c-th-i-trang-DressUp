@@ -14,6 +14,7 @@ import ProductCreate from "./pages/admin/products/ProductCreate";
 import ProductEdit from "./pages/admin/products/ProductEdit";
 import ProductDetail from "./pages/admin/products/ProductDetail";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
+import StockHistoryDashboard from "./pages/admin/stock/StockHistoryDashboard";
 
 
 import HomePage from "./pages/client/HomePage";
@@ -70,6 +71,7 @@ function App() {
             { path: "products/new", Component: ProductCreate },
             { path: "products/:id/edit", Component: ProductEdit },
             { path: "products/:id", Component: ProductDetail },
+            { path: "stock-history", Component: StockHistoryDashboard },
 
             // REVIEWS
             { path: "reviews", Component: ReviewsDashboard },
