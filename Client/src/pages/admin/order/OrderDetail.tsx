@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -83,6 +83,7 @@ const statusBadge = (status?: string) => {
   const styles: Record<string, string> = {
     completed: "bg-green-100 text-green-800",
     delivered: "bg-yellow-100 text-yellow-800",
+    renting: "bg-cyan-100 text-cyan-800",
     returning: "bg-indigo-100 text-indigo-800",
     returned: "bg-teal-100 text-teal-800",
     pending: "bg-yellow-100 text-yellow-800",
@@ -131,6 +132,7 @@ const getAvailableStatuses = (currentStatus?: string) => {
     "confirmed",
     "shipped",
     "delivered",
+    "renting",
     "returning",
     "returned",
     "fee_incurred",
@@ -199,11 +201,44 @@ const OrderDetail = () => {
         const data = res.data as Order;
         setOrder(data);
 
-        setLateFee(data.lateFee || 0);
+        let autoDays: number | '' = '';
+        let initialLateFee = data.lateFee || 0;
+
+        // Auto calculate overdue days if not locked and not cancelled
+        if (data.status !== "completed" && data.status !== "fee_incurred" && data.status !== "cancelled") {
+           const end = new Date(data.endDate || "");
+           end.setHours(23, 59, 59, 999);
+           
+           // If order history has returned state, use that date, else use current time
+           const returnedHistory = data.statusHistory?.slice().reverse().find(h => h.status === 'returned' || h.status === 'fee_incurred');
+           const referenceDate = returnedHistory ? new Date(returnedHistory.date) : new Date();
+           
+           if (referenceDate > end) {
+              const diffTime = referenceDate.getTime() - end.getTime();
+              const d = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              if (d > 0) {
+                 autoDays = d;
+                 // If no late fee saved yet, auto calculate based on rent per day
+                 if (initialLateFee === 0) {
+                    const rDays = calcRentalDays(data.startDate, data.endDate);
+                    const itemsList = Array.isArray(data.items) ? data.items : [];
+                    const rSub = itemsList.reduce((sum: number, item: any) => {
+                       return sum + Number(item.price ?? 0) * Number(item.quantity ?? 1) * rDays;
+                    }, 0);
+                    const rentPerDay = rSub / rDays;
+                    initialLateFee = Math.round(rentPerDay * d);
+                 }
+              }
+           }
+        } else {
+           autoDays = (data as any).overdueDays || '';
+        }
+
+        setLateFee(initialLateFee);
         setDamageFee(data.damageFee || 0);
         setStatus(data.status || "pending");
         setPaymentStatus(data.paymentStatus || "pending");
-        setOverdueDays((data as any).overdueDays || '');
+        setOverdueDays(autoDays);
         setSelectedErrors((data as any).damageErrors || []);
         setLostItemIds((data as any).lostItems || []);
       } catch (err: any) {
@@ -385,6 +420,7 @@ const OrderDetail = () => {
             <option value="confirmed" disabled={!getAvailableStatuses(order.status).includes("confirmed")}>Đã xác nhận</option>
             <option value="shipped" disabled={!getAvailableStatuses(order.status).includes("shipped")}>Đang giao</option>
             <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao</option>
+            <option value="renting" disabled={!getAvailableStatuses(order.status).includes("renting")}>Đang thuê</option>
             <option value="returning" disabled={!getAvailableStatuses(order.status).includes("returning")}>Đang trả đồ</option>
             <option value="returned" disabled={!getAvailableStatuses(order.status).includes("returned")}>Đã nhận đồ</option>
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
@@ -582,7 +618,8 @@ const OrderDetail = () => {
                             history.status === 'confirmed' ? 'Đã xác nhận' :
                               history.status === 'shipped' ? 'Đang giao' :
                                 history.status === 'delivered' ? 'Đã giao' :
-                                  history.status === 'returning' ? 'Đang trả đồ' :
+                                  history.status === 'renting' ? 'Đang thuê' :
+                                    history.status === 'returning' ? 'Đang trả đồ' :
                                     history.status === 'returned' ? 'Đã nhận đồ' :
                                       history.status === 'fee_incurred' ? 'Phát sinh phí' :
                                         history.status === 'completed' ? 'Hoàn tất' :
@@ -619,28 +656,22 @@ const OrderDetail = () => {
                   <div className="relative w-1/3">
                     <input
                       type="number"
+                      readOnly
                       value={overdueDays}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setOverdueDays(val === '' ? '' : Number(val));
-                        if (val !== '') {
-                          const days = Number(val);
-                          const rentPerDay = rentalSubtotal / rentalDays;
-                          setLateFee(Math.round(rentPerDay * days));
-                        }
-                      }}
                       placeholder="Ngày"
-                      className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:border-blue-500 outline-none transition-all pr-8 bg-gray-50 focus:bg-white font-medium"
+                      className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm bg-gray-100 outline-none transition-all pr-8 font-medium cursor-not-allowed"
+                      title="Hệ thống tự động tính ngày trễ hạn dựa vào thời gian trả đồ"
                     />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold">ngày</span>
                   </div>
                   <div className="relative w-2/3">
                     <input
                       type="number"
+                      readOnly
                       value={lateFee === 0 ? '' : lateFee}
-                      onChange={(e) => setLateFee(Number(e.target.value) || 0)}
                       placeholder="Số tiền"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-100 outline-none transition-all font-bold text-red-600 pr-7 cursor-not-allowed"
+                      title="Số tiền phạt do hệ thống tự đánh giá tự động dựa theo ngày"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">đ</span>
                   </div>

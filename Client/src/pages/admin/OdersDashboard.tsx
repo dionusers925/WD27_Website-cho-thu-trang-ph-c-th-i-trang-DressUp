@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -273,6 +273,10 @@ const OrdersDashboard = () => {
       confirmed: "bg-blue-100 text-blue-800",
       shipped: "bg-purple-100 text-purple-800",
       delivered: "bg-yellow-100 text-yellow-800",
+      renting: "bg-cyan-100 text-cyan-800",
+      returning: "bg-indigo-100 text-indigo-800",
+      returned: "bg-teal-100 text-teal-800",
+      fee_incurred: "bg-orange-100 text-orange-800",
     };
     return styles[status] || "bg-gray-100 text-gray-800";
   };
@@ -351,7 +355,16 @@ const OrdersDashboard = () => {
                       order.status
                     )}`}
                   >
-                    {order.status || "pending"}
+                    {order.status === 'pending' ? 'Chờ xử lý' :
+                     order.status === 'confirmed' ? 'Đã xác nhận' :
+                     order.status === 'shipped' ? 'Đang giao' :
+                     order.status === 'delivered' ? 'Đã giao' :
+                     order.status === 'renting' ? 'Đang thuê' :
+                     order.status === 'returning' ? 'Đang trả đồ' :
+                     order.status === 'returned' ? 'Đã nhận đồ' :
+                     order.status === 'fee_incurred' ? 'Phát sinh phí' :
+                     order.status === 'completed' ? 'Hoàn tất' :
+                     order.status === 'cancelled' ? 'Đã hủy' : (order.status || "pending")}
                   </span>
                 </td>
                 <td className="p-4 text-sm">

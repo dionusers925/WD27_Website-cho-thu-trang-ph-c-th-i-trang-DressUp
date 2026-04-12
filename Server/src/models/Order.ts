@@ -61,6 +61,7 @@ export interface IOrder extends Document {
     | "confirmed"
     | "shipped"
     | "delivered"
+    | "renting"
     | "returning"
     | "fee_incurred"
     | "completed"
@@ -136,6 +137,7 @@ const orderSchema: Schema = new Schema(
         "confirmed",
         "shipped",
         "delivered",
+        "renting",
         "returning",   
         "fee_incurred",
         "completed",
