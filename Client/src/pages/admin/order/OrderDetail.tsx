@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -96,7 +96,7 @@ const statusBadge = (status?: string) => {
 };
 
 const paymentStatusLabel = (value?: string) => {
-  if (!value) return "Chưa thanh toán";
+  if (!value) return "Chưa thanh toánn";
   if (value === "pending") return "Chưa thanh toán";
   if (value === "paid") return "Đã thanh toán";
   if (value === "deposit_returned") return "Đã hoàn cọc";
@@ -206,32 +206,32 @@ const OrderDetail = () => {
 
         // Auto calculate overdue days if not locked and not cancelled
         if (data.status !== "completed" && data.status !== "fee_incurred" && data.status !== "cancelled") {
-           const end = new Date(data.endDate || "");
-           end.setHours(23, 59, 59, 999);
-           
-           // If order history has returned state, use that date, else use current time
-           const returnedHistory = data.statusHistory?.slice().reverse().find(h => h.status === 'returned' || h.status === 'fee_incurred');
-           const referenceDate = returnedHistory ? new Date(returnedHistory.date) : new Date();
-           
-           if (referenceDate > end) {
-              const diffTime = referenceDate.getTime() - end.getTime();
-              const d = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-              if (d > 0) {
-                 autoDays = d;
-                 // If no late fee saved yet, auto calculate based on rent per day
-                 if (initialLateFee === 0) {
-                    const rDays = calcRentalDays(data.startDate, data.endDate);
-                    const itemsList = Array.isArray(data.items) ? data.items : [];
-                    const rSub = itemsList.reduce((sum: number, item: any) => {
-                       return sum + Number(item.price ?? 0) * Number(item.quantity ?? 1) * rDays;
-                    }, 0);
-                    const rentPerDay = rSub / rDays;
-                    initialLateFee = Math.round(rentPerDay * d);
-                 }
+          const end = new Date(data.endDate || "");
+          end.setHours(23, 59, 59, 999);
+
+          // If order history has returned state, use that date, else use current time
+          const returnedHistory = data.statusHistory?.slice().reverse().find(h => h.status === 'returned' || h.status === 'fee_incurred');
+          const referenceDate = returnedHistory ? new Date(returnedHistory.date) : new Date();
+
+          if (referenceDate > end) {
+            const diffTime = referenceDate.getTime() - end.getTime();
+            const d = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (d > 0) {
+              autoDays = d;
+              // If no late fee saved yet, auto calculate based on rent per day
+              if (initialLateFee === 0) {
+                const rDays = calcRentalDays(data.startDate, data.endDate);
+                const itemsList = Array.isArray(data.items) ? data.items : [];
+                const rSub = itemsList.reduce((sum: number, item: any) => {
+                  return sum + Number(item.price ?? 0) * Number(item.quantity ?? 1) * rDays;
+                }, 0);
+                const rentPerDay = rSub / rDays;
+                initialLateFee = Math.round(rentPerDay * d);
               }
-           }
+            }
+          }
         } else {
-           autoDays = (data as any).overdueDays || '';
+          autoDays = (data as any).overdueDays || '';
         }
 
         setLateFee(initialLateFee);
@@ -463,7 +463,7 @@ const OrderDetail = () => {
                 <div className="font-bold text-gray-800 text-base">{customerName}</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Số ĐT</div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Số Điện Thoại</div>
                 <div className="font-bold text-blue-600 bg-blue-50/70 border border-blue-100 px-3 py-1.5 rounded-lg inline-block">{customerPhone}</div>
               </div>
               <div>
@@ -620,10 +620,10 @@ const OrderDetail = () => {
                                 history.status === 'delivered' ? 'Đã giao' :
                                   history.status === 'renting' ? 'Đang thuê' :
                                     history.status === 'returning' ? 'Đang trả đồ' :
-                                    history.status === 'returned' ? 'Đã nhận đồ' :
-                                      history.status === 'fee_incurred' ? 'Phát sinh phí' :
-                                        history.status === 'completed' ? 'Hoàn tất' :
-                                          history.status === 'cancelled' ? 'Đã hủy' : history.status}
+                                      history.status === 'returned' ? 'Đã nhận đồ' :
+                                        history.status === 'fee_incurred' ? 'Phát sinh phí' :
+                                          history.status === 'completed' ? 'Hoàn tất' :
+                                            history.status === 'cancelled' ? 'Đã hủy' : history.status}
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
                       </div>
@@ -747,9 +747,9 @@ const OrderDetail = () => {
               <div className="text-right">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Trạng thái GD</div>
                 <div className={`font-bold text-sm ${paymentStatus === 'success' ? 'text-emerald-600' :
-                    paymentStatus === 'paid' ? 'text-green-600' :
-                      paymentStatus === 'deposit_returned' ? 'text-teal-600' :
-                        'text-blue-600'
+                  paymentStatus === 'paid' ? 'text-green-600' :
+                    paymentStatus === 'deposit_returned' ? 'text-teal-600' :
+                      'text-blue-600'
                   }`}>
                   {paymentStatusLabel(paymentStatus)}
                 </div>
