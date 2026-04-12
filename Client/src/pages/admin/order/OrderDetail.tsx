@@ -463,7 +463,7 @@ const OrderDetail = () => {
                 <div className="font-bold text-gray-800 text-base">{customerName}</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Số Điện Thoại</div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Số ĐT</div>
                 <div className="font-bold text-blue-600 bg-blue-50/70 border border-blue-100 px-3 py-1.5 rounded-lg inline-block">{customerPhone}</div>
               </div>
               <div>
