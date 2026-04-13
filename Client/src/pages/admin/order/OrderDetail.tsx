@@ -481,13 +481,13 @@ const OrderDetail = () => {
                 <div className="flex flex-wrap gap-4 text-sm">
                   {order.bankName && (
                     <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
-                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Ngân hàng nào:</span>
+                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Ngân hàng:</span>
                       <span className="font-bold text-emerald-700">{order.bankName}</span>
                     </div>
                   )}
                   {order.bankAccount && (
                     <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
-                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Số tài khoản:</span>
+                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Số tài khoản ngân hàng:</span>
                       <span className="font-bold text-emerald-700 tracking-wider">{order.bankAccount}</span>
                     </div>
                   )}
