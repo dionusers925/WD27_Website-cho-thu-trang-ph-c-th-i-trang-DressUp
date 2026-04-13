@@ -3,21 +3,39 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getCart } from "../../api/cartService";
 
-// Danh sách quận nội thành Hà Nội
+// Danh sách quận nội thành Hà Nội và phí ship (dựa trên khoảng cách thực tế từ shop ở Trịnh Văn Bô, Nam Từ Liêm)
 const HANOI_DISTRICTS = [
-  { id: "badinh", name: "Quận Ba Đình", fee: 35000 },
-  { id: "hoankiem", name: "Quận Hoàn Kiếm", fee: 35000 },
-  { id: "haibatrung", name: "Quận Hai Bà Trưng", fee: 35000 },
-  { id: "dongda", name: "Quận Đống Đa", fee: 35000 },
-  { id: "tayho", name: "Quận Tây Hồ", fee: 35000 },
-  { id: "caugiay", name: "Quận Cầu Giấy", fee: 35000 },
-  { id: "thanhxuan", name: "Quận Thanh Xuân", fee: 35000 },
-  { id: "hoangmai", name: "Quận Hoàng Mai", fee: 35000 },
-  { id: "longbien", name: "Quận Long Biên", fee: 35000 },
-  { id: "bactuliem", name: "Quận Bắc Từ Liêm", fee: 35000 },
-  { id: "namtuliem", name: "Quận Nam Từ Liêm", fee: 35000 },
-  { id: "hadong", name: "Quận Hà Đông", fee: 35000 },
+  { id: "namtuliem", name: "Quận Nam Từ Liêm", fee: 20000},
+  { id: "bactuliem", name: "Quận Bắc Từ Liêm", fee: 25000},
+  { id: "caugiay", name: "Quận Cầu Giấy", fee: 30000},
+  { id: "thanhxuan", name: "Quận Thanh Xuân", fee: 40000},
+  { id: "hadong", name: "Quận Hà Đông", fee: 40000},
+  { id: "badinh", name: "Quận Ba Đình", fee: 50000},
+  { id: "dongda", name: "Quận Đống Đa", fee: 45000},
+  { id: "haibatrung", name: "Quận Hai Bà Trưng", fee: 65000},
+  { id: "hoankiem", name: "Quận Hoàn Kiếm", fee: 65000},
+  { id: "tayho", name: "Quận Tây Hồ", fee: 55000},
+  { id: "hoangmai", name: "Quận Hoàng Mai", fee: 60000},
+  { id: "longbien", name: "Quận Long Biên", fee: 70000 },
 ];
+
+// Tính phí ship dựa trên quận
+const getShippingFee = (districtId: string): number => {
+  const district = HANOI_DISTRICTS.find(d => d.id === districtId);
+  return district?.fee || 35000;
+};
+
+// Lấy tên quận
+const getDistrictName = (districtId: string): string => {
+  const district = HANOI_DISTRICTS.find(d => d.id === districtId);
+  return district?.name || "";
+};
+
+// Lấy khoảng cách
+const getDistance = (districtId: string): string => {
+  const district = HANOI_DISTRICTS.find(d => d.id === districtId);
+  return district?.distance || "~7km";
+};
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -26,7 +44,8 @@ export default function CheckoutPage() {
   const [totalRental, setTotalRental] = useState(0);
   const [totalDeposit, setTotalDeposit] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
-  const [shippingFee, setShippingFee] = useState(35000);
+  const [shippingFee, setShippingFee] = useState(0);
+  const [selectedDistance, setSelectedDistance] = useState("");
   const [total, setTotal] = useState(0);
   const [returnAddressSame, setReturnAddressSame] = useState(true);
   const [returnAddress, setReturnAddress] = useState({
@@ -54,8 +73,13 @@ export default function CheckoutPage() {
 
   // Cập nhật phí ship khi chọn quận
   useEffect(() => {
-    const selectedDistrict = HANOI_DISTRICTS.find(d => d.id === formData.districtId);
-    setShippingFee(selectedDistrict?.fee || 0);
+    if (formData.districtId) {
+      setShippingFee(getShippingFee(formData.districtId));
+      setSelectedDistance(getDistance(formData.districtId));
+    } else {
+      setShippingFee(0);
+      setSelectedDistance("");
+    }
   }, [formData.districtId]);
 
   // Cập nhật tổng tiền
@@ -176,8 +200,8 @@ export default function CheckoutPage() {
   };
 
   const getFullAddress = (districtId: string, specificAddress: string) => {
-    const district = HANOI_DISTRICTS.find(d => d.id === districtId);
-    return `${specificAddress}, ${district?.name}, Hà Nội`;
+    const districtName = getDistrictName(districtId);
+    return `${specificAddress}, ${districtName}, Hà Nội`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -276,7 +300,8 @@ export default function CheckoutPage() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
           <p className="text-sm text-blue-800">
             🚚 <strong>Thông báo vận chuyển:</strong> DressUp chỉ giao hàng trong 
-            <strong> nội thành Hà Nội</strong> (12 quận). Phí ship cố định <strong>35,000đ</strong>.
+            <strong> nội thành Hà Nội</strong>. Phí ship được tính theo khoảng cách thực tế từ shop tại 
+            <strong> Trịnh Văn Bô, Nam Từ Liêm</strong>.
           </p>
         </div>
 
@@ -506,10 +531,14 @@ export default function CheckoutPage() {
                   <span className="text-gray-500">Tiền cọc</span>
                   <span>{totalDeposit.toLocaleString()}đ</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Phí ship (nội thành HN)</span>
-                  <span>{shippingFee.toLocaleString()}đ</span>
-                </div>
+                {shippingFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">
+                      Phí ship
+                    </span>
+                    <span className="text-gray-800">{shippingFee.toLocaleString()}đ</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-base font-bold pt-2 border-t">
                   <span>Tổng cộng</span>
                   <span className="text-blue-600">{total.toLocaleString()}đ</span>
