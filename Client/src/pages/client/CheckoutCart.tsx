@@ -10,9 +10,17 @@ export default function CheckoutPage() {
   const [totalRental, setTotalRental] = useState(0);
   const [totalDeposit, setTotalDeposit] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
-  const [shippingFee, setShippingFee] = useState(35000); // Phí ship cố định
+  const [shippingFee, setShippingFee] = useState(35000);
   const [total, setTotal] = useState(0);
-  const [isInHanoi, setIsInHanoi] = useState(false); // 👈 THÊM STATE
+  const [isInHanoi, setIsInHanoi] = useState(false);
+  
+  // 👉 THÊM STATE CHO ĐỊA CHỈ TRẢ ĐỒ
+  const [returnAddressSame, setReturnAddressSame] = useState(true);
+  const [returnAddress, setReturnAddress] = useState({
+    fullName: "",
+    phone: "",
+    address: "",
+  });
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -29,7 +37,6 @@ export default function CheckoutPage() {
     fetchCart();
   }, []);
 
-  // Cập nhật tổng tiền khi có phí ship
   useEffect(() => {
     if (isInHanoi) {
       setTotal(subtotal + shippingFee);
@@ -70,6 +77,13 @@ export default function CheckoutPage() {
     });
   };
 
+  const handleReturnAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setReturnAddress({
+      ...returnAddress,
+      [e.target.name]: e.target.value,
+    });
+  };
+
   const validateForm = () => {
     if (!formData.fullName.trim()) {
       alert("Vui lòng nhập họ tên");
@@ -92,17 +106,34 @@ export default function CheckoutPage() {
       return false;
     }
     if (!formData.address.trim()) {
-      alert("Vui lòng nhập địa chỉ");
+      alert("Vui lòng nhập địa chỉ nhận hàng");
       return false;
     }
-
-    // 👉 VALIDATE KHU VỰC GIAO HÀNG
     if (!isInHanoi) {
       alert("DressUp chỉ giao hàng trong nội thành Hà Nội. Vui lòng xác nhận.");
       return false;
     }
 
-    // 👉 VALIDATE BẮT BUỘC THÔNG TIN NGÂN HÀNG
+    // 👉 VALIDATE ĐỊA CHỈ TRẢ ĐỒ
+    if (!returnAddressSame) {
+      if (!returnAddress.fullName.trim()) {
+        alert("Vui lòng nhập họ tên người trả đồ");
+        return false;
+      }
+      if (!returnAddress.phone.trim()) {
+        alert("Vui lòng nhập số điện thoại người trả đồ");
+        return false;
+      }
+      if (!/^\d{10,11}$/.test(returnAddress.phone)) {
+        alert("Số điện thoại trả đồ không hợp lệ (10-11 số)");
+        return false;
+      }
+      if (!returnAddress.address.trim()) {
+        alert("Vui lòng nhập địa chỉ trả đồ");
+        return false;
+      }
+    }
+
     if (!formData.bankName.trim()) {
       alert("Vui lòng nhập tên ngân hàng để nhận hoàn cọc");
       return false;
@@ -139,6 +170,22 @@ export default function CheckoutPage() {
       }
 
       const fullAddress = `${formData.address} (Nội thành Hà Nội)`;
+      
+      // 👉 XỬ LÝ ĐỊA CHỈ TRẢ ĐỒ
+      let returnAddressData;
+      if (returnAddressSame) {
+        returnAddressData = {
+          fullName: formData.fullName,
+          phone: formData.phone,
+          address: fullAddress,
+        };
+      } else {
+        returnAddressData = {
+          fullName: returnAddress.fullName,
+          phone: returnAddress.phone,
+          address: returnAddress.address,
+        };
+      }
 
       const formattedItems = cartItems.map((item) => ({
         productId: item.productId || item._id,
@@ -166,6 +213,7 @@ export default function CheckoutPage() {
             address: fullAddress,
             note: formData.note,
           },
+          returnAddress: returnAddressData, // 👈 THÊM ĐỊA CHỈ TRẢ ĐỒ
           bankName: formData.bankName,
           bankAccount: formData.bankAccount,
           bankHolder: formData.bankHolder,
@@ -205,8 +253,9 @@ export default function CheckoutPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-md p-6">
+            {/* Thông tin người nhận */}
             <h2 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b">
-              Thông tin người nhận
+              Thông tin nhận hàng
             </h2>
 
             <div className="space-y-5">
@@ -254,7 +303,7 @@ export default function CheckoutPage() {
 
               <div>
                 <label className="block text-gray-700 font-medium mb-2">
-                  Địa chỉ <span className="text-red-500">*</span>
+                  Địa chỉ nhận hàng <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -266,7 +315,6 @@ export default function CheckoutPage() {
                 />
               </div>
 
-              {/* 👉 CHECKBOX XÁC NHẬN KHU VỰC */}
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -283,69 +331,154 @@ export default function CheckoutPage() {
               <p className="text-xs text-gray-400 -mt-2">
                 📦 Phí vận chuyển: <span className="font-semibold text-gray-600">35,000đ</span> (cố định trong nội thành Hà Nội)
               </p>
+            </div>
 
-              {/* Phần ngân hàng */}
-              <div className="border-t pt-4 mt-2">
-                <h3 className="font-semibold text-gray-800 mb-4">Thông tin nhận hoàn cọc</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Tên ngân hàng <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="bankName"
-                      value={formData.bankName}
-                      onChange={handleInputChange}
-                      placeholder="VD: Vietcombank, Techcombank, MB Bank..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
+            {/* 👉 ĐỊA CHỈ TRẢ ĐỒ */}
+            <div className="border-t pt-6 mt-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">
+                Địa chỉ trả đồ
+              </h2>
 
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Số tài khoản <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="bankAccount"
-                      value={formData.bankAccount}
-                      onChange={handleInputChange}
-                      placeholder="Số tài khoản ngân hàng"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
-                  </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    id="sameAddress"
+                    name="returnAddressOption"
+                    checked={returnAddressSame}
+                    onChange={() => setReturnAddressSame(true)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <label htmlFor="sameAddress" className="text-sm text-gray-700">
+                    Giống địa chỉ nhận hàng
+                  </label>
+                </div>
 
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">
-                      Chủ tài khoản <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="bankHolder"
-                      value={formData.bankHolder}
-                      onChange={handleInputChange}
-                      placeholder="Tên chủ tài khoản"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                    />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    id="differentAddress"
+                    name="returnAddressOption"
+                    checked={!returnAddressSame}
+                    onChange={() => setReturnAddressSame(false)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <label htmlFor="differentAddress" className="text-sm text-gray-700">
+                    Địa chỉ khác
+                  </label>
+                </div>
+
+                {!returnAddressSame && (
+                  <div className="ml-6 pl-4 border-l-2 border-blue-200 space-y-4 mt-4">
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Họ tên người trả <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="fullName"
+                        value={returnAddress.fullName}
+                        onChange={handleReturnAddressChange}
+                        placeholder="Họ tên người trả đồ"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Số điện thoại <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={returnAddress.phone}
+                        onChange={handleReturnAddressChange}
+                        placeholder="Số điện thoại người trả"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        Địa chỉ trả đồ <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="address"
+                        value={returnAddress.address}
+                        onChange={handleReturnAddressChange}
+                        placeholder="Số nhà, đường, phường/xã, quận/huyện"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
                   </div>
+                )}
+              </div>
+            </div>
+
+            {/* Thông tin ngân hàng */}
+            <div className="border-t pt-6 mt-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">
+                Thông tin nhận hoàn cọc
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Tên ngân hàng <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="bankName"
+                    value={formData.bankName}
+                    onChange={handleInputChange}
+                    placeholder="VD: Vietcombank, Techcombank, MB Bank..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Số tài khoản <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="bankAccount"
+                    value={formData.bankAccount}
+                    onChange={handleInputChange}
+                    placeholder="Số tài khoản ngân hàng"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-medium mb-2">
+                    Chủ tài khoản <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="bankHolder"
+                    value={formData.bankHolder}
+                    onChange={handleInputChange}
+                    placeholder="Tên chủ tài khoản"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Ghi chú
-                </label>
-                <textarea
-                  name="note"
-                  value={formData.note}
-                  onChange={handleInputChange}
-                  placeholder="Yêu cầu về giao hàng, thời gian nhận..."
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-                />
-              </div>
+            <div className="mt-6">
+              <label className="block text-gray-700 font-medium mb-2">
+                Ghi chú
+              </label>
+              <textarea
+                name="note"
+                value={formData.note}
+                onChange={handleInputChange}
+                placeholder="Yêu cầu về giao hàng, thời gian nhận..."
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+              />
             </div>
 
             <button
@@ -365,6 +498,7 @@ export default function CheckoutPage() {
           </form>
         </div>
 
+        {/* Tóm tắt đơn hàng */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-md p-6 sticky top-28">
             <h2 className="text-xl font-semibold text-gray-800 mb-4 pb-2 border-b">
