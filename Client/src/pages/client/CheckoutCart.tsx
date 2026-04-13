@@ -3,16 +3,41 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getCart } from "../../api/cartService";
 
-// Hàm kiểm tra địa chỉ có trong Hà Nội không
+// Danh sách quận nội thành Hà Nội
+const INNER_DISTRICTS = [
+  "Ba Đình", "Hoàn Kiếm", "Hai Bà Trưng", "Đống Đa",
+  "Tây Hồ", "Cầu Giấy", "Thanh Xuân", "Hoàng Mai",
+  "Long Biên", "Bắc Từ Liêm", "Nam Từ Liêm", "Hà Đông"
+];
+
+// Kiểm tra có phải nội thành Hà Nội không
+const isInnerHanoi = (address: string): boolean => {
+  if (!address) return false;
+  return INNER_DISTRICTS.some(district => 
+    address.toLowerCase().includes(district.toLowerCase())
+  );
+};
+
+// Kiểm tra có phải Hà Nội (nói chung) không
 const isHanoiAddress = (address: string): boolean => {
-  const hanoiKeywords = [
-    "Hà Nội", "Ha Noi", "Hà nội", "ha noi", "HN",
-    "Ba Đình", "Hoàn Kiếm", "Hai Bà Trưng", "Đống Đa",
-    "Tây Hồ", "Cầu Giấy", "Thanh Xuân", "Hoàng Mai",
-    "Long Biên", "Bắc Từ Liêm", "Nam Từ Liêm", "Hà Đông",
-    "Thanh Trì", "Gia Lâm", "Đông Anh", "Sóc Sơn", "Mê Linh"
-  ];
-  return hanoiKeywords.some(keyword => address.toLowerCase().includes(keyword.toLowerCase()));
+  if (!address) return false;
+  return address.toLowerCase().includes("hà nội") || 
+         address.toLowerCase().includes("ha noi");
+};
+
+// Lấy thông tin vận chuyển
+const getShippingInfo = (address: string): { fee: number; message: string; canDeliver: boolean } => {
+  if (!address) return { fee: 0, message: "", canDeliver: false };
+  
+  if (isInnerHanoi(address)) {
+    return { fee: 35000, message: "✅ Nội thành Hà Nội - Phí ship 35,000đ", canDeliver: true };
+  }
+  
+  if (isHanoiAddress(address)) {
+    return { fee: 0, message: "⚠️ Địa chỉ ngoại thành Hà Nội. Vui lòng liên hệ hotline để được hỗ trợ phí ship.", canDeliver: false };
+  }
+  
+  return { fee: 0, message: "❌ DressUp hiện chỉ giao hàng trong nội thành Hà Nội", canDeliver: false };
 };
 
 export default function CheckoutPage() {
@@ -42,17 +67,15 @@ export default function CheckoutPage() {
     bankHolder: "",
   });
 
+  const shippingInfo = getShippingInfo(formData.address);
+
   useEffect(() => {
     fetchCart();
   }, []);
 
   // Cập nhật phí ship khi địa chỉ thay đổi
   useEffect(() => {
-    if (isHanoiAddress(formData.address)) {
-      setShippingFee(35000);
-    } else {
-      setShippingFee(0);
-    }
+    setShippingFee(shippingInfo.fee);
   }, [formData.address]);
 
   // Cập nhật tổng tiền
@@ -125,9 +148,9 @@ export default function CheckoutPage() {
       return false;
     }
 
-    // 👉 TỰ ĐỘNG KIỂM TRA ĐỊA CHỈ HÀ NỘI
-    if (!isHanoiAddress(formData.address)) {
-      alert("DressUp hiện chỉ giao hàng trong nội thành Hà Nội. Cảm ơn bạn đã quan tâm!");
+    // Kiểm tra khu vực giao hàng
+    if (!shippingInfo.canDeliver) {
+      alert(shippingInfo.message);
       return false;
     }
 
@@ -251,6 +274,16 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gray-50 pt-28 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
+        {/* Banner thông báo vận chuyển */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+          <p className="text-sm text-blue-800">
+            🚚 <strong>Thông báo vận chuyển:</strong> DressUp chỉ giao hàng trong 
+            <strong> nội thành Hà Nội</strong> (12 quận: Ba Đình, Hoàn Kiếm, Hai Bà Trưng, Đống Đa, 
+            Tây Hồ, Cầu Giấy, Thanh Xuân, Hoàng Mai, Long Biên, Bắc Từ Liêm, Nam Từ Liêm, Hà Đông).
+            Phí ship cố định <strong>35,000đ</strong>.
+          </p>
+        </div>
+
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Thông tin thanh toán</h1>
 
         <div className="flex flex-col lg:flex-row gap-6">
@@ -293,17 +326,12 @@ export default function CheckoutPage() {
                       name="address"
                       value={formData.address}
                       onChange={handleInputChange}
-                      placeholder="Địa chỉ nhận hàng * (Ví dụ: 12 ngõ 120 Yên Lãng, Đống Đa, Hà Nội)"
+                      placeholder="Địa chỉ nhận hàng * (Ví dụ: 12 Nguyễn Huệ, Quận 1, Hà Nội)"
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                     />
-                    {formData.address && !isHanoiAddress(formData.address) && (
-                      <p className="text-xs text-red-500 mt-1">
-                        ⚠️ DressUp hiện chỉ giao hàng trong nội thành Hà Nội
-                      </p>
-                    )}
-                    {formData.address && isHanoiAddress(formData.address) && (
-                      <p className="text-xs text-green-600 mt-1">
-                        ✓ Địa chỉ trong nội thành Hà Nội - Phí ship 35,000đ
+                    {formData.address && (
+                      <p className={`text-xs mt-1 ${shippingInfo.canDeliver ? 'text-green-600' : 'text-red-500'}`}>
+                        {shippingInfo.message}
                       </p>
                     )}
                   </div>
@@ -416,7 +444,7 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={loading || (formData.address && !isHanoiAddress(formData.address))}
+                disabled={loading || !shippingInfo.canDeliver}
                 className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {loading ? "Đang xử lý..." : "Xác nhận và thanh toán"}
@@ -459,7 +487,7 @@ export default function CheckoutPage() {
                 </div>
                 {shippingFee > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Phí ship (HN)</span>
+                    <span className="text-gray-500">Phí ship (nội thành HN)</span>
                     <span>{shippingFee.toLocaleString()}đ</span>
                   </div>
                 )}
