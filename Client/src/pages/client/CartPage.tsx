@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // 👈 THÊM IMPORT
+import { useNavigate } from "react-router-dom";
 import CartItem from "../../components/cart/CartItem";
 import CartSummary from "../../components/cart/CartSummary";
 import axios from "axios";
@@ -11,7 +11,7 @@ import {
 } from "../../api/cartService";
 
 export default function CartPage() {
-  const navigate = useNavigate(); // 👈 THÊM DÒNG NÀY
+  const navigate = useNavigate(); 
   const [items, setItems] = useState<any[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -83,7 +83,7 @@ export default function CartPage() {
 
   const total = totalDeposit + totalRental;
 
-  // 👇 SỬA LẠI HÀM NÀY
+
   const handleCheckout = () => {
     if (selectedItems.length === 0) {
       alert("Vui lòng chọn sản phẩm cần thanh toán");

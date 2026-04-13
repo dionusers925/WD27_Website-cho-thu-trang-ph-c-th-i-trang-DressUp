@@ -9,7 +9,10 @@ export default function CheckoutPage() {
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [totalRental, setTotalRental] = useState(0);
   const [totalDeposit, setTotalDeposit] = useState(0);
+  const [subtotal, setSubtotal] = useState(0);
+  const [shippingFee, setShippingFee] = useState(35000); // Phí ship cố định
   const [total, setTotal] = useState(0);
+  const [isInHanoi, setIsInHanoi] = useState(false); // 👈 THÊM STATE
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -25,6 +28,15 @@ export default function CheckoutPage() {
   useEffect(() => {
     fetchCart();
   }, []);
+
+  // Cập nhật tổng tiền khi có phí ship
+  useEffect(() => {
+    if (isInHanoi) {
+      setTotal(subtotal + shippingFee);
+    } else {
+      setTotal(subtotal);
+    }
+  }, [subtotal, shippingFee, isInHanoi]);
 
   const fetchCart = async () => {
     try {
@@ -43,6 +55,7 @@ export default function CheckoutPage() {
       
       setTotalRental(rental);
       setTotalDeposit(deposit);
+      setSubtotal(rental + deposit);
       setTotal(rental + deposit);
     } catch (error) {
       console.error("Lỗi lấy giỏ hàng:", error);
@@ -83,6 +96,12 @@ export default function CheckoutPage() {
       return false;
     }
 
+    // 👉 VALIDATE KHU VỰC GIAO HÀNG
+    if (!isInHanoi) {
+      alert("DressUp chỉ giao hàng trong nội thành Hà Nội. Vui lòng xác nhận.");
+      return false;
+    }
+
     // 👉 VALIDATE BẮT BUỘC THÔNG TIN NGÂN HÀNG
     if (!formData.bankName.trim()) {
       alert("Vui lòng nhập tên ngân hàng để nhận hoàn cọc");
@@ -119,6 +138,8 @@ export default function CheckoutPage() {
         return;
       }
 
+      const fullAddress = `${formData.address} (Nội thành Hà Nội)`;
+
       const formattedItems = cartItems.map((item) => ({
         productId: item.productId || item._id,
         name: item.name,                    
@@ -127,6 +148,7 @@ export default function CheckoutPage() {
         deposit: item.deposit || 0,
         size: item.size,
         color: item.color,
+        days: item.days,
       }));
 
       const response = await axios.post(
@@ -134,8 +156,16 @@ export default function CheckoutPage() {
         {
           userId: user._id,
           total: total,
+          subtotal: subtotal,
+          shippingFee: shippingFee,
           items: formattedItems,
-          customerInfo: formData,
+          customerInfo: {
+            fullName: formData.fullName,
+            email: formData.email,
+            phone: formData.phone,
+            address: fullAddress,
+            note: formData.note,
+          },
           bankName: formData.bankName,
           bankAccount: formData.bankAccount,
           bankHolder: formData.bankHolder,
@@ -231,12 +261,30 @@ export default function CheckoutPage() {
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
-                  placeholder="Số nhà, đường, quận/huyện, tỉnh/thành"
+                  placeholder="Số nhà, đường, phường/xã"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 />
               </div>
 
-              {/* 👉 THÊM DẤU * CHO CÁC FIELD NGÂN HÀNG */}
+              {/* 👉 CHECKBOX XÁC NHẬN KHU VỰC */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="inHanoi"
+                  checked={isInHanoi}
+                  onChange={(e) => setIsInHanoi(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="inHanoi" className="text-sm text-gray-700">
+                  Địa chỉ của tôi nằm trong nội thành Hà Nội <span className="text-red-500">*</span>
+                </label>
+              </div>
+
+              <p className="text-xs text-gray-400 -mt-2">
+                📦 Phí vận chuyển: <span className="font-semibold text-gray-600">35,000đ</span> (cố định trong nội thành Hà Nội)
+              </p>
+
+              {/* Phần ngân hàng */}
               <div className="border-t pt-4 mt-2">
                 <h3 className="font-semibold text-gray-800 mb-4">Thông tin nhận hoàn cọc</h3>
                 
@@ -349,6 +397,12 @@ export default function CheckoutPage() {
                 <span className="text-gray-600">Tiền cọc</span>
                 <span className="text-gray-800">{totalDeposit.toLocaleString()}đ</span>
               </div>
+              {isInHanoi && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Phí vận chuyển (nội thành HN)</span>
+                  <span className="text-gray-800">{shippingFee.toLocaleString()}đ</span>
+                </div>
+              )}
               <div className="flex justify-between text-lg font-bold pt-2 border-t">
                 <span>Tổng thanh toán</span>
                 <span className="text-blue-600">{total.toLocaleString()}đ</span>
