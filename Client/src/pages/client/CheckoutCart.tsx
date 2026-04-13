@@ -4,41 +4,20 @@ import axios from "axios";
 import { getCart } from "../../api/cartService";
 
 // Danh sách quận nội thành Hà Nội
-const INNER_DISTRICTS = [
-  "Ba Đình", "Hoàn Kiếm", "Hai Bà Trưng", "Đống Đa",
-  "Tây Hồ", "Cầu Giấy", "Thanh Xuân", "Hoàng Mai",
-  "Long Biên", "Bắc Từ Liêm", "Nam Từ Liêm", "Hà Đông"
+const HANOI_DISTRICTS = [
+  { id: "badinh", name: "Quận Ba Đình", fee: 35000 },
+  { id: "hoankiem", name: "Quận Hoàn Kiếm", fee: 35000 },
+  { id: "haibatrung", name: "Quận Hai Bà Trưng", fee: 35000 },
+  { id: "dongda", name: "Quận Đống Đa", fee: 35000 },
+  { id: "tayho", name: "Quận Tây Hồ", fee: 35000 },
+  { id: "caugiay", name: "Quận Cầu Giấy", fee: 35000 },
+  { id: "thanhxuan", name: "Quận Thanh Xuân", fee: 35000 },
+  { id: "hoangmai", name: "Quận Hoàng Mai", fee: 35000 },
+  { id: "longbien", name: "Quận Long Biên", fee: 35000 },
+  { id: "bactuliem", name: "Quận Bắc Từ Liêm", fee: 35000 },
+  { id: "namtuliem", name: "Quận Nam Từ Liêm", fee: 35000 },
+  { id: "hadong", name: "Quận Hà Đông", fee: 35000 },
 ];
-
-// Kiểm tra có phải nội thành Hà Nội không
-const isInnerHanoi = (address: string): boolean => {
-  if (!address) return false;
-  return INNER_DISTRICTS.some(district => 
-    address.toLowerCase().includes(district.toLowerCase())
-  );
-};
-
-// Kiểm tra có phải Hà Nội (nói chung) không
-const isHanoiAddress = (address: string): boolean => {
-  if (!address) return false;
-  return address.toLowerCase().includes("hà nội") || 
-         address.toLowerCase().includes("ha noi");
-};
-
-// Lấy thông tin vận chuyển
-const getShippingInfo = (address: string): { fee: number; message: string; canDeliver: boolean } => {
-  if (!address) return { fee: 0, message: "", canDeliver: false };
-  
-  if (isInnerHanoi(address)) {
-    return { fee: 35000, message: "✅ Nội thành Hà Nội - Phí ship 35,000đ", canDeliver: true };
-  }
-  
-  if (isHanoiAddress(address)) {
-    return { fee: 0, message: "⚠️ Địa chỉ ngoại thành Hà Nội. Vui lòng liên hệ hotline để được hỗ trợ phí ship.", canDeliver: false };
-  }
-  
-  return { fee: 0, message: "❌ DressUp hiện chỉ giao hàng trong nội thành Hà Nội", canDeliver: false };
-};
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -47,36 +26,37 @@ export default function CheckoutPage() {
   const [totalRental, setTotalRental] = useState(0);
   const [totalDeposit, setTotalDeposit] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
-  const [shippingFee, setShippingFee] = useState(0);
+  const [shippingFee, setShippingFee] = useState(35000);
   const [total, setTotal] = useState(0);
   const [returnAddressSame, setReturnAddressSame] = useState(true);
   const [returnAddress, setReturnAddress] = useState({
     fullName: "",
     phone: "",
-    address: "",
+    districtId: "",
+    specificAddress: "",
   });
 
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
-    address: "",
+    districtId: "",
+    specificAddress: "",
     note: "",
     bankName: "",
     bankAccount: "",
     bankHolder: "",
   });
 
-  const shippingInfo = getShippingInfo(formData.address);
-
   useEffect(() => {
     fetchCart();
   }, []);
 
-  // Cập nhật phí ship khi địa chỉ thay đổi
+  // Cập nhật phí ship khi chọn quận
   useEffect(() => {
-    setShippingFee(shippingInfo.fee);
-  }, [formData.address]);
+    const selectedDistrict = HANOI_DISTRICTS.find(d => d.id === formData.districtId);
+    setShippingFee(selectedDistrict?.fee || 0);
+  }, [formData.districtId]);
 
   // Cập nhật tổng tiền
   useEffect(() => {
@@ -108,14 +88,14 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
   };
 
-  const handleReturnAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleReturnAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setReturnAddress({
       ...returnAddress,
       [e.target.name]: e.target.value,
@@ -143,14 +123,12 @@ export default function CheckoutPage() {
       alert("Số điện thoại không hợp lệ (10-11 số)");
       return false;
     }
-    if (!formData.address.trim()) {
-      alert("Vui lòng nhập địa chỉ nhận hàng");
+    if (!formData.districtId) {
+      alert("Vui lòng chọn quận/huyện");
       return false;
     }
-
-    // Kiểm tra khu vực giao hàng
-    if (!shippingInfo.canDeliver) {
-      alert(shippingInfo.message);
+    if (!formData.specificAddress.trim()) {
+      alert("Vui lòng nhập địa chỉ cụ thể (số nhà, tên đường)");
       return false;
     }
 
@@ -167,8 +145,12 @@ export default function CheckoutPage() {
         alert("Số điện thoại trả đồ không hợp lệ");
         return false;
       }
-      if (!returnAddress.address.trim()) {
-        alert("Vui lòng nhập địa chỉ trả đồ");
+      if (!returnAddress.districtId) {
+        alert("Vui lòng chọn quận/huyện trả đồ");
+        return false;
+      }
+      if (!returnAddress.specificAddress.trim()) {
+        alert("Vui lòng nhập địa chỉ cụ thể để trả đồ");
         return false;
       }
     }
@@ -193,6 +175,11 @@ export default function CheckoutPage() {
     return true;
   };
 
+  const getFullAddress = (districtId: string, specificAddress: string) => {
+    const district = HANOI_DISTRICTS.find(d => d.id === districtId);
+    return `${specificAddress}, ${district?.name}, Hà Nội`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -206,11 +193,22 @@ export default function CheckoutPage() {
         return;
       }
 
-      const fullAddress = `${formData.address} (Nội thành Hà Nội)`;
+      const fullAddress = getFullAddress(formData.districtId, formData.specificAddress);
 
-      const returnAddressData = returnAddressSame
-        ? { fullName: formData.fullName, phone: formData.phone, address: fullAddress }
-        : returnAddress;
+      let returnAddressData = null;
+      if (returnAddressSame) {
+        returnAddressData = {
+          fullName: formData.fullName,
+          phone: formData.phone,
+          address: fullAddress,
+        };
+      } else {
+        returnAddressData = {
+          fullName: returnAddress.fullName,
+          phone: returnAddress.phone,
+          address: getFullAddress(returnAddress.districtId, returnAddress.specificAddress),
+        };
+      }
 
       const formattedItems = cartItems.map((item) => ({
         productId: item.productId || item._id,
@@ -278,9 +276,7 @@ export default function CheckoutPage() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
           <p className="text-sm text-blue-800">
             🚚 <strong>Thông báo vận chuyển:</strong> DressUp chỉ giao hàng trong 
-            <strong> nội thành Hà Nội</strong> (12 quận: Ba Đình, Hoàn Kiếm, Hai Bà Trưng, Đống Đa, 
-            Tây Hồ, Cầu Giấy, Thanh Xuân, Hoàng Mai, Long Biên, Bắc Từ Liêm, Nam Từ Liêm, Hà Đông).
-            Phí ship cố định <strong>35,000đ</strong>.
+            <strong> nội thành Hà Nội</strong> (12 quận). Phí ship cố định <strong>35,000đ</strong>.
           </p>
         </div>
 
@@ -320,20 +316,32 @@ export default function CheckoutPage() {
                     placeholder="Số điện thoại *"
                     className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   />
+                  
+                  {/* Chọn quận */}
+                  <select
+                    name="districtId"
+                    value={formData.districtId}
+                    onChange={handleInputChange}
+                    className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="">-- Chọn Quận/Huyện * --</option>
+                    {HANOI_DISTRICTS.map(district => (
+                      <option key={district.id} value={district.id}>
+                        {district.name}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {/* Địa chỉ cụ thể */}
                   <div className="md:col-span-2">
                     <input
                       type="text"
-                      name="address"
-                      value={formData.address}
+                      name="specificAddress"
+                      value={formData.specificAddress}
                       onChange={handleInputChange}
-                      placeholder="Địa chỉ nhận hàng * (Ví dụ: 12 Nguyễn Huệ, Quận 1, Hà Nội)"
+                      placeholder="Số nhà, tên đường * (Ví dụ: 12 ngõ 120 Yên Lãng)"
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                     />
-                    {formData.address && (
-                      <p className={`text-xs mt-1 ${shippingInfo.canDeliver ? 'text-green-600' : 'text-red-500'}`}>
-                        {shippingInfo.message}
-                      </p>
-                    )}
                   </div>
                 </div>
               </section>
@@ -381,12 +389,25 @@ export default function CheckoutPage() {
                         placeholder="Số điện thoại *"
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                       />
+                      <select
+                        name="districtId"
+                        value={returnAddress.districtId}
+                        onChange={handleReturnAddressChange}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      >
+                        <option value="">-- Chọn Quận/Huyện trả đồ * --</option>
+                        {HANOI_DISTRICTS.map(district => (
+                          <option key={district.id} value={district.id}>
+                            {district.name}
+                          </option>
+                        ))}
+                      </select>
                       <input
                         type="text"
-                        name="address"
-                        value={returnAddress.address}
+                        name="specificAddress"
+                        value={returnAddress.specificAddress}
                         onChange={handleReturnAddressChange}
-                        placeholder="Địa chỉ trả đồ *"
+                        placeholder="Số nhà, tên đường *"
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                       />
                     </div>
@@ -444,7 +465,7 @@ export default function CheckoutPage() {
 
               <button
                 type="submit"
-                disabled={loading || !shippingInfo.canDeliver}
+                disabled={loading}
                 className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {loading ? "Đang xử lý..." : "Xác nhận và thanh toán"}
@@ -485,12 +506,10 @@ export default function CheckoutPage() {
                   <span className="text-gray-500">Tiền cọc</span>
                   <span>{totalDeposit.toLocaleString()}đ</span>
                 </div>
-                {shippingFee > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Phí ship (nội thành HN)</span>
-                    <span>{shippingFee.toLocaleString()}đ</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Phí ship (nội thành HN)</span>
+                  <span>{shippingFee.toLocaleString()}đ</span>
+                </div>
                 <div className="flex justify-between text-base font-bold pt-2 border-t">
                   <span>Tổng cộng</span>
                   <span className="text-blue-600">{total.toLocaleString()}đ</span>
