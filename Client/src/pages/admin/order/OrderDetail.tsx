@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -89,6 +89,7 @@ const statusBadge = (status?: string) => {
     pending: "bg-yellow-100 text-yellow-800",
     cancelled: "bg-red-100 text-red-800",
     confirmed: "bg-blue-100 text-blue-800",
+    preparing: "bg-sky-100 text-sky-800",
     shipped: "bg-purple-100 text-purple-800",
     fee_incurred: "bg-orange-100 text-orange-800",
   };
@@ -130,6 +131,7 @@ const getAvailableStatuses = (currentStatus?: string) => {
   const statuses = [
     "pending",
     "confirmed",
+    "preparing",
     "shipped",
     "delivered",
     "renting",
@@ -418,6 +420,7 @@ const OrderDetail = () => {
           >
             <option value="pending" disabled={!getAvailableStatuses(order.status).includes("pending")}>Chờ xử lý</option>
             <option value="confirmed" disabled={!getAvailableStatuses(order.status).includes("confirmed")}>Đã xác nhận</option>
+            <option value="preparing" disabled={!getAvailableStatuses(order.status).includes("preparing")}>Đang chuẩn bị hàng</option>
             <option value="shipped" disabled={!getAvailableStatuses(order.status).includes("shipped")}>Đang giao</option>
             <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao</option>
             <option value="renting" disabled={!getAvailableStatuses(order.status).includes("renting")}>Đang thuê</option>
@@ -532,9 +535,15 @@ const OrderDetail = () => {
                   const isLost = lostItemIds.includes(itemKey);
 
                   const toggleLost = () => {
+                    const willBeLost = !isLost;
                     setLostItemIds(prev =>
-                      isLost ? prev.filter(k => k !== itemKey) : [...prev, itemKey]
+                      willBeLost ? [...prev, itemKey] : prev.filter(k => k !== itemKey)
                     );
+                    // Khi chọn mất đồ, xóa hết các mục lỗi hư hỏng đã chọn
+                    if (willBeLost) {
+                      setSelectedErrors([]);
+                      setDamageFee(0);
+                    }
                   };
 
                   return (
@@ -616,14 +625,15 @@ const OrderDetail = () => {
                         <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${statusBadge(history.status)}`}>
                           {history.status === 'pending' ? 'Chờ xử lý' :
                             history.status === 'confirmed' ? 'Đã xác nhận' :
-                              history.status === 'shipped' ? 'Đang giao' :
-                                history.status === 'delivered' ? 'Đã giao' :
-                                  history.status === 'renting' ? 'Đang thuê' :
-                                    history.status === 'returning' ? 'Đang trả đồ' :
-                                      history.status === 'returned' ? 'Đã nhận đồ' :
-                                        history.status === 'fee_incurred' ? 'Phát sinh phí' :
-                                          history.status === 'completed' ? 'Hoàn tất' :
-                                            history.status === 'cancelled' ? 'Đã hủy' : history.status}
+                              history.status === 'preparing' ? 'Đang chuẩn bị hàng' :
+                                history.status === 'shipped' ? 'Đang giao' :
+                                  history.status === 'delivered' ? 'Đã giao' :
+                                    history.status === 'renting' ? 'Đang thuê' :
+                                      history.status === 'returning' ? 'Đang trả đồ' :
+                                        history.status === 'returned' ? 'Đã nhận đồ' :
+                                          history.status === 'fee_incurred' ? 'Phát sinh phí' :
+                                            history.status === 'completed' ? 'Hoàn tất' :
+                                              history.status === 'cancelled' ? 'Đã hủy' : history.status}
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
                       </div>
@@ -687,19 +697,27 @@ const OrderDetail = () => {
                     { id: 'tear_major', label: 'Rách lớn/Hỏng khóa', fee: 100000 },
                     { id: 'burn', label: 'Cháy/Thủng', fee: 200000 },
                     { id: 'lost_item', label: 'Mất đồ/Phụ kiện', fee: 300000 },
-                  ].map(error => (
-                    <label key={error.id} className="flex items-start gap-2.5 cursor-pointer group">
+                  ].map(error => {
+                    const isDisabled = lostItemIds.length > 0 || (error.id !== 'lost_item' && selectedErrors.includes('lost_item'));
+                    return (
+                    <label key={error.id} className={`flex items-start gap-2.5 group ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
                       <input
                         type="checkbox"
-                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer mt-0.5"
+                        disabled={isDisabled}
+                        className={`rounded border-gray-300 text-red-600 focus:ring-red-500 w-4 h-4 mt-0.5 ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
                         checked={selectedErrors.includes(error.id)}
                         onChange={(e) => {
                           let newErrors = [...selectedErrors];
                           let currentDamageFee = damageFee;
 
                           if (e.target.checked) {
-                            newErrors.push(error.id);
-                            currentDamageFee += error.fee;
+                            if (error.id === 'lost_item') {
+                              newErrors = ['lost_item'];
+                              currentDamageFee = error.fee;
+                            } else {
+                              newErrors.push(error.id);
+                              currentDamageFee += error.fee;
+                            }
                           } else {
                             newErrors = newErrors.filter(id => id !== error.id);
                             currentDamageFee = Math.max(0, currentDamageFee - error.fee);
@@ -714,16 +732,17 @@ const OrderDetail = () => {
                         <span className="text-[11px] font-bold text-red-500 mt-0.5">+{formatCurrency(error.fee).replace(' đ', 'đ')}</span>
                       </div>
                     </label>
-                  ))}
+                  )})}
                 </div>
 
                 <div className="relative">
                   <input
                     type="number"
+                    disabled={lostItemIds.length > 0 || selectedErrors.includes('lost_item')}
                     value={damageFee === 0 ? '' : damageFee}
                     onChange={(e) => setDamageFee(Number(e.target.value) || 0)}
                     placeholder="Nhập tổn thất khác..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white"
+                    className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white ${(lostItemIds.length > 0 || selectedErrors.includes('lost_item')) ? "opacity-50 cursor-not-allowed" : ""}`}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">đ</span>
                 </div>
