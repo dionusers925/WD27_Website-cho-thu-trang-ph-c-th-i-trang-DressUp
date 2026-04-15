@@ -32,6 +32,7 @@ import LoginPage from "./layouts/LoginPage";
 import ProtectedRoute from "./layouts/ProtectedRoute";
 
 import PaymentResult from "./pages/client/PaymentResult";
+import ShipperPage from "./pages/shipper/ShipperPage";
 
 function App() {
   const NotFound = () => <div>Not Found</div>;
@@ -41,6 +42,12 @@ function App() {
     {
       path: "/payment-result",
       Component: PaymentResult,
+    },
+
+    // SHIPPER
+    {
+      path: "/ship",
+      Component: ShipperPage,
     },
 
     // ADMIN
