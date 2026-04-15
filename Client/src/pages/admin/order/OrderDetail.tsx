@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -700,39 +700,40 @@ const OrderDetail = () => {
                   ].map(error => {
                     const isDisabled = lostItemIds.length > 0 || (error.id !== 'lost_item' && selectedErrors.includes('lost_item'));
                     return (
-                    <label key={error.id} className={`flex items-start gap-2.5 group ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
-                      <input
-                        type="checkbox"
-                        disabled={isDisabled}
-                        className={`rounded border-gray-300 text-red-600 focus:ring-red-500 w-4 h-4 mt-0.5 ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
-                        checked={selectedErrors.includes(error.id)}
-                        onChange={(e) => {
-                          let newErrors = [...selectedErrors];
-                          let currentDamageFee = damageFee;
+                      <label key={error.id} className={`flex items-start gap-2.5 group ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                        <input
+                          type="checkbox"
+                          disabled={isDisabled}
+                          className={`rounded border-gray-300 text-red-600 focus:ring-red-500 w-4 h-4 mt-0.5 ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+                          checked={selectedErrors.includes(error.id)}
+                          onChange={(e) => {
+                            let newErrors = [...selectedErrors];
+                            let currentDamageFee = damageFee;
 
-                          if (e.target.checked) {
-                            if (error.id === 'lost_item') {
-                              newErrors = ['lost_item'];
-                              currentDamageFee = error.fee;
+                            if (e.target.checked) {
+                              if (error.id === 'lost_item') {
+                                newErrors = ['lost_item'];
+                                currentDamageFee = error.fee;
+                              } else {
+                                newErrors.push(error.id);
+                                currentDamageFee += error.fee;
+                              }
                             } else {
-                              newErrors.push(error.id);
-                              currentDamageFee += error.fee;
+                              newErrors = newErrors.filter(id => id !== error.id);
+                              currentDamageFee = Math.max(0, currentDamageFee - error.fee);
                             }
-                          } else {
-                            newErrors = newErrors.filter(id => id !== error.id);
-                            currentDamageFee = Math.max(0, currentDamageFee - error.fee);
-                          }
 
-                          setSelectedErrors(newErrors);
-                          setDamageFee(currentDamageFee);
-                        }}
-                      />
-                      <div className="flex-1 flex flex-col">
-                        <span className="text-[13px] text-gray-700 font-medium group-hover:text-red-700 transition-colors">{error.label}</span>
-                        <span className="text-[11px] font-bold text-red-500 mt-0.5">+{formatCurrency(error.fee).replace(' đ', 'đ')}</span>
-                      </div>
-                    </label>
-                  )})}
+                            setSelectedErrors(newErrors);
+                            setDamageFee(currentDamageFee);
+                          }}
+                        />
+                        <div className="flex-1 flex flex-col">
+                          <span className="text-[13px] text-gray-700 font-medium group-hover:text-red-700 transition-colors">{error.label}</span>
+                          <span className="text-[11px] font-bold text-red-500 mt-0.5">+{formatCurrency(error.fee).replace(' đ', 'đ')}</span>
+                        </div>
+                      </label>
+                    )
+                  })}
                 </div>
 
                 <div className="relative">
