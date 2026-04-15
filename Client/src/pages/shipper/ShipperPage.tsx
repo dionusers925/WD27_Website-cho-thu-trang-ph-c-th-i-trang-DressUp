@@ -252,7 +252,7 @@ export default function ShipperPage() {
             gap: 6,
           }}
         >
-          🔄 Làm mới
+          🔄 Làm mới đơn
         </button>
       </div>
 
