@@ -413,7 +413,7 @@ export default function ShipperPage() {
               {statusMeta[activeTab].icon}
             </div>
             <div style={{ color: "#475569", fontWeight: 700, fontSize: 14 }}>
-              Không có đơn {statusMeta[activeTab].label.toLowerCase()}
+              Không có đơn nào{statusMeta[activeTab].label.toLowerCase()}
             </div>
           </div>
         ) : (
