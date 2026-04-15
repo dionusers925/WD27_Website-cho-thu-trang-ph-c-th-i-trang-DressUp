@@ -252,7 +252,7 @@ export default function ShipperPage() {
             gap: 6,
           }}
         >
-          🔄 Làm mới đơn
+          🔄 Làm mới
         </button>
       </div>
 
@@ -397,7 +397,7 @@ export default function ShipperPage() {
             }}
           >
             <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
-            Đang tải đơn hàng...
+            Đang tải đơn hàng....
           </div>
         ) : filtered.length === 0 ? (
           <div
