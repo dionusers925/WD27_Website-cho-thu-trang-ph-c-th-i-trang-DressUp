@@ -41,29 +41,17 @@ const calcRentalDays = (start: Date, end: Date) => {
 
 
 const allowedStatuses = [
-
-
   "pending",
-
-
   "confirmed",
-
-
+  "preparing",
   "shipped",
-
-
   "delivered",
-
-
+  "renting",
+  "returning",
+  "returned",
   "fee_incurred",
-
-
   "completed",
-
-
   "cancelled",
-
-
 ];
 
 
@@ -1311,17 +1299,14 @@ const handleUpdateOrder = async (req: express.Request, res: express.Response) =>
 
 
     if (req.body.lostItems !== undefined) {
-
-
       updates.lostItems = Array.isArray(req.body.lostItems)
-
-
         ? req.body.lostItems
-
-
         : [];
+    }
 
-
+    // Lưu ảnh bằng chứng giao hàng từ shipper (base64)
+    if (typeof req.body.deliveryProof === "string" && req.body.deliveryProof.length > 0) {
+      updates.deliveryProof = req.body.deliveryProof;
     }
 
 

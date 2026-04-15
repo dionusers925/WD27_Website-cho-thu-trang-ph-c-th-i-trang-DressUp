@@ -67,6 +67,7 @@ interface Order {
     updatedBy?: string;
     date: string;
   }[];
+  deliveryProof?: string;
 }
 
 const formatCurrency = (value: number) =>
@@ -502,6 +503,26 @@ const OrderDetail = () => {
               <div className="mt-5 pt-4 border-t border-dashed border-gray-200">
                 <div className="text-[10px] font-bold text-yellow-600 uppercase mb-1.5 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Ghi chú từ khách:</div>
                 <div className="text-gray-600 italic bg-yellow-50 p-3.5 rounded-lg text-sm border border-yellow-100/50">{order.note}</div>
+              </div>
+            )}
+
+            {/* HIỂN THỊ ẢNH BẰNG CHỨNG GIAO HÀNG (TỪ SHIPPER) */}
+            {order.deliveryProof && (
+              <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                <div className="text-[10px] font-bold text-emerald-600 uppercase mb-3 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  Bằng chứng giao hàng
+                </div>
+                <div className="bg-emerald-50/50 border border-emerald-100 p-2 rounded-xl text-center">
+                  <img
+                    src={order.deliveryProof}
+                    alt="Bằng chứng giao hàng"
+                    className="max-h-60 w-auto max-w-full mx-auto rounded-lg shadow-sm border border-emerald-200"
+                  />
+                  <div className="mt-2 text-xs font-bold text-emerald-600 italic">
+                    ✓ Đã xác nhận giao hàng
+                  </div>
+                </div>
               </div>
             )}
           </div>

@@ -59,13 +59,17 @@ export interface IOrder extends Document {
   status:
     | "pending"
     | "confirmed"
+    | "preparing"
     | "shipped"
     | "delivered"
     | "renting"
     | "returning"
+    | "returned"
     | "fee_incurred"
     | "completed"
     | "cancelled";
+
+  deliveryProof?: string;
 
   vnpTransactionNo?: string;
 
@@ -135,16 +139,20 @@ const orderSchema: Schema = new Schema(
       enum: [
         "pending",
         "confirmed",
+        "preparing",
         "shipped",
         "delivered",
         "renting",
-        "returning",   
+        "returning",
+        "returned",
         "fee_incurred",
         "completed",
         "cancelled",
       ],
       default: "pending",
     },
+
+    deliveryProof: { type: String, default: "" },
 
     vnpTransactionNo: { type: String, default: "" },
 
