@@ -144,6 +144,16 @@ function DetailPage() {
     [product],
   );
 
+  const totalStock = useMemo(() => {
+    if (variants.length > 0) {
+      return variants.reduce(
+        (sum: number, variant: any) => sum + (Number(variant?.stock) || 0),
+        0,
+      );
+    }
+    return Number(product?.stock) || 0;
+  }, [variants, product]);
+
   const colors = useMemo(() => {
     const variantColors = variants
       .map((variant: any) => variant?.color)
@@ -498,11 +508,11 @@ function DetailPage() {
                   </span>
                 )}
               </div>
-              {selectedVariant?.stock !== undefined && (
-                <p className="text-[10px] uppercase tracking-widest text-gray-400">
-                  Còn {selectedVariant.stock} sản phẩm
-                </p>
-              )}
+              <p className="text-[10px] uppercase tracking-widest text-gray-400">
+                {selectedVariant?.stock !== undefined
+                  ? `Số lượng còn lại: ${selectedVariant.stock}`
+                  : `Số lượng còn lại: ${totalStock}`}
+              </p>
             </div>
 
             <div className="space-y-6">
@@ -753,6 +763,12 @@ function DetailPage() {
                   <span>Tình trạng</span>
                   <span className="text-gray-900 font-medium">
                     {conditionLabel}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Sản phẩm trong kho</span>
+                  <span className="text-gray-900 font-medium">
+                    {totalStock}
                   </span>
                 </div>
               </div>

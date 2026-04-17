@@ -36,6 +36,7 @@ const OrdersDashboard = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [hasAccount, setHasAccount] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -309,6 +310,12 @@ const OrdersDashboard = () => {
           <h1 className="text-2xl font-bold text-gray-800">Quản lý đơn hàng DressUp</h1>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowHistoryModal(true)}
+            className="text-blue-800 bg-blue-100 px-5 py-2 rounded-xl font-semibold shadow-sm transition-all active:scale-95 border border-blue-200"
+          >
+            Lịch sử tạo đơn
+          </button>
           <button
             onClick={() => setShowModal(true)}
             style={{ backgroundColor: "#1e3a8a" }}
@@ -786,6 +793,95 @@ const OrdersDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showHistoryModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center mb-6 border-b pb-4">
+              <h2 className="text-xl font-bold text-gray-800">
+                Lịch sử tạo đơn hàng
+              </h2>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-gray-400 font-bold hover:text-gray-800 text-xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            {orders.length === 0 ? (
+              <p className="text-center text-gray-500 py-10">
+                Chưa có đơn hàng nào.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {[...orders]
+                  .sort(
+                    (a, b) =>
+                      new Date(b.createdAt || 0).getTime() -
+                      new Date(a.createdAt || 0).getTime()
+                  )
+                  .map((o: any) => (
+                    <div
+                      key={o._id}
+                      className="p-4 border border-gray-200 rounded-xl flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition"
+                    >
+                      <div>
+                        <p className="font-bold text-blue-800 mb-1">
+                          Mã đơn: {o._id?.slice(-6).toUpperCase()}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Khách hàng:{" "}
+                          {o.customerName ||
+                            o.userId?.name ||
+                            "Khách tại quầy"}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Ngày tạo:{" "}
+                          {o.createdAt
+                            ? new Date(o.createdAt).toLocaleString("vi-VN")
+                            : "Không rõ"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-800 mb-1">
+                          {(o.total ?? 0).toLocaleString()}đ
+                        </p>
+                        <span
+                          className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusBadge(
+                            o.status
+                          )}`}
+                        >
+                          {o.status === "pending"
+                            ? "Chờ xử lý"
+                            : o.status === "confirmed"
+                            ? "Đã xác nhận"
+                            : o.status === "shipped"
+                            ? "Đang giao"
+                            : o.status === "delivered"
+                            ? "Đã giao"
+                            : o.status === "renting"
+                            ? "Đang thuê"
+                            : o.status === "returning"
+                            ? "Đang trả đồ"
+                            : o.status === "returned"
+                            ? "Đã nhận đồ"
+                            : o.status === "fee_incurred"
+                            ? "Phát sinh phí"
+                            : o.status === "completed"
+                            ? "Hoàn tất"
+                            : o.status === "cancelled"
+                            ? "Đã hủy"
+                            : o.status || "pending"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         </div>
       )}
