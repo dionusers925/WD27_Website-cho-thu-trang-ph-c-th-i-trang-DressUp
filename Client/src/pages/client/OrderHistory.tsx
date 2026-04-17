@@ -32,6 +32,11 @@ interface Order {
   bankName?: string;
   bankAccount?: string;
   bankHolder?: string;
+  statusHistory?: {
+    status: string;
+    updatedBy?: string;
+    date: string;
+  }[];
 }
 
 export default function OrderHistory() {
@@ -307,6 +312,35 @@ export default function OrderHistory() {
             <span className="text-blue-600">{selectedOrder.total.toLocaleString()}đ</span>
           </div>
         </div>
+
+        {/* Lịch sử đơn hàng */}
+        {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 && (
+          <div className="border-t pt-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Lịch sử đơn hàng
+            </h3>
+            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">
+              {selectedOrder.statusHistory.map((history, idx) => (
+                <div key={idx} className="relative flex items-center gap-4">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-blue-100 text-blue-600 shadow shrink-0 z-10">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${getStatusText(history.status).color}`}>
+                        {getStatusText(history.status).text}
+                      </span>
+                      <time className="text-xs font-semibold text-gray-500">
+                        {new Date(history.date || new Date()).toLocaleString("vi-VN")}
+                      </time>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   </div>

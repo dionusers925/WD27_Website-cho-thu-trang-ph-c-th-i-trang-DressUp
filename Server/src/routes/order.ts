@@ -132,6 +132,22 @@ orderRouter.get("/", async (_req, res) => {
 
 
 
+// Lấy danh sách đơn hàng của khách hàng
+orderRouter.get("/my-orders", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+      return res.status(400).json({ message: "userId không hợp lệ" });
+    }
+    const orders = await Order.find({ userId: String(userId) })
+      .populate("items.productId", "name price images")
+      .sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi Server" });
+  }
+});
+
 // Lấy chi tiết đơn hàng
 orderRouter.get("/:id", async (req, res) => {
 

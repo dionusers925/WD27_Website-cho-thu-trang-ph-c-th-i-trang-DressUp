@@ -403,7 +403,7 @@ export default function ShipperPage() {
                                 onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(168,85,247,0.05)")}
                               >
                                 <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
-                                <div style={{ fontWeight: 700, fontSize: 14, color: "#c084fc", marginBottom: 4 }}>Chụp hoặc chọn ảnh có san</div>
+                                <div style={{ fontWeight: 700, fontSize: 14, color: "#c084fc", marginBottom: 4 }}>Chụp hoặc chọn ảnh</div>
                                 <div style={{ fontSize: 12, color: "#64748b" }}>Ảnh xác nhận đã giao khách</div>
                               </div>
                             )}
