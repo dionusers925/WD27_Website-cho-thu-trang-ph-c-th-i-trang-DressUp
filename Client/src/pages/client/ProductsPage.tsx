@@ -38,6 +38,8 @@ function ProductsPage() {
   );
   const [priceRange, setPriceRange] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("featured");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(9);
 
   useEffect(() => {
     if (categoryParam) {
@@ -50,8 +52,8 @@ function ProductsPage() {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
           axios
-            .get(`${API_URL}/api/products`)
-            .catch(() => axios.get(`${API_URL}/products`)),
+            .get(`${API_URL}/api/products?limit=1000`)
+            .catch(() => axios.get(`${API_URL}/products?limit=1000`)),
           axios.get(`${API_URL}/categories`).catch(() => ({ data: [] })),
         ]);
 
@@ -80,6 +82,7 @@ function ProductsPage() {
 
   const handleCategoryChange = (catId: string) => {
     setSelectedCategory(catId);
+    setCurrentPage(1);
     const nextParams = new URLSearchParams(searchParams);
     if (catId === "all") {
       nextParams.delete("category");
@@ -153,7 +156,53 @@ function ProductsPage() {
   const handleClearFilters = () => {
     setSelectedCategory("all");
     setPriceRange("all");
+    setCurrentPage(1);
     setSearchParams(new URLSearchParams());
+  };
+
+  // Reset to page 1 whenever sort changes
+  const handleSortChange = (value: string) => {
+    setSortBy(value);
+    setCurrentPage(1);
+  };
+
+  const handlePriceChange = (value: string) => {
+    setPriceRange(value);
+    setCurrentPage(1);
+  };
+
+  const handleItemsPerPageChange = (val: number) => {
+    setItemsPerPage(val);
+    setCurrentPage(1);
+  };
+
+  // Pagination derived values
+  const totalPages = Math.max(1, Math.ceil(sortedProducts.length / itemsPerPage));
+  const paginatedProducts = sortedProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
+  );
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Build page numbers with ellipsis
+  const getPageNumbers = () => {
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 4) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 3) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
   };
 
   const priceLabels: Record<string, string> = {
@@ -278,7 +327,7 @@ function ProductsPage() {
                       type="radio"
                       name="price"
                       checked={priceRange === "all"}
-                      onChange={() => setPriceRange("all")}
+                      onChange={() => handlePriceChange("all")}
                       className="accent-black w-4 h-4"
                     />
                     <span className="text-[11px] group-hover:text-gray-500 transition-colors uppercase tracking-wider text-gray-700">
@@ -290,7 +339,7 @@ function ProductsPage() {
                       type="radio"
                       name="price"
                       checked={priceRange === "under500k"}
-                      onChange={() => setPriceRange("under500k")}
+                      onChange={() => handlePriceChange("under500k")}
                       className="accent-black w-4 h-4"
                     />
                     <span className="text-[11px] group-hover:text-gray-500 transition-colors uppercase tracking-wider text-gray-700">
@@ -302,7 +351,7 @@ function ProductsPage() {
                       type="radio"
                       name="price"
                       checked={priceRange === "500k-1m"}
-                      onChange={() => setPriceRange("500k-1m")}
+                      onChange={() => handlePriceChange("500k-1m")}
                       className="accent-black w-4 h-4"
                     />
                     <span className="text-[11px] group-hover:text-gray-500 transition-colors uppercase tracking-wider text-gray-700">
@@ -314,7 +363,7 @@ function ProductsPage() {
                       type="radio"
                       name="price"
                       checked={priceRange === "over1m"}
-                      onChange={() => setPriceRange("over1m")}
+                      onChange={() => handlePriceChange("over1m")}
                       className="accent-black w-4 h-4"
                     />
                     <span className="text-[11px] group-hover:text-gray-500 transition-colors uppercase tracking-wider text-gray-700">
@@ -326,7 +375,7 @@ function ProductsPage() {
                 <div className="lg:hidden space-y-3">
                   <select
                     value={priceRange}
-                    onChange={(e) => setPriceRange(e.target.value)}
+                    onChange={(e) => handlePriceChange(e.target.value)}
                     className="w-full border border-gray-200 px-4 py-3 text-[11px] uppercase tracking-widest bg-white"
                   >
                     <option value="all">Tất cả</option>
@@ -343,22 +392,48 @@ function ProductsPage() {
           <main className="flex-1">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
               <p className="text-[11px] uppercase tracking-widest text-gray-500">
-                Hiển thị {sortedProducts.length} sản phẩm
+                Hiển thị{" "}
+                <span className="text-gray-800 font-semibold">
+                  {sortedProducts.length === 0
+                    ? 0
+                    : (currentPage - 1) * itemsPerPage + 1}
+                  –
+                  {Math.min(currentPage * itemsPerPage, sortedProducts.length)}
+                </span>{" "}
+                / {sortedProducts.length} sản phẩm
               </p>
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] uppercase tracking-widest text-gray-400">
-                  Sắp xếp
-                </span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="border border-gray-200 px-4 py-2 text-[10px] uppercase tracking-widest bg-white"
-                >
-                  <option value="featured">Nổi bật</option>
-                  <option value="newest">Mới nhất</option>
-                  <option value="price-asc">Giá tăng dần</option>
-                  <option value="price-desc">Giá giảm dần</option>
-                </select>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] uppercase tracking-widest text-gray-400 hidden sm:inline">
+                    Sắp xếp
+                  </span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => handleSortChange(e.target.value)}
+                    className="border border-gray-200 px-4 py-2 text-[10px] uppercase tracking-widest bg-white"
+                  >
+                    <option value="featured">Nổi bật</option>
+                    <option value="newest">Mới nhất</option>
+                    <option value="price-asc">Giá tăng dần</option>
+                    <option value="price-desc">Giá giảm dần</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] uppercase tracking-widest text-gray-400 hidden sm:inline">
+                    Số lượng
+                  </span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                    className="border border-gray-200 px-4 py-2 text-[10px] uppercase tracking-widest bg-white"
+                  >
+                    <option value={9}>9 / trang</option>
+                    <option value={18}>18 / trang</option>
+                    <option value={36}>36 / trang</option>
+                    <option value={72}>72 / trang</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -370,7 +445,7 @@ function ProductsPage() {
               </div>
             ) : sortedProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
-                {sortedProducts.map((item) => {
+                {paginatedProducts.map((item) => {
                   const itemImg =
                     item.images && item.images.length > 0
                       ? item.images[0]
@@ -530,6 +605,65 @@ function ProductsPage() {
                 >
                   Xóa bộ lọc
                 </button>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {!loading && sortedProducts.length > 0 && (
+              <div className="mt-14 flex flex-col items-center gap-6">
+                <div className="flex items-center gap-2">
+                  {/* Prev */}
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 hover:border-black hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Trang trước"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+
+                  {/* Page numbers */}
+                  {getPageNumbers().map((page, idx) =>
+                    page === "..." ? (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="w-10 h-10 flex items-center justify-center text-gray-400 text-[11px] select-none"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page as number)}
+                        className={`w-10 h-10 flex items-center justify-center rounded-full border text-[11px] uppercase tracking-widest transition-all ${
+                          currentPage === page
+                            ? "bg-black text-white border-black shadow-lg"
+                            : "border-gray-200 bg-white text-gray-600 hover:border-black hover:text-black"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ),
+                  )}
+
+                  {/* Next */}
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 hover:border-black hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Trang tiếp"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <p className="text-[10px] uppercase tracking-[0.35em] text-gray-400">
+                  Trang {currentPage} / {totalPages}
+                </p>
               </div>
             )}
           </main>
