@@ -777,10 +777,10 @@ const OrderDetail = () => {
                                     {isVideo ? (
                                       <video src={url} className="w-full h-full object-cover" />
                                     ) : (
-                                      <img 
-                                        src={url} 
-                                        className="w-full h-full object-cover cursor-pointer" 
-                                        onClick={() => window.open(url, '_blank')} 
+                                      <img
+                                        src={url}
+                                        className="w-full h-full object-cover cursor-pointer"
+                                        onClick={() => window.open(url, '_blank')}
                                       />
                                     )}
                                   </div>
@@ -815,9 +815,9 @@ const OrderDetail = () => {
                       {isVideo ? (
                         <video src={url} className="w-full h-full object-cover" />
                       ) : (
-                        <img 
-                          src={url} 
-                          className="w-full h-full object-cover" 
+                        <img
+                          src={url}
+                          className="w-full h-full object-cover"
                           onClick={() => window.open(url, '_blank')}
                         />
                       )}
@@ -831,114 +831,154 @@ const OrderDetail = () => {
 
 
           {/* PHẦN HỒ SƠ KIỂM ĐỒ (ADMIN) */}
-          {(['renting', 'returning', 'picked_up', 'returned', 'fee_incurred', 'completed'].includes(status) || 
-            (order?.adminReturnMedia && order.adminReturnMedia.length > 0) || 
+          {(['renting', 'returning', 'picked_up', 'returned', 'fee_incurred', 'completed'].includes(status) ||
+            (order?.adminReturnMedia && order.adminReturnMedia.length > 0) ||
             penaltyNoteState) && (
-            <div className={`bg-white rounded-xl p-5 border-2 shadow-md transition-all ${status === "returned" ? "border-orange-200 ring-2 ring-orange-50" : "border-emerald-100"}`}>
-              <div className={`text-[11px] font-bold uppercase tracking-wider mb-4 border-b pb-2 flex justify-between items-center ${status === "returned" ? "text-orange-600 border-orange-100" : "text-emerald-600 border-emerald-100"}`}>
-                <span>{status === "returned" ? "📷 Hồ sơ khách trả đồ (Đang xử lý)" : "✅ Hồ sơ kiểm đồ đã lưu"}</span>
-                {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
-              </div>
+              <div className={`bg-white rounded-xl p-5 border-2 shadow-md transition-all ${status === "returned" ? "border-orange-200 ring-2 ring-orange-50" : "border-emerald-100"}`}>
+                <div className={`text-[11px] font-bold uppercase tracking-wider mb-4 border-b pb-2 flex justify-between items-center ${status === "returned" ? "text-orange-600 border-orange-100" : "text-emerald-600 border-emerald-100"}`}>
+                  <span>{status === "returned" ? "📷 Hồ sơ khách trả đồ (Đang xử lý)" : "✅ Hồ sơ kiểm đồ đã lưu"}</span>
+                  {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
+                </div>
 
-              <div className="space-y-5">
-                {/* 1. Existing Media Gallery (Improved Visibility for Saved Record) */}
-                {order?.adminReturnMedia && order.adminReturnMedia.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] flex items-center gap-2">
-                       <span className="w-8 h-px bg-emerald-200"></span>
-                       Ảnh / Video minh chứng đã lưu:
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      {order.adminReturnMedia.map((url, idx) => {
-                        const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
-                        return (
-                          <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden border-2 border-emerald-100 bg-white group shadow-md hover:shadow-emerald-200 transition-all ring-1 ring-emerald-50">
-                            {isVideo ? (
-                              <video src={url} className="w-full h-full object-contain bg-black" />
-                            ) : (
-                              <img 
-                                src={url} 
-                                alt="Inspection Proof"
-                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-700" 
-                                onClick={() => window.open(url, '_blank')} 
-                              />
-                            )}
-                            <div className="absolute top-3 right-3 bg-emerald-500/90 text-white rounded-full p-1 shadow-lg ring-2 ring-white">
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+                <div className="space-y-5">
+                  {/* 1. Penalty Note (Moved to Top) */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <svg className="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      Ghi chú tình trạng đồ
+                    </label>
+                    {status === "returned" && !isLocked ? (
+                      <textarea
+                        value={penaltyNoteState}
+                        onChange={(e) => setPenaltyNoteState(e.target.value)}
+                        placeholder="Nhập ghi chú kiểm định tại đây..."
+                        className="w-full border-2 border-orange-100 rounded-xl p-4 text-sm focus:border-orange-500 focus:ring-4 focus:ring-orange-50 outline-none transition-all min-h-[120px] bg-orange-50/20 font-medium"
+                      />
+                    ) : (
+                      <div className="p-4 bg-gray-50 rounded-xl text-sm text-gray-700 italic border-l-4 border-emerald-400 shadow-inner">
+                        {penaltyNoteState || "Chưa có ghi chú kiểm định"}
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {/* 2. Penalty Note */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                    <svg className="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    Ghi chú tình trạng đồ
-                  </label>
-                  {status === "returned" && !isLocked ? (
-                    <textarea
-                      value={penaltyNoteState}
-                      onChange={(e) => setPenaltyNoteState(e.target.value)}
-                      placeholder="Nhập ghi chú kiểm định tại đây..."
-                      className="w-full border-2 border-orange-100 rounded-xl p-4 text-sm focus:border-orange-500 focus:ring-4 focus:ring-orange-50 outline-none transition-all min-h-[120px] bg-orange-50/20 font-medium"
-                    />
-                  ) : (
-                    <div className="p-4 bg-gray-50 rounded-xl text-sm text-gray-700 italic border-l-4 border-emerald-400 shadow-inner">
-                      {penaltyNoteState || "Chưa có ghi chú kiểm định"}
+                  {/* 2. Existing Media Gallery (Now Below Note) */}
+                  {order?.adminReturnMedia && order.adminReturnMedia.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <span className="w-8 h-px bg-emerald-200"></span>
+                        Ảnh / Video minh chứng đã lưu:
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {order.adminReturnMedia.map((url, idx) => {
+                          const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                          return (
+                            <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden border-2 border-emerald-100 bg-white group shadow-md hover:shadow-emerald-200 transition-all ring-1 ring-emerald-50">
+                              {isVideo ? (
+                                <video src={url} className="w-full h-full object-contain bg-black" />
+                              ) : (
+                                <img
+                                  src={url}
+                                  alt="Inspection Proof"
+                                  className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-700"
+                                  onClick={() => window.open(url, '_blank')}
+                                />
+                              )}
+                              <div className="absolute top-3 right-3 bg-emerald-500/90 text-white rounded-full p-1 shadow-lg ring-2 ring-white">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Local Preview Gallery */}
+                  {adminFiles.length > 0 && (
+                    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
+                      <div className="flex justify-between items-center">
+                        <div className="text-[10px] font-bold text-orange-500 uppercase tracking-widest flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full animate-ping"></span>
+                          Đang chuẩn bị {adminFiles.length} tệp:
+                        </div>
+                        <button 
+                          onClick={() => setAdminFiles([])}
+                          className="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase tracking-widest transition-colors"
+                        >
+                          Hủy tất cả
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-2 bg-orange-50/30 p-2 rounded-2xl border-2 border-dashed border-orange-200">
+                        {adminFiles.map((f, idx) => (
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border-2 border-white bg-white shadow-md group ring-2 ring-orange-100/50">
+                            {f.file.type.startsWith("video") ? (
+                              <video src={f.preview} className="w-full h-full object-cover" />
+                            ) : (
+                              <img src={f.preview} className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); removeAdminFile(idx); }}
+                              className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[11px] shadow-lg hover:bg-red-600 active:scale-90 transition-all z-20 border-2 border-white"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {/* Nút thêm nhanh ngay trong Grid */}
+                        <button 
+                          onClick={() => adminFileInputRef.current?.click()}
+                          className="aspect-square rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/50 flex flex-col items-center justify-center hover:bg-orange-100 hover:border-orange-500 transition-all group"
+                        >
+                          <span className="text-xl group-hover:scale-125 transition-transform">➕</span>
+                          <span className="text-[8px] font-black text-orange-600 uppercase mt-1">Thêm</span>
+                        </button>
+                      </div>
+
+                      {/* NÚT TẢI LÊN VÀ LƯU NGAY TRONG PANEL */}
+                      <button
+                        onClick={handleUpdateOrder}
+                        disabled={isUpdating || isLocked}
+                        className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-orange-200 hover:from-orange-600 hover:to-orange-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+                      >
+                        {isUpdating ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            Đang tải lên và lưu...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            Bắt đầu tải lên và lưu hồ sơ
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 4. Upload Button (BOTTOM) */}
+                  {!isLocked && (status === "returned" || status === "returning" || status === "picked_up" || status === "renting") && (
+                    <div
+                      onClick={() => adminFileInputRef.current?.click()}
+                      className="cursor-pointer border-2 border-dashed border-orange-200 rounded-xl p-6 text-center bg-orange-50/20 hover:bg-orange-50 hover:border-orange-500 hover:scale-[1.02] transition-all group"
+                    >
+                      <div className="text-3xl mb-2 group-hover:bounce transition-transform">📸</div>
+                      <div className="text-[11px] font-black text-orange-600 uppercase tracking-[0.2em]">Tải thêm ảnh / video</div>
+                      <div className="text-[9px] text-gray-400 mt-1">Chọn tệp minh chứng mới</div>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*,video/*"
+                        ref={adminFileInputRef}
+                        className="hidden"
+                        onChange={handleAdminFilePick}
+                      />
                     </div>
                   )}
                 </div>
-
-                {/* 3. Local Preview Gallery */}
-                {adminFiles.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Tệp mới chuẩn bị tải lên:</div>
-                    <div className="grid grid-cols-4 gap-2 bg-orange-50/30 p-2 rounded-xl border-2 border-dashed border-orange-200">
-                      {adminFiles.map((f, idx) => (
-                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border-2 border-white bg-white shadow-md group">
-                          {f.file.type.startsWith("video") ? (
-                            <video src={f.preview} className="w-full h-full object-cover" />
-                          ) : (
-                            <img src={f.preview} className="w-full h-full object-cover" />
-                          )}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); removeAdminFile(idx); }}
-                            className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-lg hover:bg-red-600 active:scale-90 transition-all z-20"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 4. Upload Button (BOTTOM) */}
-                {!isLocked && (status === "returned" || status === "returning" || status === "picked_up" || status === "renting") && (
-                  <div 
-                    onClick={() => adminFileInputRef.current?.click()}
-                    className="cursor-pointer border-2 border-dashed border-orange-200 rounded-xl p-6 text-center bg-orange-50/20 hover:bg-orange-50 hover:border-orange-500 hover:scale-[1.02] transition-all group"
-                  >
-                    <div className="text-3xl mb-2 group-hover:bounce transition-transform">📸</div>
-                    <div className="text-[11px] font-black text-orange-600 uppercase tracking-[0.2em]">Tải thêm ảnh / video</div>
-                    <div className="text-[9px] text-gray-400 mt-1">Chọn tệp minh chứng mới</div>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*,video/*"
-                      ref={adminFileInputRef}
-                      className="hidden"
-                      onChange={handleAdminFilePick}
-                    />
-                  </div>
-                )}
               </div>
-            </div>
-          )}
+            )}
 
           {/* KHỐI PHÍ PHÁT SINH */}
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
