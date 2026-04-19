@@ -43,12 +43,14 @@ const formatDate = (v?: string) =>
 const formatDateTime = (v?: string) =>
   v ? new Date(v).toLocaleString("vi-VN") : "-";
 
-const SHIPPER_STATUSES = ["preparing", "shipped", "delivered"];
+const SHIPPER_STATUSES = ["preparing", "shipped", "delivered", "returning", "returned"];
 
 const statusMeta: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   preparing: { label: "Đang chuẩn bị", color: "#0ea5e9", bg: "rgba(14,165,233,0.12)", icon: "📦" },
   shipped: { label: "Đang giao", color: "#a855f7", bg: "rgba(168,85,247,0.12)", icon: "🚚" },
   delivered: { label: "Đã giao", color: "#22c55e", bg: "rgba(34,197,94,0.12)", icon: "✅" },
+  returning: { label: "Đang trả đồ", color: "#f97316", bg: "rgba(249,115,22,0.12)", icon: "♻️" },
+  returned: { label: "Đã nhận về", color: "#14b8a6", bg: "rgba(20,184,166,0.12)", icon: "✔️" },
 };
 
 const nextStatus: Record<string, string> = { preparing: "shipped", shipped: "delivered" };
@@ -58,7 +60,7 @@ export default function ShipperPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"preparing" | "shipped" | "delivered">("preparing");
+  const [activeTab, setActiveTab] = useState<"preparing" | "shipped" | "delivered" | "returning" | "returned">("preparing");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
@@ -163,6 +165,27 @@ export default function ShipperPage() {
     }
   };
 
+  /* Xác nhận nhận đồ khách trả (returning → returned) */
+  const handlePickupReturned = async (order: Order) => {
+    if (order.status !== "returning") return;
+    setUpdating(order._id);
+    try {
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      const updatedBy = userData?.name || userData?.email || "Shipper";
+      await axios.put(`http://localhost:3000/orders/${order._id}`, {
+        status: "returned",
+        updatedBy,
+      });
+      showToast(`♻️ Đã lấy hàng trả #${(order.orderNumber || order._id).slice(-6).toUpperCase()} thành công`);
+      fetchOrders();
+      setExpandedId(null);
+    } catch {
+      showToast("❌ Cập nhật thất bại. Thử lại!", "err");
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const filtered = orders.filter(
     (o) =>
       o.status === activeTab &&
@@ -176,6 +199,8 @@ export default function ShipperPage() {
     preparing: orders.filter((o) => o.status === "preparing").length,
     shipped: orders.filter((o) => o.status === "shipped").length,
     delivered: orders.filter((o) => o.status === "delivered").length,
+    returning: orders.filter((o) => o.status === "returning").length,
+    returned: orders.filter((o) => o.status === "returned").length,
   };
 
   const getAddress = (o: Order) => {
@@ -213,8 +238,8 @@ export default function ShipperPage() {
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "24px 16px" }}>
 
         {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
-          {(["preparing", "shipped", "delivered"] as const).map((s) => {
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginBottom: 24 }}>
+          {(["preparing", "shipped", "delivered", "returning", "returned"] as const).map((s) => {
             const m = statusMeta[s];
             return (
               <div key={s} onClick={() => setActiveTab(s)} style={{ background: activeTab === s ? m.bg : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeTab === s ? m.color : "rgba(255,255,255,0.07)"}`, borderRadius: 14, padding: "14px 12px", textAlign: "center", cursor: "pointer", transition: "all .2s" }}>
@@ -463,6 +488,19 @@ export default function ShipperPage() {
                       {order.status === "delivered" && (
                         <div style={{ textAlign: "center", padding: "12px 0", color: "#22c55e", fontWeight: 700, fontSize: 14 }}>
                           ✅ Đơn hàng đã hoàn thành giao
+                        </div>
+                      )}
+
+                      {order.status === "returning" && (
+                        <button disabled={isUpdating} onClick={() => handlePickupReturned(order)}
+                          style={{ width: "100%", padding: "14px 0", borderRadius: 12, border: "none", background: isUpdating ? "rgba(249,115,22,0.3)" : "linear-gradient(135deg,#f97316,#ea580c)", color: "#fff", fontWeight: 800, fontSize: 15, cursor: isUpdating ? "not-allowed" : "pointer", boxShadow: isUpdating ? "none" : "0 4px 20px rgba(249,115,22,0.4)", transition: "all .2s" }}>
+                          {isUpdating ? "⏳ Đang cập nhật..." : "📦 Xác nhận lấy đồ trả →"}
+                        </button>
+                      )}
+
+                      {order.status === "returned" && (
+                        <div style={{ textAlign: "center", padding: "12px 0", color: "#14b8a6", fontWeight: 700, fontSize: 14 }}>
+                          ✅ Đã lấy đồ trả thành công
                         </div>
                       )}
                     </div>
