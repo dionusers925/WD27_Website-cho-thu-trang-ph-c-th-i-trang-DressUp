@@ -276,6 +276,7 @@ const OrdersDashboard = () => {
       delivered: "bg-yellow-100 text-yellow-800",
       renting: "bg-cyan-100 text-cyan-800",
       returning: "bg-indigo-100 text-indigo-800",
+      picked_up: "bg-blue-100 text-blue-800",
       returned: "bg-teal-100 text-teal-800",
       fee_incurred: "bg-orange-100 text-orange-800",
     };
@@ -368,6 +369,7 @@ const OrdersDashboard = () => {
                      order.status === 'delivered' ? 'Đã giao' :
                      order.status === 'renting' ? 'Đang thuê' :
                      order.status === 'returning' ? 'Đang trả đồ' :
+                     order.status === 'picked_up' ? 'Đã lấy đơn' :
                      order.status === 'returned' ? 'Đã nhận đồ' :
                      order.status === 'fee_incurred' ? 'Phát sinh phí' :
                      order.status === 'completed' ? 'Hoàn tất' :

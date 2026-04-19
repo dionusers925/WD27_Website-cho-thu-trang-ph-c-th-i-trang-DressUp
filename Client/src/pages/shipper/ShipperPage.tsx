@@ -43,13 +43,14 @@ const formatDate = (v?: string) =>
 const formatDateTime = (v?: string) =>
   v ? new Date(v).toLocaleString("vi-VN") : "-";
 
-const SHIPPER_STATUSES = ["preparing", "shipped", "delivered", "returning", "returned"];
+const SHIPPER_STATUSES = ["preparing", "shipped", "delivered", "returning", "picked_up", "returned"];
 
 const statusMeta: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   preparing: { label: "Đang chuẩn bị", color: "#0ea5e9", bg: "rgba(14,165,233,0.12)", icon: "📦" },
   shipped: { label: "Đang giao", color: "#a855f7", bg: "rgba(168,85,247,0.12)", icon: "🚚" },
   delivered: { label: "Đã giao", color: "#22c55e", bg: "rgba(34,197,94,0.12)", icon: "✅" },
   returning: { label: "Đang trả đồ", color: "#f97316", bg: "rgba(249,115,22,0.12)", icon: "♻️" },
+  picked_up: { label: "Đã lấy đơn", color: "#6366f1", bg: "rgba(99,102,241,0.12)", icon: "📦" },
   returned: { label: "Đã nhận về", color: "#14b8a6", bg: "rgba(20,184,166,0.12)", icon: "✔️" },
 };
 
@@ -60,7 +61,7 @@ export default function ShipperPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"preparing" | "shipped" | "delivered" | "returning" | "returned">("preparing");
+  const [activeTab, setActiveTab] = useState<"preparing" | "shipped" | "delivered" | "returning" | "picked_up" | "returned">("preparing");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
@@ -173,10 +174,10 @@ export default function ShipperPage() {
       const userData = JSON.parse(localStorage.getItem("user") || "{}");
       const updatedBy = userData?.name || userData?.email || "Shipper";
       await axios.put(`http://localhost:3000/orders/${order._id}`, {
-        status: "returned",
+        status: "picked_up",
         updatedBy,
       });
-      showToast(`♻️ Đã lấy hàng trả #${(order.orderNumber || order._id).slice(-6).toUpperCase()} thành công`);
+      showToast(`♻️ Đã lấy đơn trả #${(order.orderNumber || order._id).slice(-6).toUpperCase()} thành công`);
       fetchOrders();
       setExpandedId(null);
     } catch {
@@ -200,6 +201,7 @@ export default function ShipperPage() {
     shipped: orders.filter((o) => o.status === "shipped").length,
     delivered: orders.filter((o) => o.status === "delivered").length,
     returning: orders.filter((o) => o.status === "returning").length,
+    picked_up: orders.filter((o) => o.status === "picked_up").length,
     returned: orders.filter((o) => o.status === "returned").length,
   };
 
@@ -239,7 +241,7 @@ export default function ShipperPage() {
 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 12, marginBottom: 24 }}>
-          {(["preparing", "shipped", "delivered", "returning", "returned"] as const).map((s) => {
+          {(["preparing", "shipped", "delivered", "returning", "picked_up", "returned"] as const).map((s) => {
             const m = statusMeta[s];
             return (
               <div key={s} onClick={() => setActiveTab(s)} style={{ background: activeTab === s ? m.bg : "rgba(255,255,255,0.04)", border: `1.5px solid ${activeTab === s ? m.color : "rgba(255,255,255,0.07)"}`, borderRadius: 14, padding: "14px 12px", textAlign: "center", cursor: "pointer", transition: "all .2s" }}>

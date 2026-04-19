@@ -48,6 +48,7 @@ const allowedStatuses = [
   "delivered",
   "renting",
   "returning",
+  "picked_up",
   "returned",
   "fee_incurred",
   "completed",

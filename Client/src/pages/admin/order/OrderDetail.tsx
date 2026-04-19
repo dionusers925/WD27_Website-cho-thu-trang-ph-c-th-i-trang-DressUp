@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -86,6 +86,7 @@ const statusBadge = (status?: string) => {
     delivered: "bg-yellow-100 text-yellow-800",
     renting: "bg-cyan-100 text-cyan-800",
     returning: "bg-indigo-100 text-indigo-800",
+    picked_up: "bg-blue-100 text-blue-800",
     returned: "bg-teal-100 text-teal-800",
     pending: "bg-yellow-100 text-yellow-800",
     cancelled: "bg-red-100 text-red-800",
@@ -137,6 +138,7 @@ const getAvailableStatuses = (currentStatus?: string) => {
     "delivered",
     "renting",
     "returning",
+    "picked_up",
     "returned",
     "fee_incurred",
     "completed",
@@ -213,7 +215,7 @@ const OrderDetail = () => {
           end.setHours(23, 59, 59, 999);
 
           // If order history has returned state, use that date, else use current time
-          const returnedHistory = data.statusHistory?.slice().reverse().find(h => h.status === 'returned' || h.status === 'fee_incurred');
+          const returnedHistory = data.statusHistory?.slice().reverse().find(h => h.status === 'returned' || h.status === 'picked_up' || h.status === 'fee_incurred');
           const referenceDate = returnedHistory ? new Date(returnedHistory.date) : new Date();
 
           if (referenceDate > end) {
@@ -426,6 +428,7 @@ const OrderDetail = () => {
             <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao</option>
             <option value="renting" disabled={!getAvailableStatuses(order.status).includes("renting")}>Đang thuê</option>
             <option value="returning" disabled={!getAvailableStatuses(order.status).includes("returning")}>Đang trả đồ</option>
+            <option value="picked_up" disabled={!getAvailableStatuses(order.status).includes("picked_up")}>Đã lấy đơn</option>
             <option value="returned" disabled={!getAvailableStatuses(order.status).includes("returned")}>Đã nhận đồ</option>
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
             <option value="completed" disabled={!getAvailableStatuses(order.status).includes("completed")}>Hoàn tất</option>
