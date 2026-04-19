@@ -1330,6 +1330,10 @@ const handleUpdateOrder = async (req: express.Request, res: express.Response) =>
       updates.returnMedia = req.body.returnMedia;
     }
 
+    if (Array.isArray(req.body.adminReturnMedia)) {
+      updates.adminReturnMedia = req.body.adminReturnMedia;
+    }
+
 
 
 
