@@ -758,23 +758,30 @@ const OrderDetail = () => {
 
                       {/* Hiển thị đính kèm nếu là trạng thái 'returned' (Đã nhận đồ) */}
                       {history.status === 'returned' && (
-                        <div className="mt-3 bg-orange-50/50 border border-orange-100 rounded-lg p-3">
-                          <div className="text-[10px] font-bold text-orange-600 uppercase mb-2">Hồ sơ kiểm đồ đính kèm:</div>
+                        <div className="mt-3 bg-orange-50/50 border border-orange-100 rounded-lg p-3 shadow-sm">
+                          <div className="text-[10px] font-bold text-orange-600 uppercase mb-2 flex items-center gap-1.5">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            Minh chứng kiểm đồ:
+                          </div>
                           {order.penaltyNote && (
-                            <div className="text-xs text-gray-700 italic border-l-2 border-orange-300 pl-2 mb-3 bg-white/50 p-1 rounded">
+                            <div className="text-[11px] text-gray-700 italic border-l-2 border-orange-300 pl-2 mb-3 bg-white/60 p-2 rounded">
                               "{order.penaltyNote}"
                             </div>
                           )}
                           {order.adminReturnMedia && order.adminReturnMedia.length > 0 && (
-                            <div className="grid grid-cols-4 gap-1.5">
+                            <div className="grid grid-cols-4 gap-2">
                               {order.adminReturnMedia.map((url, i) => {
                                 const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
                                 return (
-                                  <div key={i} className="aspect-square rounded border border-orange-200 overflow-hidden bg-white shadow-sm">
+                                  <div key={i} className="aspect-square rounded-md border border-orange-200 overflow-hidden bg-white shadow-sm hover:ring-2 hover:ring-orange-300 transition-all">
                                     {isVideo ? (
                                       <video src={url} className="w-full h-full object-cover" />
                                     ) : (
-                                      <img src={url} className="w-full h-full object-cover cursor-pointer" onClick={() => window.open(url, '_blank')} />
+                                      <img 
+                                        src={url} 
+                                        className="w-full h-full object-cover cursor-pointer" 
+                                        onClick={() => window.open(url, '_blank')} 
+                                      />
                                     )}
                                   </div>
                                 )
@@ -858,20 +865,30 @@ const OrderDetail = () => {
 
                 {/* Existing Media Gallery (from database) */}
                 {order?.adminReturnMedia && order.adminReturnMedia.length > 0 && (
-                  <div className="pt-1">
-                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">Ảnh/Video đã xác nhận:</div>
-                    <div className="grid grid-cols-4 gap-2">
+                  <div className="pt-2">
+                    <div className="text-[10px] font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                      Ảnh/Video minh chứng đã lưu:
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 bg-white p-2 rounded-xl border border-gray-100 shadow-inner">
                       {order.adminReturnMedia.map((url, idx) => {
                         const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
                         return (
-                          <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-emerald-100 bg-gray-50 group">
+                          <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-emerald-100 bg-gray-50 group shadow-sm hover:shadow-md transition-all">
                             {isVideo ? (
                               <video src={url} className="w-full h-full object-cover" />
                             ) : (
-                              <img src={url} className="w-full h-full object-cover cursor-pointer" onClick={() => window.open(url, '_blank')} />
+                              <img 
+                                src={url} 
+                                className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform duration-500" 
+                                onClick={() => window.open(url, '_blank')} 
+                              />
                             )}
                             <div className="absolute top-1 right-1 bg-emerald-500 text-white p-0.5 rounded-full shadow-sm">
                               <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                               <span className="text-[10px] text-white font-bold bg-black/40 px-2 py-1 rounded">Xem chi tiết</span>
                             </div>
                           </div>
                         )

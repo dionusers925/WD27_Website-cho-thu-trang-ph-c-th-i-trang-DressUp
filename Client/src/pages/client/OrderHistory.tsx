@@ -250,6 +250,14 @@ export default function OrderHistory() {
                     </p>
                   </div>
 
+                  {/* Thông báo mới từ cửa hàng */}
+                  {order.status === 'returned' && (
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-[10px] font-black animate-pulse border border-orange-200 uppercase tracking-tighter">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      Có thông báo kiểm đồ
+                    </div>
+                  )}
+
                   {/* Nút đã nhận */}
                   {(order.status === "shipped" || order.status === "delivered") && (
                     <button
@@ -330,6 +338,21 @@ export default function OrderHistory() {
 
             {/* Nội dung cuộn */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Thông báo nổi bật khi đã nhận đồ */}
+              {selectedOrder.status === 'returned' && (
+                <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-xl shadow-lg border border-orange-400 flex items-start gap-4 mb-2 animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center shrink-0 shadow-inner">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-black text-sm uppercase tracking-wider mb-1">Cửa hàng đã nhận được đồ!</div>
+                    <p className="text-xs text-orange-50 font-medium leading-relaxed">
+                      Nhân viên đã hoàn tất kiểm tra tình trạng đồ bạn trả. Vui lòng xem kỹ ghi chú và hình ảnh minh chứng phía dưới để biết chi tiết về tình trạng sản phẩm và các phí phát sinh (nếu có).
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-gray-500 text-sm">Mã đơn hàng</p>
