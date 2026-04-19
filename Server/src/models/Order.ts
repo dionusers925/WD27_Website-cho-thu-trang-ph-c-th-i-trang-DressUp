@@ -70,6 +70,7 @@ export interface IOrder extends Document {
     | "cancelled";
 
   deliveryProof?: string;
+  returnMedia?: string[];
 
   vnpTransactionNo?: string;
 
@@ -153,6 +154,7 @@ const orderSchema: Schema = new Schema(
     },
 
     deliveryProof: { type: String, default: "" },
+    returnMedia: { type: [String], default: [] },
 
     vnpTransactionNo: { type: String, default: "" },
 

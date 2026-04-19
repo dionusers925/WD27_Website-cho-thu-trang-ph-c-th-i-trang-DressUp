@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -44,6 +44,11 @@ export default function OrderHistory() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
+  const [returnFiles, setReturnFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -95,9 +100,24 @@ export default function OrderHistory() {
     }
   };
 
-  // Hàm xử lý trả đồ
-  const handleReturnOrder = async (orderId: string) => {
-    if (!confirm("Bạn có chắc muốn trả đồ này?")) return;
+  // Hàm xử lý trả đồ (mở modal)
+  const handleReturnOrder = (orderId: string) => {
+    setReturnOrderId(orderId);
+    setReturnFiles([]);
+  };
+
+  const handleReturnFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setReturnFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+    }
+  };
+
+  const removeReturnFile = (index: number) => {
+    setReturnFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const submitReturnRequest = async () => {
+    if (!returnOrderId) return;
 
     try {
       const user = JSON.parse(localStorage.getItem("user") || "null");
@@ -106,15 +126,43 @@ export default function OrderHistory() {
         return;
       }
 
-      await axios.post(
-        `http://localhost:3000/orders/${orderId}/return`,
-        { userId: user._id }
-      );
+      setIsUploading(true);
+      const uploadedUrls: string[] = [];
+
+      // Upload từng file
+      for (const file of returnFiles) {
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+        });
+        reader.readAsDataURL(file);
+        const dataUrl = await base64Promise;
+
+        const uploadRes = await axios.post("http://localhost:3000/api/uploads", {
+          dataUrl,
+          fileName: file.name,
+        });
+
+        if (uploadRes.data.url) {
+          uploadedUrls.push(uploadRes.data.url);
+        }
+      }
+
+      await axios.put(`http://localhost:3000/orders/${returnOrderId}`, {
+        status: "returning",
+        updatedBy: user.name || user.email || "Khách hàng",
+        returnMedia: uploadedUrls,
+      });
 
       alert("Đã gửi yêu cầu trả đồ thành công!");
+      setReturnOrderId(null);
+      setReturnFiles([]);
       fetchOrders();
     } catch (error: any) {
       alert(error.response?.data?.message || "Có lỗi xảy ra");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -379,6 +427,89 @@ export default function OrderHistory() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal Trả Đồ */}
+      {returnOrderId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full flex flex-col overflow-hidden">
+            <div className="bg-white px-6 py-4 border-b flex justify-between items-center shrink-0">
+              <h2 className="text-xl font-bold">Yêu cầu trả đồ</h2>
+              <button
+                onClick={() => setReturnOrderId(null)}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-gray-600 text-sm">
+                Vui lòng cung cấp hình ảnh/video thực tế của sản phẩm trước khi gửi trả (nếu có).
+              </p>
+
+              <div>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={handleReturnFilesChange}
+                  className="hidden"
+                  ref={fileInputRef}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition w-full"
+                >
+                  + Tải ảnh/video lên
+                </button>
+              </div>
+
+              {returnFiles.length > 0 && (
+                <div className="space-y-2 mt-4 max-h-40 overflow-y-auto">
+                  {returnFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-gray-50 p-2 rounded border">
+                      <span className="text-sm truncate max-w-[200px]">{file.name}</span>
+                      <button
+                        onClick={() => removeReturnFile(idx)}
+                        className="text-red-500 hover:text-red-700 font-bold"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 border-t p-4 flex justify-end gap-3 shrink-0">
+              <button
+                onClick={() => setReturnOrderId(null)}
+                disabled={isUploading}
+                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={submitReturnRequest}
+                disabled={isUploading}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                {isUploading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Đang tải lên...
+                  </>
+                ) : (
+                  "Xác nhận trả đồ"
+                )}
+              </button>
             </div>
           </div>
         </div>

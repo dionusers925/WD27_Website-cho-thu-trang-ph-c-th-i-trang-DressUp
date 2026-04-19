@@ -1325,6 +1325,10 @@ const handleUpdateOrder = async (req: express.Request, res: express.Response) =>
       updates.deliveryProof = req.body.deliveryProof;
     }
 
+    if (Array.isArray(req.body.returnMedia)) {
+      updates.returnMedia = req.body.returnMedia;
+    }
+
 
 
 
