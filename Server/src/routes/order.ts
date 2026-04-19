@@ -1542,7 +1542,10 @@ const handleUpdateOrder = async (req: express.Request, res: express.Response) =>
 
 
 
-    if (!penaltyEnabled) {
+    // Cho phép lưu ghi chú và minh chứng ở các trạng thái trả đồ mà không bị xóa
+    const isInReturnProcess = ["returning", "picked_up", "returned"].includes(targetStatus);
+
+    if (!penaltyEnabled && !isInReturnProcess) {
 
 
       updates.lateDays = 0;

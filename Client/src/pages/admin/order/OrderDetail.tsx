@@ -800,7 +800,34 @@ const OrderDetail = () => {
 
         {/* CỘT PHẢI (Thông tin & Thanh toán) */}
         <div className="space-y-6">
-
+          {/* MINH CHỨNG TỪ KHÁCH HÀNG (Nếu có) */}
+          {order.returnMedia && order.returnMedia.length > 0 && (
+            <div className="bg-white rounded-xl p-5 border-2 border-blue-100 shadow-md">
+              <div className="text-[11px] font-bold text-blue-600 uppercase tracking-widest mb-4 border-b border-blue-50 pb-2 flex items-center gap-2">
+                <span className="text-lg">👤</span>
+                Minh chứng từ khách hàng (Gửi khi trả đồ)
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {order.returnMedia.map((url, idx) => {
+                  const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                  return (
+                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 bg-gray-50 group hover:ring-2 hover:ring-blue-400 transition-all cursor-pointer shadow-sm">
+                      {isVideo ? (
+                        <video src={url} className="w-full h-full object-cover" />
+                      ) : (
+                        <img 
+                          src={url} 
+                          className="w-full h-full object-cover" 
+                          onClick={() => window.open(url, '_blank')}
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
 
           {/* PHẦN HỒ SƠ KIỂM ĐỒ (ADMIN) */}
@@ -813,82 +840,31 @@ const OrderDetail = () => {
                 {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
               </div>
 
-              <div className="space-y-4">
-                {/* Upload zone - Hiện khi ở trạng thái 'Đang thuê' trở đi để admin có thể chuẩn bị hồ sơ */}
-                {!isLocked && (status === "returned" || status === "returning" || status === "picked_up" || status === "renting") && (
-                  <div className="space-y-3">
-                    <div
-                      onClick={() => adminFileInputRef.current?.click()}
-                      className="border-2 border-dashed border-orange-200 rounded-xl p-6 text-center cursor-pointer hover:bg-orange-50 transition-all group bg-orange-50/10"
-                    >
-                      <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📸</div>
-                      <div className="text-sm font-bold text-orange-600 uppercase mb-1">Tải ảnh hoặc video lên</div>
-                      <div className="text-[10px] text-gray-400">Hồ sơ minh chứng tình trạng đồ khi nhận lại</div>
-                      
-                      {/* Nút bấm giả lập để người dùng thấy rõ 'Nút tải lên' */}
-                      <div className="mt-3 inline-block bg-orange-500 text-white text-[10px] px-4 py-1.5 rounded-full font-bold shadow-sm group-hover:bg-orange-600 transition-colors uppercase">
-                         Chọn tệp ngay
-                      </div>
-
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*,video/*"
-                        ref={adminFileInputRef}
-                        className="hidden"
-                        onChange={handleAdminFilePick}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Local Preview Gallery */}
-                {adminFiles.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2 border-t border-orange-100 pt-3">
-                    {adminFiles.map((f, idx) => (
-                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-orange-100 bg-gray-50 group">
-                        {f.file.type.startsWith("video") ? (
-                          <video src={f.preview} className="w-full h-full object-cover" />
-                        ) : (
-                          <img src={f.preview} className="w-full h-full object-cover" />
-                        )}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); removeAdminFile(idx); }}
-                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Existing Media Gallery (from database) */}
+              <div className="space-y-5">
+                {/* 1. Existing Media Gallery (Improved Visibility for Saved Record) */}
                 {order?.adminReturnMedia && order.adminReturnMedia.length > 0 && (
-                  <div className="pt-2">
-                    <div className="text-[10px] font-bold text-gray-500 uppercase mb-3 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
-                      Ảnh/Video minh chứng đã lưu:
+                  <div className="space-y-4">
+                    <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                       <span className="w-8 h-px bg-emerald-200"></span>
+                       Ảnh / Video minh chứng đã lưu:
                     </div>
-                    <div className="grid grid-cols-3 gap-3 bg-white p-2 rounded-xl border border-gray-100 shadow-inner">
+                    <div className="grid grid-cols-2 gap-4">
                       {order.adminReturnMedia.map((url, idx) => {
                         const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
                         return (
-                          <div key={idx} className="relative aspect-video rounded-lg overflow-hidden border border-emerald-100 bg-gray-50 group shadow-sm hover:shadow-md transition-all">
+                          <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden border-2 border-emerald-100 bg-white group shadow-md hover:shadow-emerald-200 transition-all ring-1 ring-emerald-50">
                             {isVideo ? (
-                              <video src={url} className="w-full h-full object-cover" />
+                              <video src={url} className="w-full h-full object-contain bg-black" />
                             ) : (
                               <img 
                                 src={url} 
-                                className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform duration-500" 
+                                alt="Inspection Proof"
+                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-700" 
                                 onClick={() => window.open(url, '_blank')} 
                               />
                             )}
-                            <div className="absolute top-1 right-1 bg-emerald-500 text-white p-0.5 rounded-full shadow-sm">
-                              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                            </div>
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                               <span className="text-[10px] text-white font-bold bg-black/40 px-2 py-1 rounded">Xem chi tiết</span>
+                            <div className="absolute top-3 right-3 bg-emerald-500/90 text-white rounded-full p-1 shadow-lg ring-2 ring-white">
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
                             </div>
                           </div>
                         )
@@ -897,23 +873,69 @@ const OrderDetail = () => {
                   </div>
                 )}
 
-
-                {/* Penalty Note */}
-                <div className="pt-2">
-                  <label className="text-[11px] font-bold text-gray-600 mb-2 block uppercase">Ghi chú kiểm đồ</label>
+                {/* 2. Penalty Note */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <svg className="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    Ghi chú tình trạng đồ
+                  </label>
                   {status === "returned" && !isLocked ? (
                     <textarea
                       value={penaltyNoteState}
                       onChange={(e) => setPenaltyNoteState(e.target.value)}
-                      placeholder="VD: Sản phẩm có vết ố nhỏ ở chân váy, đã trao đổi với khách..."
-                      className="w-full border border-orange-100 rounded-lg p-3 text-sm focus:border-orange-500 outline-none transition-all min-h-[100px] bg-orange-50/20"
+                      placeholder="Nhập ghi chú kiểm định tại đây..."
+                      className="w-full border-2 border-orange-100 rounded-xl p-4 text-sm focus:border-orange-500 focus:ring-4 focus:ring-orange-50 outline-none transition-all min-h-[120px] bg-orange-50/20 font-medium"
                     />
                   ) : (
-                    <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 italic border border-gray-100">
-                      {penaltyNoteState || "Không có ghi chú"}
+                    <div className="p-4 bg-gray-50 rounded-xl text-sm text-gray-700 italic border-l-4 border-emerald-400 shadow-inner">
+                      {penaltyNoteState || "Chưa có ghi chú kiểm định"}
                     </div>
                   )}
                 </div>
+
+                {/* 3. Local Preview Gallery */}
+                {adminFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Tệp mới chuẩn bị tải lên:</div>
+                    <div className="grid grid-cols-4 gap-2 bg-orange-50/30 p-2 rounded-xl border-2 border-dashed border-orange-200">
+                      {adminFiles.map((f, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border-2 border-white bg-white shadow-md group">
+                          {f.file.type.startsWith("video") ? (
+                            <video src={f.preview} className="w-full h-full object-cover" />
+                          ) : (
+                            <img src={f.preview} className="w-full h-full object-cover" />
+                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeAdminFile(idx); }}
+                            className="absolute top-0.5 right-0.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-lg hover:bg-red-600 active:scale-90 transition-all z-20"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Upload Button (BOTTOM) */}
+                {!isLocked && (status === "returned" || status === "returning" || status === "picked_up" || status === "renting") && (
+                  <div 
+                    onClick={() => adminFileInputRef.current?.click()}
+                    className="cursor-pointer border-2 border-dashed border-orange-200 rounded-xl p-6 text-center bg-orange-50/20 hover:bg-orange-50 hover:border-orange-500 hover:scale-[1.02] transition-all group"
+                  >
+                    <div className="text-3xl mb-2 group-hover:bounce transition-transform">📸</div>
+                    <div className="text-[11px] font-black text-orange-600 uppercase tracking-[0.2em]">Tải thêm ảnh / video</div>
+                    <div className="text-[9px] text-gray-400 mt-1">Chọn tệp minh chứng mới</div>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,video/*"
+                      ref={adminFileInputRef}
+                      className="hidden"
+                      onChange={handleAdminFilePick}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
