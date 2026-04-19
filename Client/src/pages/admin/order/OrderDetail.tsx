@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+﻿import { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -752,9 +752,37 @@ const OrderDetail = () => {
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-600 mb-2">
                         Người cập nhật: <span className="font-bold text-gray-800">{history.updatedBy || 'Hệ thống'}</span>
                       </div>
+
+                      {/* Hiển thị đính kèm nếu là trạng thái 'returned' (Đã nhận đồ) */}
+                      {history.status === 'returned' && (
+                        <div className="mt-3 bg-orange-50/50 border border-orange-100 rounded-lg p-3">
+                          <div className="text-[10px] font-bold text-orange-600 uppercase mb-2">Hồ sơ kiểm đồ đính kèm:</div>
+                          {order.penaltyNote && (
+                            <div className="text-xs text-gray-700 italic border-l-2 border-orange-300 pl-2 mb-3 bg-white/50 p-1 rounded">
+                              "{order.penaltyNote}"
+                            </div>
+                          )}
+                          {order.adminReturnMedia && order.adminReturnMedia.length > 0 && (
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {order.adminReturnMedia.map((url, i) => {
+                                const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                                return (
+                                  <div key={i} className="aspect-square rounded border border-orange-200 overflow-hidden bg-white shadow-sm">
+                                    {isVideo ? (
+                                      <video src={url} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <img src={url} className="w-full h-full object-cover cursor-pointer" onClick={() => window.open(url, '_blank')} />
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

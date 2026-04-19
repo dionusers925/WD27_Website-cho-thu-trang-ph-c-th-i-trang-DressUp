@@ -463,6 +463,39 @@ export default function OrderHistory() {
                               {new Date(history.date || new Date()).toLocaleString("vi-VN")}
                             </time>
                           </div>
+
+                          {/* Hiển thị đính kèm cho khách xem nếu là trạng thái 'returned' */}
+                          {history.status === 'returned' && (
+                            <div className="mt-2 bg-orange-50/50 border border-orange-100 rounded-lg p-2.5">
+                              <div className="text-[10px] font-bold text-orange-600 uppercase mb-1.5 font-sans">Minh chứng từ cửa hàng:</div>
+                              {selectedOrder.penaltyNote && (
+                                <div className="text-xs text-gray-700 italic mb-2 px-2 py-1.5 bg-white/80 rounded border border-orange-50">
+                                  "{selectedOrder.penaltyNote}"
+                                </div>
+                              )}
+                              {selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0 && (
+                                <div className="grid grid-cols-5 gap-1.5">
+                                  {selectedOrder.adminReturnMedia.map((url, i) => {
+                                    const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                                    return (
+                                      <div key={i} className="aspect-square rounded border border-orange-200 overflow-hidden bg-white shadow-sm">
+                                        {isVideo ? (
+                                          <video src={url} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <img 
+                                            src={url} 
+                                            alt="Inspection" 
+                                            className="w-full h-full object-cover cursor-pointer" 
+                                            onClick={() => window.open(url, '_blank')}
+                                          />
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
