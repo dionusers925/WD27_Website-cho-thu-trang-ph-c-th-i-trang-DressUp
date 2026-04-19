@@ -768,32 +768,34 @@ const OrderDetail = () => {
 
 
 
-          {/* PHẦN UPLOAD KHI NHẬN ĐỒ (RETURNED) */}
-          {status === "returned" && (
-            <div className="bg-white rounded-xl p-5 border-2 border-orange-200 shadow-md">
-              <div className="text-[11px] font-bold text-orange-600 uppercase tracking-wider mb-4 border-b border-orange-100 pb-2 flex justify-between items-center">
-                <span>📷 Hồ sơ khách trả đồ (Admin)</span>
+          {/* PHẦN HỒ SƠ KIỂM ĐỒ (ADMIN) */}
+          {(status === "returned" || (order?.adminReturnMedia && order.adminReturnMedia.length > 0) || penaltyNoteState) && (
+            <div className={`bg-white rounded-xl p-5 border-2 shadow-md transition-all ${status === "returned" ? "border-orange-200" : "border-emerald-100"}`}>
+              <div className={`text-[11px] font-bold uppercase tracking-wider mb-4 border-b pb-2 flex justify-between items-center ${status === "returned" ? "text-orange-600 border-orange-100" : "text-emerald-600 border-emerald-100"}`}>
+                <span>{status === "returned" ? "📷 Hồ sơ khách trả đồ (Đang xử lý)" : "✅ Hồ sơ kiểm đồ đã lưu"}</span>
                 {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
               </div>
 
               <div className="space-y-4">
-                {/* Upload zone */}
-                <div
-                  onClick={() => adminFileInputRef.current?.click()}
-                  className="border-2 border-dashed border-orange-200 rounded-xl p-6 text-center cursor-pointer hover:bg-orange-50 transition-all group"
-                >
-                  <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📸</div>
-                  <div className="text-xs font-bold text-orange-600 uppercase">Tải ảnh hoặc video</div>
-                  <div className="text-[10px] text-gray-400 mt-1">Minh chứng tình trạng đồ khi nhận từ khách</div>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,video/*"
-                    ref={adminFileInputRef}
-                    className="hidden"
-                    onChange={handleAdminFilePick}
-                  />
-                </div>
+                {/* Upload zone - Chỉ hiện khi ở trạng thái 'Đã nhận đồ' (returned) */}
+                {status === "returned" && !isLocked && (
+                  <div
+                    onClick={() => adminFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-orange-200 rounded-xl p-6 text-center cursor-pointer hover:bg-orange-50 transition-all group"
+                  >
+                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📸</div>
+                    <div className="text-xs font-bold text-orange-600 uppercase">Tải ảnh hoặc video</div>
+                    <div className="text-[10px] text-gray-400 mt-1">Minh chứng tình trạng đồ khi nhận từ khách</div>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,video/*"
+                      ref={adminFileInputRef}
+                      className="hidden"
+                      onChange={handleAdminFilePick}
+                    />
+                  </div>
+                )}
 
                 {/* Local Preview Gallery */}
                 {adminFiles.length > 0 && (
@@ -818,8 +820,8 @@ const OrderDetail = () => {
 
                 {/* Existing Media Gallery (from database) */}
                 {order?.adminReturnMedia && order.adminReturnMedia.length > 0 && (
-                  <div className="pt-3">
-                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">Đã lưu trong hệ thống:</div>
+                  <div className="pt-1">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">Ảnh/Video đã xác nhận:</div>
                     <div className="grid grid-cols-4 gap-2">
                       {order.adminReturnMedia.map((url, idx) => {
                         const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
@@ -844,12 +846,18 @@ const OrderDetail = () => {
                 {/* Penalty Note */}
                 <div className="pt-2">
                   <label className="text-[11px] font-bold text-gray-600 mb-2 block uppercase">Ghi chú kiểm đồ</label>
-                  <textarea
-                    value={penaltyNoteState}
-                    onChange={(e) => setPenaltyNoteState(e.target.value)}
-                    placeholder="VD: Sản phẩm có vết ố nhỏ ở chân váy, đã trao đổi với khách..."
-                    className="w-full border border-orange-100 rounded-lg p-3 text-sm focus:border-orange-500 outline-none transition-all min-h-[100px] bg-orange-50/20"
-                  />
+                  {status === "returned" && !isLocked ? (
+                    <textarea
+                      value={penaltyNoteState}
+                      onChange={(e) => setPenaltyNoteState(e.target.value)}
+                      placeholder="VD: Sản phẩm có vết ố nhỏ ở chân váy, đã trao đổi với khách..."
+                      className="w-full border border-orange-100 rounded-lg p-3 text-sm focus:border-orange-500 outline-none transition-all min-h-[100px] bg-orange-50/20"
+                    />
+                  ) : (
+                    <div className="p-3 bg-gray-50 rounded-lg text-sm text-gray-700 italic border border-gray-100">
+                      {penaltyNoteState || "Không có ghi chú"}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

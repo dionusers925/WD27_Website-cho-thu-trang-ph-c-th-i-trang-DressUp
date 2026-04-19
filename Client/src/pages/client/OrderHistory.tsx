@@ -37,6 +37,8 @@ interface Order {
     updatedBy?: string;
     date: string;
   }[];
+  adminReturnMedia?: string[];
+  penaltyNote?: string;
 }
 
 export default function OrderHistory() {
@@ -399,6 +401,45 @@ export default function OrderHistory() {
                   <span className="text-blue-600">{selectedOrder.total.toLocaleString()}đ</span>
                 </div>
               </div>
+
+              {/* Kiểm tra từ cửa hàng (Minh chứng Admin) */}
+              {(selectedOrder.penaltyNote || (selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0)) && (
+                <div className="border-t pt-4 bg-orange-50/30 -mx-4 px-4 pb-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2 text-orange-700">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-7.618 3.04 bonus 11.955 11.955 0 01-1.539 1.118l1.035 1.035a2.121 2.121 0 003 0l6.364-6.364a2.121 2.121 0 000-3z" /></svg>
+                    Kiểm tra từ cửa hàng
+                  </h3>
+                  
+                  {selectedOrder.penaltyNote && (
+                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-sm text-gray-700 mb-3 italic shadow-sm">
+                      <span className="font-bold text-orange-600 not-italic block mb-1">Ghi chú từ nhân viên:</span>
+                      "{selectedOrder.penaltyNote}"
+                    </div>
+                  )}
+
+                  {selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedOrder.adminReturnMedia.map((url, idx) => {
+                        const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                        return (
+                          <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-orange-200 bg-white shadow-sm">
+                            {isVideo ? (
+                              <video src={url} controls className="w-full h-full object-cover" />
+                            ) : (
+                              <img 
+                                src={url} 
+                                alt="Inspection" 
+                                className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform" 
+                                onClick={() => window.open(url, '_blank')}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Lịch sử đơn hàng */}
               {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 && (
