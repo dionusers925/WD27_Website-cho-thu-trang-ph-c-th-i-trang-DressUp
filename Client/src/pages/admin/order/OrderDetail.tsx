@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -797,31 +797,41 @@ const OrderDetail = () => {
 
 
           {/* PHẦN HỒ SƠ KIỂM ĐỒ (ADMIN) */}
-          {(status === "returned" || (order?.adminReturnMedia && order.adminReturnMedia.length > 0) || penaltyNoteState) && (
-            <div className={`bg-white rounded-xl p-5 border-2 shadow-md transition-all ${status === "returned" ? "border-orange-200" : "border-emerald-100"}`}>
+          {(['renting', 'returning', 'picked_up', 'returned', 'fee_incurred', 'completed'].includes(status) || 
+            (order?.adminReturnMedia && order.adminReturnMedia.length > 0) || 
+            penaltyNoteState) && (
+            <div className={`bg-white rounded-xl p-5 border-2 shadow-md transition-all ${status === "returned" ? "border-orange-200 ring-2 ring-orange-50" : "border-emerald-100"}`}>
               <div className={`text-[11px] font-bold uppercase tracking-wider mb-4 border-b pb-2 flex justify-between items-center ${status === "returned" ? "text-orange-600 border-orange-100" : "text-emerald-600 border-emerald-100"}`}>
                 <span>{status === "returned" ? "📷 Hồ sơ khách trả đồ (Đang xử lý)" : "✅ Hồ sơ kiểm đồ đã lưu"}</span>
                 {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
               </div>
 
               <div className="space-y-4">
-                {/* Upload zone - Chỉ hiện khi ở trạng thái 'Đã nhận đồ' (returned) */}
-                {status === "returned" && !isLocked && (
-                  <div
-                    onClick={() => adminFileInputRef.current?.click()}
-                    className="border-2 border-dashed border-orange-200 rounded-xl p-6 text-center cursor-pointer hover:bg-orange-50 transition-all group"
-                  >
-                    <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📸</div>
-                    <div className="text-xs font-bold text-orange-600 uppercase">Tải ảnh hoặc video</div>
-                    <div className="text-[10px] text-gray-400 mt-1">Minh chứng tình trạng đồ khi nhận từ khách</div>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*,video/*"
-                      ref={adminFileInputRef}
-                      className="hidden"
-                      onChange={handleAdminFilePick}
-                    />
+                {/* Upload zone - Hiện khi ở trạng thái 'Đang thuê' trở đi để admin có thể chuẩn bị hồ sơ */}
+                {!isLocked && (status === "returned" || status === "returning" || status === "picked_up" || status === "renting") && (
+                  <div className="space-y-3">
+                    <div
+                      onClick={() => adminFileInputRef.current?.click()}
+                      className="border-2 border-dashed border-orange-200 rounded-xl p-6 text-center cursor-pointer hover:bg-orange-50 transition-all group bg-orange-50/10"
+                    >
+                      <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📸</div>
+                      <div className="text-sm font-bold text-orange-600 uppercase mb-1">Tải ảnh hoặc video lên</div>
+                      <div className="text-[10px] text-gray-400">Hồ sơ minh chứng tình trạng đồ khi nhận lại</div>
+                      
+                      {/* Nút bấm giả lập để người dùng thấy rõ 'Nút tải lên' */}
+                      <div className="mt-3 inline-block bg-orange-500 text-white text-[10px] px-4 py-1.5 rounded-full font-bold shadow-sm group-hover:bg-orange-600 transition-colors uppercase">
+                         Chọn tệp ngay
+                      </div>
+
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*,video/*"
+                        ref={adminFileInputRef}
+                        className="hidden"
+                        onChange={handleAdminFilePick}
+                      />
+                    </div>
                   </div>
                 )}
 
