@@ -41,6 +41,7 @@ interface Order {
   customerAddress?: string;
   bankAccount?: string;
   bankName?: string;
+  bankHolder?: string;
   note?: string;
   lateFee?: number;
   damageFee?: number;
@@ -68,6 +69,7 @@ interface Order {
     date: string;
   }[];
   deliveryProof?: string;
+  returnMedia?: string[];
 }
 
 const formatCurrency = (value: number) =>
@@ -498,6 +500,12 @@ const OrderDetail = () => {
                       <span className="font-bold text-emerald-700 tracking-wider">{order.bankAccount}</span>
                     </div>
                   )}
+                  {order.bankHolder && (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
+                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Chủ tài khoản:</span>
+                      <span className="font-bold text-emerald-700">{order.bankHolder}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -525,6 +533,40 @@ const OrderDetail = () => {
                   <div className="mt-2 text-xs font-bold text-emerald-600 italic">
                     ✓ Đã xác nhận giao hàng
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* HIỂN THỊ BẰNG CHỨNG TRẢ ĐỒ (TỪ KHÁCH HÀNG) */}
+            {order.returnMedia && order.returnMedia.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                <div className="text-[10px] font-bold text-orange-600 uppercase mb-3 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Bằng chứng trả đồ của khách
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-orange-50/50 border border-orange-100 p-3 rounded-xl">
+                  {order.returnMedia.map((url, index) => {
+                    const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                    return (
+                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-orange-200 shadow-sm bg-white group">
+                        {isVideo ? (
+                          <video src={url} controls className="w-full h-full object-cover" />
+                        ) : (
+                          <img
+                            src={url}
+                            alt={`Bằng chứng trả đồ ${index + 1}`}
+                            className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                            onClick={() => window.open(url, '_blank')}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 text-xs font-bold text-orange-600 italic text-center">
+                  ⚠ Khách hàng đã tải lên {order.returnMedia.length} hình ảnh/video bằng chứng
                 </div>
               </div>
             )}
