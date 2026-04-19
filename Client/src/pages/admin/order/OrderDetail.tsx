@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -70,6 +70,8 @@ interface Order {
   }[];
   deliveryProof?: string;
   returnMedia?: string[];
+  adminReturnMedia?: string[];
+  penaltyNote?: string;
 }
 
 const formatCurrency = (value: number) =>
@@ -190,6 +192,12 @@ const OrderDetail = () => {
   const [selectedErrors, setSelectedErrors] = useState<string[]>([]);
   const [lostItemIds, setLostItemIds] = useState<string[]>([]);
 
+  // Admin return media & notes
+  const [adminFiles, setAdminFiles] = useState<{ file: File; preview: string }[]>([]);
+  const [penaltyNoteState, setPenaltyNoteState] = useState<string>("");
+  const adminFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
   // Kiểm tra đơn đã chốt cứng chưa (không cho sửa)
   const isLocked = useMemo(() => {
     if (!order) return false;
@@ -248,6 +256,7 @@ const OrderDetail = () => {
         setOverdueDays(autoDays);
         setSelectedErrors((data as any).damageErrors || []);
         setLostItemIds((data as any).lostItems || []);
+        setPenaltyNoteState(data.penaltyNote || "");
       } catch (err: any) {
         const message =
           err?.response?.data?.message ||
@@ -269,6 +278,25 @@ const OrderDetail = () => {
       const userData = JSON.parse(localStorage.getItem("user") || "{}");
       const updatedBy = userData?.name || userData?.email || "Quản trị viên";
 
+      const uploadedUrls: string[] = [...(order?.adminReturnMedia || [])];
+
+      // Upload new files if status is returned
+      if (status === "returned" && adminFiles.length > 0) {
+        setIsUploadingMedia(true);
+        for (const f of adminFiles) {
+          try {
+            const res = await axios.post("http://localhost:3000/api/uploads", {
+              dataUrl: f.preview,
+              fileName: f.file.name
+            });
+            if (res.data.url) uploadedUrls.push(res.data.url);
+          } catch (uploadErr) {
+            console.error("Lỗi upload file admin:", uploadErr);
+          }
+        }
+        setIsUploadingMedia(false);
+      }
+
       const res = await axios.put(`http://localhost:3000/orders/${id}`, {
         lateFee,
         damageFee,
@@ -277,15 +305,36 @@ const OrderDetail = () => {
         overdueDays,
         damageErrors: selectedErrors,
         lostItems: lostItemIds,
+        adminReturnMedia: uploadedUrls,
+        penaltyNote: penaltyNoteState,
         updatedBy
       });
       setOrder(res.data); // Cập nhật lại UI sau khi lưu thành công
+      setAdminFiles([]); // Clear local files after upload
       alert("Cập nhật đơn hàng thành công!");
     } catch (err) {
       alert("Không thể lưu chi phí. Vui lòng kiểm tra lại server.");
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleAdminFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (re) => {
+          setAdminFiles(prev => [...prev, { file, preview: re.target?.result as string }]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    e.target.value = "";
+  };
+
+  const removeAdminFile = (idx: number) => {
+    setAdminFiles(prev => prev.filter((_, i) => i !== idx));
   };
 
   const items = useMemo(
@@ -718,6 +767,93 @@ const OrderDetail = () => {
         <div className="space-y-6">
 
 
+
+          {/* PHẦN UPLOAD KHI NHẬN ĐỒ (RETURNED) */}
+          {status === "returned" && (
+            <div className="bg-white rounded-xl p-5 border-2 border-orange-200 shadow-md">
+              <div className="text-[11px] font-bold text-orange-600 uppercase tracking-wider mb-4 border-b border-orange-100 pb-2 flex justify-between items-center">
+                <span>📷 Hồ sơ khách trả đồ (Admin)</span>
+                {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
+              </div>
+
+              <div className="space-y-4">
+                {/* Upload zone */}
+                <div
+                  onClick={() => adminFileInputRef.current?.click()}
+                  className="border-2 border-dashed border-orange-200 rounded-xl p-6 text-center cursor-pointer hover:bg-orange-50 transition-all group"
+                >
+                  <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📸</div>
+                  <div className="text-xs font-bold text-orange-600 uppercase">Tải ảnh hoặc video</div>
+                  <div className="text-[10px] text-gray-400 mt-1">Minh chứng tình trạng đồ khi nhận từ khách</div>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,video/*"
+                    ref={adminFileInputRef}
+                    className="hidden"
+                    onChange={handleAdminFilePick}
+                  />
+                </div>
+
+                {/* Local Preview Gallery */}
+                {adminFiles.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2 border-t border-orange-100 pt-3">
+                    {adminFiles.map((f, idx) => (
+                      <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-orange-100 bg-gray-50 group">
+                        {f.file.type.startsWith("video") ? (
+                          <video src={f.preview} className="w-full h-full object-cover" />
+                        ) : (
+                          <img src={f.preview} className="w-full h-full object-cover" />
+                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removeAdminFile(idx); }}
+                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Existing Media Gallery (from database) */}
+                {order?.adminReturnMedia && order.adminReturnMedia.length > 0 && (
+                  <div className="pt-3">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">Đã lưu trong hệ thống:</div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {order.adminReturnMedia.map((url, idx) => {
+                        const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                        return (
+                          <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-emerald-100 bg-gray-50 group">
+                            {isVideo ? (
+                              <video src={url} className="w-full h-full object-cover" />
+                            ) : (
+                              <img src={url} className="w-full h-full object-cover cursor-pointer" onClick={() => window.open(url, '_blank')} />
+                            )}
+                            <div className="absolute top-1 right-1 bg-emerald-500 text-white p-0.5 rounded-full shadow-sm">
+                              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+
+                {/* Penalty Note */}
+                <div className="pt-2">
+                  <label className="text-[11px] font-bold text-gray-600 mb-2 block uppercase">Ghi chú kiểm đồ</label>
+                  <textarea
+                    value={penaltyNoteState}
+                    onChange={(e) => setPenaltyNoteState(e.target.value)}
+                    placeholder="VD: Sản phẩm có vết ố nhỏ ở chân váy, đã trao đổi với khách..."
+                    className="w-full border border-orange-100 rounded-lg p-3 text-sm focus:border-orange-500 outline-none transition-all min-h-[100px] bg-orange-50/20"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* KHỐI PHÍ PHÁT SINH */}
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">

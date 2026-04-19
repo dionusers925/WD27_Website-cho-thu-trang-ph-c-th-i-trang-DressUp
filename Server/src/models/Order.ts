@@ -72,6 +72,7 @@ export interface IOrder extends Document {
 
   deliveryProof?: string;
   returnMedia?: string[];
+  adminReturnMedia?: string[];
 
   vnpTransactionNo?: string;
 
@@ -157,6 +158,7 @@ const orderSchema: Schema = new Schema(
 
     deliveryProof: { type: String, default: "" },
     returnMedia: { type: [String], default: [] },
+    adminReturnMedia: { type: [String], default: [] },
 
     vnpTransactionNo: { type: String, default: "" },
 
