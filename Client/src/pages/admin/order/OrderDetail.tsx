@@ -152,7 +152,7 @@ const getAvailableStatuses = (currentStatus?: string) => {
 
   if (currentIndex === -1) return statuses;
   if (currentStatus === "completed") return ["completed"];
-  if (currentStatus === "fee_incurred") return ["fee_incurred"];
+  if (currentStatus === "fee_incurred") return ["fee_incurred", "completed"];
   if (currentStatus === "cancelled") return ["cancelled"];
 
   // Trả về trạng thái hiện tại và tất cả các trạng thái phía sau nó
@@ -201,7 +201,7 @@ const OrderDetail = () => {
   // Kiểm tra đơn đã chốt cứng chưa (không cho sửa)
   const isLocked = useMemo(() => {
     if (!order) return false;
-    const isTerminalStatus = order.status === "fee_incurred" || order.status === "completed";
+    const isTerminalStatus = order.status === "completed";
     const isPaymentDone = order.paymentStatus === "success" || order.paymentStatus === "paid" || order.paymentStatus === "completed";
     return isTerminalStatus && isPaymentDone;
   }, [order]);
