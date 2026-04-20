@@ -47,6 +47,7 @@ const OrdersDashboard = () => {
   const [currentColor, setCurrentColor] = useState("");
   const [searchProductTerm, setSearchProductTerm] = useState("");
   const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [searchOrderCode, setSearchOrderCode] = useState("");
 
   const normalizeProduct = (p: any): Product => {
     const rentalTiers = Array.isArray(p?.rentalTiers)
@@ -330,6 +331,16 @@ const OrdersDashboard = () => {
         </div>
       </div>
 
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Tìm kiếm theo mã đơn hàng..."
+          className="w-full md:w-1/3 p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+          value={searchOrderCode}
+          onChange={(e) => setSearchOrderCode(e.target.value)}
+        />
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
         <table className="w-full text-left">
           <thead className="bg-gray-100 border-b border-gray-200">
@@ -343,7 +354,13 @@ const OrdersDashboard = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {orders.map((order: any) => (
+            {orders.filter((order: any) => {
+              if (!searchOrderCode) return true;
+              const shortId = order._id?.slice(-6).toUpperCase() || "";
+              const fullId = order._id?.toUpperCase() || "";
+              const term = searchOrderCode.toUpperCase().trim();
+              return shortId.includes(term) || fullId.includes(term);
+            }).map((order: any) => (
               <tr key={order._id} className="hover:bg-gray-50 transition">
                 <td className="p-4 font-mono text-sm text-blue-600 font-semibold">
                   {order._id?.slice(-6).toUpperCase()}
