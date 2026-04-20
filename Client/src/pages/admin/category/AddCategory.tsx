@@ -46,6 +46,7 @@ const AddCategory = () => {
           name="name"
           rules={[
             { required: true, message: "Tên danh mục không được để trống!" },
+            { max: 255, message: "Tên danh mục không được vượt quá 255 ký tự" },
             { min: 5, message: "Tên danh mục phải có ít nhất 5 ký tự" },
           ]}
         >
