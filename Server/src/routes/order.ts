@@ -43,7 +43,7 @@ orderRouter.get("/my-orders", async (req, res) => {
   }
 });
 
-// 👉 THÊM API TRẢ ĐỒ
+// API trả đồ
 orderRouter.post("/:id/return", async (req, res) => {
   try {
     const { id } = req.params;
@@ -57,23 +57,21 @@ orderRouter.post("/:id/return", async (req, res) => {
       return res.status(400).json({ message: "Thiếu userId" });
     }
 
-    // Tìm đơn hàng của user này
     const order = await Order.findOne({ _id: id, userId: userId });
     
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
-    // Chỉ cho phép trả đồ khi đơn hàng đã giao (delivered)
     if (order.status !== "delivered") {
       return res.status(400).json({ 
         message: "Chỉ có thể trả đồ khi đơn hàng đã được giao" 
       });
     }
 
-    // Cập nhật status
     order.status = "returning";
-    (order as any).statusHistory.push({
+    if (!order.statusHistory) order.statusHistory = [];
+    order.statusHistory.push({
       status: "returning",
       date: new Date(),
       updatedBy: "Khách hàng",
@@ -273,97 +271,15 @@ orderRouter.put("/:id", async (req, res) => {
   }
 });
 
-
-// ==================== API GIA HẠN THUÊ ====================
+// ==================== API GIA HẠN / RÚT NGẮN THUÊ ====================
+// ==================== API GIA HẠN / RÚT NGẮN THUÊ ====================
 orderRouter.post("/:id/extend", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { userId, additionalDays, newEndDate } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
-    }
-
-    if (!userId) {
-      return res.status(400).json({ message: "Thiếu userId" });
-    }
-
-    const order = await Order.findOne({ _id: id, userId: userId });
-    if (!order) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-
-    // Chỉ cho phép gia hạn khi đơn hàng đang trong quá trình thuê
-    const allowedStatuses = ["confirmed", "shipped", "delivered"];
-    if (!allowedStatuses.includes(order.status)) {
-      return res.status(400).json({
-        message: "Chỉ có thể gia hạn khi đơn hàng đang trong quá trình thuê",
-      });
-    }
-
-    // Tính ngày kết thúc mới
-    let newEndDateObj: Date;
-    if (newEndDate) {
-      newEndDateObj = new Date(newEndDate);
-    } else if (additionalDays) {
-      newEndDateObj = new Date(order.endDate);
-      newEndDateObj.setDate(newEndDateObj.getDate() + additionalDays);
-    } else {
-      return res.status(400).json({ message: "Thiếu thông tin gia hạn" });
-    }
-
-    // Tính số ngày thuê mới
-    const start = new Date(order.startDate);
-    const oldEnd = new Date(order.endDate);
-    const oldRentalDays = calcRentalDays(start, oldEnd);
-    const newRentalDays = calcRentalDays(start, newEndDateObj);
-    const addedDays = newRentalDays - oldRentalDays;
-
-    if (addedDays <= 0) {
-      return res.status(400).json({ message: "Ngày kết thúc mới phải lớn hơn ngày hiện tại" });
-    }
-
-    // Tính thêm tiền
-    const rentalSubtotal = (order.items || []).reduce(
-      (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1),
-      0
-    );
-    const dailyRate = rentalSubtotal / oldRentalDays;
-    const additionalRental = dailyRate * addedDays;
-    const newTotal = (order.total || 0) + additionalRental;
-
-    // Cập nhật order
-    order.endDate = newEndDateObj;
-    order.total = newTotal;
-    
-    if (!order.statusHistory) order.statusHistory = [];
-    order.statusHistory.push({
-      status: "extended",
-      date: new Date(),
-      updatedBy: "Khách hàng",
-      note: `Gia hạn thêm ${addedDays} ngày. Tổng tiền mới: ${newTotal.toLocaleString()}đ`,
-    });
-
-    await order.save();
-
-    res.json({
-      success: true,
-      message: `Đã gia hạn thêm ${addedDays} ngày. Vui lòng thanh toán thêm ${additionalRental.toLocaleString()}đ`,
-      order,
-      additionalPayment: additionalRental,
-    });
-  } catch (error) {
-    console.error("Lỗi gia hạn:", error);
-    res.status(500).json({ message: "Lỗi server" });
-  }
-});
-
-// ==================== API RÚT NGẮN THUÊ ====================
-orderRouter.post("/:id/shorten", async (req, res) => {
   try {
     const { id } = req.params;
     const { userId, newEndDate } = req.body;
 
+    console.log("📥 Received:", { id, userId, newEndDate });
+
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
     }
@@ -377,40 +293,66 @@ orderRouter.post("/:id/shorten", async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
     }
 
-    // Chỉ cho phép rút ngắn khi đơn hàng chưa kết thúc
-    const allowedStatuses = ["confirmed", "shipped", "delivered"];
+    const allowedStatuses = ["confirmed", "shipped", "delivered", "renting"];
     if (!allowedStatuses.includes(order.status)) {
       return res.status(400).json({
-        message: "Không thể rút ngắn thời gian thuê ở trạng thái này",
+        message: "Chỉ có thể thay đổi thời gian thuê khi đơn hàng đang trong quá trình thuê",
       });
     }
 
+    // Parse ngày mới
     const newEndDateObj = new Date(newEndDate);
-    const currentEndDate = new Date(order.endDate);
-    const currentStartDate = new Date(order.startDate);
+    const currentStartDate = order.startDate ? new Date(order.startDate) : new Date();
+    const currentEndDate = order.endDate ? new Date(order.endDate) : new Date();
 
-    if (newEndDateObj >= currentEndDate) {
-      return res.status(400).json({ message: "Ngày kết thúc mới phải sớm hơn ngày kết thúc hiện tại" });
+    console.log("📅 Dates:", {
+      newEndDateObj,
+      currentStartDate,
+      currentEndDate,
+    });
+
+    // Kiểm tra ngày hợp lệ
+    if (isNaN(newEndDateObj.getTime())) {
+      return res.status(400).json({ message: "Ngày kết thúc không hợp lệ" });
     }
 
     if (newEndDateObj <= currentStartDate) {
-      return res.status(400).json({ message: "Ngày kết thúc mới phải sau ngày bắt đầu" });
+      return res.status(400).json({ 
+        message: `Ngày kết thúc phải sau ngày bắt đầu (${currentStartDate.toLocaleDateString("vi-VN")})` 
+      });
     }
 
-    // Tính số ngày thuê mới
-    const start = currentStartDate;
-    const oldRentalDays = calcRentalDays(start, currentEndDate);
-    const newRentalDays = calcRentalDays(start, newEndDateObj);
-    const reducedDays = oldRentalDays - newRentalDays;
+    // 👉 BỎ KIỂM TRA newEndDateObj <= currentEndDate
+    // Để cho phép cả rút ngắn (chọn ngày sớm hơn)
 
-    // Tính số tiền được hoàn
+    // Tính số ngày thay đổi
+    const oldRentalDays = calcRentalDays(currentStartDate, currentEndDate);
+    const newRentalDays = calcRentalDays(currentStartDate, newEndDateObj);
+    const daysChanged = newRentalDays - oldRentalDays;
+
+    // Tính tiền
     const rentalSubtotal = (order.items || []).reduce(
       (sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1),
       0
     );
     const dailyRate = rentalSubtotal / oldRentalDays;
-    const refundAmount = dailyRate * reducedDays;
-    const newTotal = (order.total || 0) - refundAmount;
+    
+    let message = "";
+    let newTotal = order.total;
+
+    if (daysChanged > 0) {
+      // Gia hạn
+      const additionalRental = dailyRate * daysChanged;
+      newTotal = order.total + additionalRental;
+      message = `Đã gia hạn thêm ${daysChanged} ngày. Vui lòng thanh toán thêm ${additionalRental.toLocaleString()}đ`;
+    } else if (daysChanged < 0) {
+      // Rút ngắn
+      const refundAmount = dailyRate * Math.abs(daysChanged);
+      newTotal = order.total - refundAmount;
+      message = `Đã rút ngắn ${Math.abs(daysChanged)} ngày. Số tiền hoàn: ${refundAmount.toLocaleString()}đ sẽ được chuyển vào tài khoản ngân hàng của bạn`;
+    } else {
+      return res.status(400).json({ message: "Ngày kết thúc mới trùng với ngày hiện tại" });
+    }
 
     // Cập nhật order
     order.endDate = newEndDateObj;
@@ -418,22 +360,23 @@ orderRouter.post("/:id/shorten", async (req, res) => {
     
     if (!order.statusHistory) order.statusHistory = [];
     order.statusHistory.push({
-      status: "shortened",
+      status: daysChanged > 0 ? "extended" : "shortened",
       date: new Date(),
       updatedBy: "Khách hàng",
-      note: `Rút ngắn ${reducedDays} ngày. Số tiền hoàn: ${refundAmount.toLocaleString()}đ`,
+      note: message,
     });
 
     await order.save();
 
     res.json({
       success: true,
-      message: `Đã rút ngắn ${reducedDays} ngày. Số tiền hoàn: ${refundAmount.toLocaleString()}đ sẽ được chuyển vào tài khoản ngân hàng của bạn`,
+      message,
       order,
-      refundAmount,
+      additionalPayment: daysChanged > 0 ? dailyRate * daysChanged : 0,
+      refundAmount: daysChanged < 0 ? dailyRate * Math.abs(daysChanged) : 0,
     });
   } catch (error) {
-    console.error("Lỗi rút ngắn:", error);
+    console.error("Lỗi thay đổi thời gian thuê:", error);
     res.status(500).json({ message: "Lỗi server" });
   }
 });

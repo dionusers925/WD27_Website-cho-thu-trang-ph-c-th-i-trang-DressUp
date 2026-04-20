@@ -41,6 +41,9 @@ export interface IOrder extends Document {
   startDate?: Date;
   endDate?: Date;
 
+  rentalDays?: number;     
+  originalEndDate?: Date;    
+
   subtotal: number;
   serviceFee: number;
 
@@ -56,18 +59,22 @@ export interface IOrder extends Document {
   paymentStatus: string;
 
   status:
-    | "pending"
-    | "confirmed"
-    | "shipped"
-    | "delivered"
-    | "returning"        
-    | "fee_incurred"
-    | "completed"
-    | "cancelled";
+  | "pending"
+  | "confirmed"
+  | "shipped"
+  | "delivered"
+  | "returning"
+  | "returned"
+  | "renting"
+  | "extended"
+  | "shortened"
+  | "fee_incurred"
+  | "completed"
+  | "cancelled";
 
   vnpTransactionNo?: string;
 
-  statusHistory?: Array<{ status: string; updatedBy?: string; date: Date }>;
+  statusHistory?: Array<{ status: string; updatedBy?: string; date: Date; note?: string }>;
   paymentStatusHistory?: Array<{ status: string; updatedBy?: string; date: Date }>;
 
   createdAt: Date;
@@ -115,6 +122,8 @@ const orderSchema: Schema = new Schema(
 
     startDate: Date,
     endDate: Date,
+    rentalDays: { type: Number, default: 0 },           
+    originalEndDate: { type: Date, default: null },   
 
     subtotal: { type: Number, default: 0 },
     serviceFee: { type: Number, default: 0 },
@@ -132,16 +141,24 @@ const orderSchema: Schema = new Schema(
 
     status: {
       type: String,
+      status: {
+  type: String,
       enum: [
         "pending",
         "confirmed",
         "shipped",
         "delivered",
-        "returning",   
+        "returning",
+        "returned",
+        "renting",
+        "extended",
+        "shortened",
         "fee_incurred",
         "completed",
         "cancelled",
       ],
+  default: "pending",
+},
       default: "pending",
     },
 
@@ -152,6 +169,7 @@ const orderSchema: Schema = new Schema(
         status: String,
         date: { type: Date, default: Date.now },
         updatedBy: String,
+        note: String,     
       },
     ],
 

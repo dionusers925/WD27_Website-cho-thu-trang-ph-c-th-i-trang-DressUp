@@ -27,6 +27,7 @@ interface Order {
   createdAt: string;
   items: OrderItem[];
   customerName?: string;
+  startDate?: string;       
   customerPhone?: string;
   customerAddress?: string;
   bankName?: string;
@@ -76,6 +77,9 @@ export default function OrderHistory() {
       const response = await axios.get(
         `http://localhost:3000/orders/my-orders?userId=${user._id}`
       );
+      console.log("Đơn hàng đầu tiên:", response.data[0]);
+console.log("startDate:", response.data[0]?.startDate);
+console.log("endDate:", response.data[0]?.endDate);
       setOrders(response.data);
     } catch (error) {
       console.error("Lỗi lấy lịch sử đơn hàng:", error);
@@ -118,35 +122,44 @@ export default function OrderHistory() {
 
   // Hàm xử lý gia hạn 
   const handleExtendOrder = async () => {
-    if (!selectedOrderForExtend) return;
-    
-    setIsExtending(true);
-    try {
-      const user = JSON.parse(localStorage.getItem("user") || "null");
-      if (!user) {
-        alert("Vui lòng đăng nhập");
-        return;
-      }
-
-      const response = await axios.post(
-        `http://localhost:3000/orders/${selectedOrderForExtend._id}/extend`,
-        {
-          userId: user._id,
-          additionalDays: extendDays,
-        }
-      );
-
-      if (response.data.success) {
-        alert(response.data.message);
-        setShowExtendModal(false);
-        fetchOrders();
-      }
-    } catch (error: any) {
-      alert(error.response?.data?.message || "Có lỗi xảy ra khi gia hạn");
-    } finally {
-      setIsExtending(false);
+  if (!selectedOrderForExtend) return;
+  if (!extendDays) {
+    alert("Vui lòng chọn ngày kết thúc mới");
+    return;
+  }
+  
+  setIsExtending(true);
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    if (!user) {
+      alert("Vui lòng đăng nhập");
+      return;
     }
-  };
+
+    // Chuyển đổi ngày sang định dạng ISO
+    const formattedDate = new Date(extendDays).toISOString();
+    console.log("📅 Gửi ngày:", formattedDate);
+
+    const response = await axios.post(
+      `http://localhost:3000/orders/${selectedOrderForExtend._id}/extend`,
+      {
+        userId: user._id,
+        newEndDate: formattedDate,  // Gửi ISO string
+      }
+    );
+
+    if (response.data.success) {
+      alert(response.data.message);
+      setShowExtendModal(false);
+      fetchOrders();
+    }
+  } catch (error: any) {
+    console.error("Lỗi gia hạn:", error);
+    alert(error.response?.data?.message || "Có lỗi xảy ra khi gia hạn");
+  } finally {
+    setIsExtending(false);
+  }
+};
 
   const handleReturnFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -709,76 +722,84 @@ export default function OrderHistory() {
         </div>
       )}
 
-      {/*  MODAL GIA HẠN  */}
-      {showExtendModal && selectedOrderForExtend && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-          <div className="bg-white rounded-xl max-w-md w-full">
-            <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h2 className="text-xl font-bold">Gia hạn thời gian thuê</h2>
-              <button
-                onClick={() => setShowExtendModal(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              <div>
-                <p className="text-gray-600 text-sm">Đơn hàng: {selectedOrderForExtend.orderNumber}</p>
-                <p className="text-gray-600 text-sm">
-                  Ngày kết thúc hiện tại: {selectedOrderForExtend.endDate ? new Date(selectedOrderForExtend.endDate).toLocaleDateString("vi-VN") : "Chưa có"}
-                </p>
-              </div>
+      
+      {/* Modal Gia hạn / Rút ngắn */}
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Chọn số ngày gia hạn
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {[1, 2, 3, 5, 7].map(days => (
-                    <button
-                      key={days}
-                      type="button"
-                      onClick={() => setExtendDays(days)}
-                      className={`px-4 py-2 rounded-lg border transition ${
-                        extendDays === days
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "border-gray-300 text-gray-700 hover:border-blue-400"
-                      }`}
-                    >
-                      +{days} ngày
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 p-3 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  💡 <strong>Lưu ý:</strong> Khi gia hạn, bạn sẽ cần thanh toán thêm tiền thuê phát sinh. 
-                  Vui lòng liên hệ cửa hàng để được hỗ trợ thanh toán.
-                </p>
-              </div>
-            </div>
-
-            <div className="p-4 border-t flex gap-3">
-              <button
-                onClick={() => setShowExtendModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleExtendOrder}
-                disabled={isExtending}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
-              >
-                {isExtending ? "Đang xử lý..." : "Xác nhận gia hạn"}
-              </button>
-            </div>
-          </div>
+{showExtendModal && selectedOrderForExtend && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
+    <div className="bg-white rounded-xl max-w-md w-full">
+      <div className="px-6 py-4 border-b flex justify-between items-center">
+        <h2 className="text-xl font-bold">Thay đổi thời gian thuê</h2>
+        <button
+          onClick={() => setShowExtendModal(false)}
+          className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+        >
+          ×
+        </button>
+      </div>
+      
+      <div className="p-6 space-y-4">
+        <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Ngày bắt đầu:</span> 
+            {selectedOrderForExtend.startDate 
+              ? new Date(selectedOrderForExtend.startDate).toLocaleDateString("vi-VN") 
+              : "Chưa có dữ liệu"}
+          </p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Ngày kết thúc hiện tại:</span> 
+            {selectedOrderForExtend.endDate 
+              ? new Date(selectedOrderForExtend.endDate).toLocaleDateString("vi-VN") 
+              : "Chưa có dữ liệu"}
+          </p>
+          <p className="text-sm text-gray-600">
+            <span className="font-medium">Số ngày thuê:</span> 
+            {selectedOrderForExtend.startDate && selectedOrderForExtend.endDate 
+              ? Math.ceil((new Date(selectedOrderForExtend.endDate).getTime() - new Date(selectedOrderForExtend.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
+              : "Đang tính"} ngày
+          </p>
         </div>
-      )}
+
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Chọn ngày kết thúc mới
+          </label>
+          <input
+            type="date"
+            value={extendDays}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExtendDays(e.target.value)}
+            min={selectedOrderForExtend.startDate ? new Date(selectedOrderForExtend.startDate).toISOString().split("T")[0] : undefined}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+        </div>
+
+        <div className="bg-yellow-50 p-3 rounded-lg">
+          <p className="text-sm text-yellow-800">
+            💡 <strong>Lưu ý:</strong> 
+            <br />- Chọn ngày lớn hơn hiện tại → <span className="text-green-600">Gia hạn (thanh toán thêm)</span>
+            <br />- Chọn ngày nhỏ hơn hiện tại → <span className="text-orange-600">Rút ngắn (hoàn tiền)</span>
+          </p>
+        </div>
+      </div>
+
+      <div className="p-4 border-t flex gap-3">
+        <button
+          onClick={() => setShowExtendModal(false)}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+        >
+          Hủy
+        </button>
+        <button
+          onClick={handleExtendOrder}
+          disabled={isExtending || !extendDays}
+          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
+        >
+          {isExtending ? "Đang xử lý..." : "Xác nhận thay đổi"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* MODAL XEM NHANH HỒ SƠ KIỂM ĐỒ  */}
       {viewingInspection && (
