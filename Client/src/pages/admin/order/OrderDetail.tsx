@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
 
@@ -41,6 +41,7 @@ interface Order {
   customerAddress?: string;
   bankAccount?: string;
   bankName?: string;
+  bankHolder?: string;
   note?: string;
   lateFee?: number;
   damageFee?: number;
@@ -67,6 +68,10 @@ interface Order {
     updatedBy?: string;
     date: string;
   }[];
+  deliveryProof?: string;
+  returnMedia?: string[];
+  adminReturnMedia?: string[];
+  penaltyNote?: string;
 }
 
 const formatCurrency = (value: number) =>
@@ -83,11 +88,14 @@ const statusBadge = (status?: string) => {
   const styles: Record<string, string> = {
     completed: "bg-green-100 text-green-800",
     delivered: "bg-yellow-100 text-yellow-800",
+    renting: "bg-cyan-100 text-cyan-800",
     returning: "bg-indigo-100 text-indigo-800",
+    picked_up: "bg-blue-100 text-blue-800",
     returned: "bg-teal-100 text-teal-800",
     pending: "bg-yellow-100 text-yellow-800",
     cancelled: "bg-red-100 text-red-800",
     confirmed: "bg-blue-100 text-blue-800",
+    preparing: "bg-sky-100 text-sky-800",
     shipped: "bg-purple-100 text-purple-800",
     fee_incurred: "bg-orange-100 text-orange-800",
   };
@@ -95,7 +103,7 @@ const statusBadge = (status?: string) => {
 };
 
 const paymentStatusLabel = (value?: string) => {
-  if (!value) return "Chưa thanh toán";
+  if (!value) return "Chưa thanh toánn";
   if (value === "pending") return "Chưa thanh toán";
   if (value === "paid") return "Đã thanh toán";
   if (value === "deposit_returned") return "Đã hoàn cọc";
@@ -129,9 +137,12 @@ const getAvailableStatuses = (currentStatus?: string) => {
   const statuses = [
     "pending",
     "confirmed",
+    "preparing",
     "shipped",
     "delivered",
+    "renting",
     "returning",
+    "picked_up",
     "returned",
     "fee_incurred",
     "completed",
@@ -181,6 +192,12 @@ const OrderDetail = () => {
   const [selectedErrors, setSelectedErrors] = useState<string[]>([]);
   const [lostItemIds, setLostItemIds] = useState<string[]>([]);
 
+  // Admin return media & notes
+  const [adminFiles, setAdminFiles] = useState<{ file: File; preview: string }[]>([]);
+  const [penaltyNoteState, setPenaltyNoteState] = useState<string>("");
+  const adminFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+
   // Kiểm tra đơn đã chốt cứng chưa (không cho sửa)
   const isLocked = useMemo(() => {
     if (!order) return false;
@@ -199,13 +216,47 @@ const OrderDetail = () => {
         const data = res.data as Order;
         setOrder(data);
 
-        setLateFee(data.lateFee || 0);
+        let autoDays: number | '' = '';
+        let initialLateFee = data.lateFee || 0;
+
+        // Auto calculate overdue days if not locked and not cancelled
+        if (data.status !== "completed" && data.status !== "fee_incurred" && data.status !== "cancelled") {
+          const end = new Date(data.endDate || "");
+          end.setHours(23, 59, 59, 999);
+
+          // If order history has returned state, use that date, else use current time
+          const returnedHistory = data.statusHistory?.slice().reverse().find(h => h.status === 'returned' || h.status === 'picked_up' || h.status === 'fee_incurred');
+          const referenceDate = returnedHistory ? new Date(returnedHistory.date) : new Date();
+
+          if (referenceDate > end) {
+            const diffTime = referenceDate.getTime() - end.getTime();
+            const d = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (d > 0) {
+              autoDays = d;
+              // If no late fee saved yet, auto calculate based on rent per day
+              if (initialLateFee === 0) {
+                const rDays = calcRentalDays(data.startDate, data.endDate);
+                const itemsList = Array.isArray(data.items) ? data.items : [];
+                const rSub = itemsList.reduce((sum: number, item: any) => {
+                  return sum + Number(item.price ?? 0) * Number(item.quantity ?? 1) * rDays;
+                }, 0);
+                const rentPerDay = rSub / rDays;
+                initialLateFee = Math.round(rentPerDay * d);
+              }
+            }
+          }
+        } else {
+          autoDays = (data as any).overdueDays || '';
+        }
+
+        setLateFee(initialLateFee);
         setDamageFee(data.damageFee || 0);
         setStatus(data.status || "pending");
         setPaymentStatus(data.paymentStatus || "pending");
-        setOverdueDays((data as any).overdueDays || '');
+        setOverdueDays(autoDays);
         setSelectedErrors((data as any).damageErrors || []);
         setLostItemIds((data as any).lostItems || []);
+        setPenaltyNoteState(data.penaltyNote || "");
       } catch (err: any) {
         const message =
           err?.response?.data?.message ||
@@ -227,6 +278,25 @@ const OrderDetail = () => {
       const userData = JSON.parse(localStorage.getItem("user") || "{}");
       const updatedBy = userData?.name || userData?.email || "Quản trị viên";
 
+      const uploadedUrls: string[] = [...(order?.adminReturnMedia || [])];
+
+      // Upload new files if status is returned
+      if (status === "returned" && adminFiles.length > 0) {
+        setIsUploadingMedia(true);
+        for (const f of adminFiles) {
+          try {
+            const res = await axios.post("http://localhost:3000/api/uploads", {
+              dataUrl: f.preview,
+              fileName: f.file.name
+            });
+            if (res.data.url) uploadedUrls.push(res.data.url);
+          } catch (uploadErr) {
+            console.error("Lỗi upload file admin:", uploadErr);
+          }
+        }
+        setIsUploadingMedia(false);
+      }
+
       const res = await axios.put(`http://localhost:3000/orders/${id}`, {
         lateFee,
         damageFee,
@@ -235,15 +305,36 @@ const OrderDetail = () => {
         overdueDays,
         damageErrors: selectedErrors,
         lostItems: lostItemIds,
+        adminReturnMedia: uploadedUrls,
+        penaltyNote: penaltyNoteState,
         updatedBy
       });
       setOrder(res.data); // Cập nhật lại UI sau khi lưu thành công
+      setAdminFiles([]); // Clear local files after upload
       alert("Cập nhật đơn hàng thành công!");
     } catch (err) {
       alert("Không thể lưu chi phí. Vui lòng kiểm tra lại server.");
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleAdminFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (re) => {
+          setAdminFiles(prev => [...prev, { file, preview: re.target?.result as string }]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    e.target.value = "";
+  };
+
+  const removeAdminFile = (idx: number) => {
+    setAdminFiles(prev => prev.filter((_, i) => i !== idx));
   };
 
   const items = useMemo(
@@ -383,9 +474,12 @@ const OrderDetail = () => {
           >
             <option value="pending" disabled={!getAvailableStatuses(order.status).includes("pending")}>Chờ xử lý</option>
             <option value="confirmed" disabled={!getAvailableStatuses(order.status).includes("confirmed")}>Đã xác nhận</option>
+            <option value="preparing" disabled={!getAvailableStatuses(order.status).includes("preparing")}>Đang chuẩn bị hàng</option>
             <option value="shipped" disabled={!getAvailableStatuses(order.status).includes("shipped")}>Đang giao</option>
             <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao</option>
+            <option value="renting" disabled={!getAvailableStatuses(order.status).includes("renting")}>Đang thuê</option>
             <option value="returning" disabled={!getAvailableStatuses(order.status).includes("returning")}>Đang trả đồ</option>
+            <option value="picked_up" disabled={!getAvailableStatuses(order.status).includes("picked_up")}>Đã lấy đơn</option>
             <option value="returned" disabled={!getAvailableStatuses(order.status).includes("returned")}>Đã nhận đồ</option>
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
             <option value="completed" disabled={!getAvailableStatuses(order.status).includes("completed")}>Hoàn tất</option>
@@ -427,7 +521,7 @@ const OrderDetail = () => {
                 <div className="font-bold text-gray-800 text-base">{customerName}</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Số ĐT</div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Số ĐT khách</div>
                 <div className="font-bold text-blue-600 bg-blue-50/70 border border-blue-100 px-3 py-1.5 rounded-lg inline-block">{customerPhone}</div>
               </div>
               <div>
@@ -455,6 +549,12 @@ const OrderDetail = () => {
                       <span className="font-bold text-emerald-700 tracking-wider">{order.bankAccount}</span>
                     </div>
                   )}
+                  {order.bankHolder && (
+                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">
+                      <span className="text-[10px] font-bold text-emerald-500 uppercase">Chủ tài khoản:</span>
+                      <span className="font-bold text-emerald-700">{order.bankHolder}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -463,6 +563,60 @@ const OrderDetail = () => {
               <div className="mt-5 pt-4 border-t border-dashed border-gray-200">
                 <div className="text-[10px] font-bold text-yellow-600 uppercase mb-1.5 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>Ghi chú từ khách:</div>
                 <div className="text-gray-600 italic bg-yellow-50 p-3.5 rounded-lg text-sm border border-yellow-100/50">{order.note}</div>
+              </div>
+            )}
+
+            {/* HIỂN THỊ ẢNH BẰNG CHỨNG GIAO HÀNG (TỪ SHIPPER) */}
+            {order.deliveryProof && (
+              <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                <div className="text-[10px] font-bold text-emerald-600 uppercase mb-3 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  Bằng chứng giao hàng
+                </div>
+                <div className="bg-emerald-50/50 border border-emerald-100 p-2 rounded-xl text-center">
+                  <img
+                    src={order.deliveryProof}
+                    alt="Bằng chứng giao hàng"
+                    className="max-h-60 w-auto max-w-full mx-auto rounded-lg shadow-sm border border-emerald-200"
+                  />
+                  <div className="mt-2 text-xs font-bold text-emerald-600 italic">
+                    ✓ Đã xác nhận giao hàng
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* HIỂN THỊ BẰNG CHỨNG TRẢ ĐỒ (TỪ KHÁCH HÀNG) */}
+            {order.returnMedia && order.returnMedia.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-dashed border-gray-200">
+                <div className="text-[10px] font-bold text-orange-600 uppercase mb-3 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Bằng chứng trả đồ của khách
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-orange-50/50 border border-orange-100 p-3 rounded-xl">
+                  {order.returnMedia.map((url, index) => {
+                    const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                    return (
+                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-orange-200 shadow-sm bg-white group">
+                        {isVideo ? (
+                          <video src={url} controls className="w-full h-full object-cover" />
+                        ) : (
+                          <img
+                            src={url}
+                            alt={`Bằng chứng trả đồ ${index + 1}`}
+                            className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform"
+                            onClick={() => window.open(url, '_blank')}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 text-xs font-bold text-orange-600 italic text-center">
+                  ⚠ Khách hàng đã tải lên {order.returnMedia.length} hình ảnh/video bằng chứng
+                </div>
               </div>
             )}
           </div>
@@ -496,9 +650,15 @@ const OrderDetail = () => {
                   const isLost = lostItemIds.includes(itemKey);
 
                   const toggleLost = () => {
+                    const willBeLost = !isLost;
                     setLostItemIds(prev =>
-                      isLost ? prev.filter(k => k !== itemKey) : [...prev, itemKey]
+                      willBeLost ? [...prev, itemKey] : prev.filter(k => k !== itemKey)
                     );
+                    // Khi chọn mất đồ, xóa hết các mục lỗi hư hỏng đã chọn
+                    if (willBeLost) {
+                      setSelectedErrors([]);
+                      setDamageFee(0);
+                    }
                   };
 
                   return (
@@ -580,19 +740,56 @@ const OrderDetail = () => {
                         <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${statusBadge(history.status)}`}>
                           {history.status === 'pending' ? 'Chờ xử lý' :
                             history.status === 'confirmed' ? 'Đã xác nhận' :
-                              history.status === 'shipped' ? 'Đang giao' :
-                                history.status === 'delivered' ? 'Đã giao' :
-                                  history.status === 'returning' ? 'Đang trả đồ' :
-                                    history.status === 'returned' ? 'Đã nhận đồ' :
-                                      history.status === 'fee_incurred' ? 'Phát sinh phí' :
-                                        history.status === 'completed' ? 'Hoàn tất' :
-                                          history.status === 'cancelled' ? 'Đã hủy' : history.status}
+                              history.status === 'preparing' ? 'Đang chuẩn bị hàng' :
+                                history.status === 'shipped' ? 'Đang giao' :
+                                  history.status === 'delivered' ? 'Đã giao' :
+                                    history.status === 'renting' ? 'Đang thuê' :
+                                      history.status === 'returning' ? 'Đang trả đồ' :
+                                        history.status === 'returned' ? 'Đã nhận đồ' :
+                                          history.status === 'fee_incurred' ? 'Phát sinh phí' :
+                                            history.status === 'completed' ? 'Hoàn tất' :
+                                              history.status === 'cancelled' ? 'Đã hủy' : history.status}
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-600 mb-2">
                         Người cập nhật: <span className="font-bold text-gray-800">{history.updatedBy || 'Hệ thống'}</span>
                       </div>
+
+                      {/* Hiển thị đính kèm nếu là trạng thái 'returned' (Đã nhận đồ) */}
+                      {history.status === 'returned' && (
+                        <div className="mt-3 bg-orange-50/50 border border-orange-100 rounded-lg p-3 shadow-sm">
+                          <div className="text-[10px] font-bold text-orange-600 uppercase mb-2 flex items-center gap-1.5">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                            Minh chứng kiểm đồ:
+                          </div>
+                          {order.penaltyNote && (
+                            <div className="text-[11px] text-gray-700 italic border-l-2 border-orange-300 pl-2 mb-3 bg-white/60 p-2 rounded">
+                              "{order.penaltyNote}"
+                            </div>
+                          )}
+                          {order.adminReturnMedia && order.adminReturnMedia.length > 0 && (
+                            <div className="grid grid-cols-4 gap-2">
+                              {order.adminReturnMedia.map((url, i) => {
+                                const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                                return (
+                                  <div key={i} className="aspect-square rounded-md border border-orange-200 overflow-hidden bg-white shadow-sm hover:ring-2 hover:ring-orange-300 transition-all">
+                                    {isVideo ? (
+                                      <video src={url} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <img
+                                        src={url}
+                                        className="w-full h-full object-cover cursor-pointer"
+                                        onClick={() => window.open(url, '_blank')}
+                                      />
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -603,8 +800,185 @@ const OrderDetail = () => {
 
         {/* CỘT PHẢI (Thông tin & Thanh toán) */}
         <div className="space-y-6">
+          {/* MINH CHỨNG TỪ KHÁCH HÀNG (Nếu có) */}
+          {order.returnMedia && order.returnMedia.length > 0 && (
+            <div className="bg-white rounded-xl p-5 border-2 border-blue-100 shadow-md">
+              <div className="text-[11px] font-bold text-blue-600 uppercase tracking-widest mb-4 border-b border-blue-50 pb-2 flex items-center gap-2">
+                <span className="text-lg">👤</span>
+                Minh chứng từ khách hàng (Gửi khi trả đồ)
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {order.returnMedia.map((url, idx) => {
+                  const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                  return (
+                    <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 bg-gray-50 group hover:ring-2 hover:ring-blue-400 transition-all cursor-pointer shadow-sm">
+                      {isVideo ? (
+                        <video src={url} className="w-full h-full object-cover" />
+                      ) : (
+                        <img
+                          src={url}
+                          className="w-full h-full object-cover"
+                          onClick={() => window.open(url, '_blank')}
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
 
+          {/* PHẦN HỒ SƠ KIỂM ĐỒ (ADMIN) */}
+          {(['renting', 'returning', 'picked_up', 'returned', 'fee_incurred', 'completed'].includes(status) ||
+            (order?.adminReturnMedia && order.adminReturnMedia.length > 0) ||
+            penaltyNoteState) && (
+              <div className={`bg-white rounded-xl p-5 border-2 shadow-md transition-all ${status === "returned" ? "border-orange-200 ring-2 ring-orange-50" : "border-emerald-100"}`}>
+                <div className={`text-[11px] font-bold uppercase tracking-wider mb-4 border-b pb-2 flex justify-between items-center ${status === "returned" ? "text-orange-600 border-orange-100" : "text-emerald-600 border-emerald-100"}`}>
+                  <span>{status === "returned" ? "📷 Hồ sơ khách trả đồ (Đang xử lý)" : "✅ Hồ sơ kiểm đồ đã lưu"}</span>
+                  {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
+                </div>
+
+                <div className="space-y-5">
+                  {/* 1. Penalty Note (Moved to Top) */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <svg className="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      Ghi chú tình trạng đồ
+                    </label>
+                    {status === "returned" && !isLocked ? (
+                      <textarea
+                        value={penaltyNoteState}
+                        onChange={(e) => setPenaltyNoteState(e.target.value)}
+                        placeholder="Nhập ghi chú kiểm định tại đây..."
+                        className="w-full border-2 border-orange-100 rounded-xl p-4 text-sm focus:border-orange-500 focus:ring-4 focus:ring-orange-50 outline-none transition-all min-h-[120px] bg-orange-50/20 font-medium"
+                      />
+                    ) : (
+                      <div className="p-4 bg-gray-50 rounded-xl text-sm text-gray-700 italic border-l-4 border-emerald-400 shadow-inner">
+                        {penaltyNoteState || "Chưa có ghi chú kiểm định"}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Existing Media Gallery (Now Below Note) */}
+                  {order?.adminReturnMedia && order.adminReturnMedia.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                        <span className="w-8 h-px bg-emerald-200"></span>
+                        Ảnh / Video minh chứng đã lưu:
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        {order.adminReturnMedia.map((url, idx) => {
+                          const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
+                          return (
+                            <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden border-2 border-emerald-100 bg-white group shadow-md hover:shadow-emerald-200 transition-all ring-1 ring-emerald-50">
+                              {isVideo ? (
+                                <video src={url} className="w-full h-full object-contain bg-black" />
+                              ) : (
+                                <img
+                                  src={url}
+                                  alt="Inspection Proof"
+                                  className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-700"
+                                  onClick={() => window.open(url, '_blank')}
+                                />
+                              )}
+                              <div className="absolute top-3 right-3 bg-emerald-500/90 text-white rounded-full p-1 shadow-lg ring-2 ring-white">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Local Preview Gallery */}
+                  {adminFiles.length > 0 && (
+                    <div className="space-y-4 animate-in slide-in-from-bottom-2 duration-300">
+                      <div className="flex justify-between items-center">
+                        <div className="text-[10px] font-bold text-orange-500 uppercase tracking-widest flex items-center gap-2">
+                          <span className="w-2 h-2 bg-orange-500 rounded-full animate-ping"></span>
+                          Đang chuẩn bị {adminFiles.length} tệp:
+                        </div>
+                        <button 
+                          onClick={() => setAdminFiles([])}
+                          className="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase tracking-widest transition-colors"
+                        >
+                          Hủy tất cả
+                        </button>
+                      </div>
+                      
+                      <div className="grid grid-cols-4 gap-2 bg-orange-50/30 p-2 rounded-2xl border-2 border-dashed border-orange-200">
+                        {adminFiles.map((f, idx) => (
+                          <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border-2 border-white bg-white shadow-md group ring-2 ring-orange-100/50">
+                            {f.file.type.startsWith("video") ? (
+                              <video src={f.preview} className="w-full h-full object-cover" />
+                            ) : (
+                              <img src={f.preview} className="w-full h-full object-cover" />
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); removeAdminFile(idx); }}
+                              className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-[11px] shadow-lg hover:bg-red-600 active:scale-90 transition-all z-20 border-2 border-white"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {/* Nút thêm nhanh ngay trong Grid */}
+                        <button 
+                          onClick={() => adminFileInputRef.current?.click()}
+                          className="aspect-square rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/50 flex flex-col items-center justify-center hover:bg-orange-100 hover:border-orange-500 transition-all group"
+                        >
+                          <span className="text-xl group-hover:scale-125 transition-transform">➕</span>
+                          <span className="text-[8px] font-black text-orange-600 uppercase mt-1">Thêm</span>
+                        </button>
+                      </div>
+
+                      {/* NÚT TẢI LÊN VÀ LƯU NGAY TRONG PANEL */}
+                      <button
+                        onClick={handleUpdateOrder}
+                        disabled={isUpdating || isLocked}
+                        className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-orange-200 hover:from-orange-600 hover:to-orange-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
+                      >
+                        {isUpdating ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            Đang tải lên và lưu...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            Bắt đầu tải lên và lưu hồ sơ
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 4. Upload Button (BOTTOM) */}
+                  {!isLocked && (status === "returned" || status === "returning" || status === "picked_up" || status === "renting") && (
+                    <div
+                      onClick={() => adminFileInputRef.current?.click()}
+                      className="cursor-pointer border-2 border-dashed border-orange-200 rounded-xl p-6 text-center bg-orange-50/20 hover:bg-orange-50 hover:border-orange-500 hover:scale-[1.02] transition-all group"
+                    >
+                      <div className="text-3xl mb-2 group-hover:bounce transition-transform">📸</div>
+                      <div className="text-[11px] font-black text-orange-600 uppercase tracking-[0.2em]">Tải thêm ảnh / video</div>
+                      <div className="text-[9px] text-gray-400 mt-1">Chọn tệp minh chứng mới</div>
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*,video/*"
+                        ref={adminFileInputRef}
+                        className="hidden"
+                        onChange={handleAdminFilePick}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
           {/* KHỐI PHÍ PHÁT SINH */}
           <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
@@ -619,28 +993,22 @@ const OrderDetail = () => {
                   <div className="relative w-1/3">
                     <input
                       type="number"
+                      readOnly
                       value={overdueDays}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setOverdueDays(val === '' ? '' : Number(val));
-                        if (val !== '') {
-                          const days = Number(val);
-                          const rentPerDay = rentalSubtotal / rentalDays;
-                          setLateFee(Math.round(rentPerDay * days));
-                        }
-                      }}
                       placeholder="Ngày"
-                      className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:border-blue-500 outline-none transition-all pr-8 bg-gray-50 focus:bg-white font-medium"
+                      className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-sm bg-gray-100 outline-none transition-all pr-8 font-medium cursor-not-allowed"
+                      title="Hệ thống tự động tính ngày trễ hạn dựa vào thời gian trả đồ"
                     />
                     <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold">ngày</span>
                   </div>
                   <div className="relative w-2/3">
                     <input
                       type="number"
+                      readOnly
                       value={lateFee === 0 ? '' : lateFee}
-                      onChange={(e) => setLateFee(Number(e.target.value) || 0)}
                       placeholder="Số tiền"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-100 outline-none transition-all font-bold text-red-600 pr-7 cursor-not-allowed"
+                      title="Số tiền phạt do hệ thống tự đánh giá tự động dựa theo ngày"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">đ</span>
                   </div>
@@ -656,43 +1024,53 @@ const OrderDetail = () => {
                     { id: 'tear_major', label: 'Rách lớn/Hỏng khóa', fee: 100000 },
                     { id: 'burn', label: 'Cháy/Thủng', fee: 200000 },
                     { id: 'lost_item', label: 'Mất đồ/Phụ kiện', fee: 300000 },
-                  ].map(error => (
-                    <label key={error.id} className="flex items-start gap-2.5 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-red-600 focus:ring-red-500 w-4 h-4 cursor-pointer mt-0.5"
-                        checked={selectedErrors.includes(error.id)}
-                        onChange={(e) => {
-                          let newErrors = [...selectedErrors];
-                          let currentDamageFee = damageFee;
+                  ].map(error => {
+                    const isDisabled = lostItemIds.length > 0 || (error.id !== 'lost_item' && selectedErrors.includes('lost_item'));
+                    return (
+                      <label key={error.id} className={`flex items-start gap-2.5 group ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                        <input
+                          type="checkbox"
+                          disabled={isDisabled}
+                          className={`rounded border-gray-300 text-red-600 focus:ring-red-500 w-4 h-4 mt-0.5 ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+                          checked={selectedErrors.includes(error.id)}
+                          onChange={(e) => {
+                            let newErrors = [...selectedErrors];
+                            let currentDamageFee = damageFee;
 
-                          if (e.target.checked) {
-                            newErrors.push(error.id);
-                            currentDamageFee += error.fee;
-                          } else {
-                            newErrors = newErrors.filter(id => id !== error.id);
-                            currentDamageFee = Math.max(0, currentDamageFee - error.fee);
-                          }
+                            if (e.target.checked) {
+                              if (error.id === 'lost_item') {
+                                newErrors = ['lost_item'];
+                                currentDamageFee = error.fee;
+                              } else {
+                                newErrors.push(error.id);
+                                currentDamageFee += error.fee;
+                              }
+                            } else {
+                              newErrors = newErrors.filter(id => id !== error.id);
+                              currentDamageFee = Math.max(0, currentDamageFee - error.fee);
+                            }
 
-                          setSelectedErrors(newErrors);
-                          setDamageFee(currentDamageFee);
-                        }}
-                      />
-                      <div className="flex-1 flex flex-col">
-                        <span className="text-[13px] text-gray-700 font-medium group-hover:text-red-700 transition-colors">{error.label}</span>
-                        <span className="text-[11px] font-bold text-red-500 mt-0.5">+{formatCurrency(error.fee).replace(' đ', 'đ')}</span>
-                      </div>
-                    </label>
-                  ))}
+                            setSelectedErrors(newErrors);
+                            setDamageFee(currentDamageFee);
+                          }}
+                        />
+                        <div className="flex-1 flex flex-col">
+                          <span className="text-[13px] text-gray-700 font-medium group-hover:text-red-700 transition-colors">{error.label}</span>
+                          <span className="text-[11px] font-bold text-red-500 mt-0.5">+{formatCurrency(error.fee).replace(' đ', 'đ')}</span>
+                        </div>
+                      </label>
+                    )
+                  })}
                 </div>
 
                 <div className="relative">
                   <input
                     type="number"
+                    disabled={lostItemIds.length > 0 || selectedErrors.includes('lost_item')}
                     value={damageFee === 0 ? '' : damageFee}
                     onChange={(e) => setDamageFee(Number(e.target.value) || 0)}
                     placeholder="Nhập tổn thất khác..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white"
+                    className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white ${(lostItemIds.length > 0 || selectedErrors.includes('lost_item')) ? "opacity-50 cursor-not-allowed" : ""}`}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">đ</span>
                 </div>
@@ -715,12 +1093,11 @@ const OrderDetail = () => {
               </div>
               <div className="text-right">
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Trạng thái GD</div>
-                <div className={`font-bold text-sm ${
-                  paymentStatus === 'success' ? 'text-emerald-600' :
+                <div className={`font-bold text-sm ${paymentStatus === 'success' ? 'text-emerald-600' :
                   paymentStatus === 'paid' ? 'text-green-600' :
-                  paymentStatus === 'deposit_returned' ? 'text-teal-600' :
-                  'text-blue-600'
-                }`}>
+                    paymentStatus === 'deposit_returned' ? 'text-teal-600' :
+                      'text-blue-600'
+                  }`}>
                   {paymentStatusLabel(paymentStatus)}
                 </div>
               </div>
@@ -731,8 +1108,8 @@ const OrderDetail = () => {
               // Tìm entry hoàn cọc gần nhất trong paymentStatusHistory
               const refundEntry = order.paymentStatusHistory
                 ? [...order.paymentStatusHistory].reverse().find(
-                    h => h.status === 'deposit_returned' || h.status === 'success' || h.status === 'completed'
-                  )
+                  h => h.status === 'deposit_returned' || h.status === 'success' || h.status === 'completed'
+                )
                 : undefined;
               return (
                 <div className="mx-4 my-3 bg-teal-50 border border-teal-200 rounded-xl p-4 flex items-start gap-3">

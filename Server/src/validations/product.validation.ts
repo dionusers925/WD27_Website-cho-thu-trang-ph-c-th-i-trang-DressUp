@@ -7,11 +7,18 @@ export const rentalPriceSchema = z.object({
   price: z.coerce.number().min(0),
 });
 
+const variantAttributeSchema = z.object({
+  attributeId: z.string().optional(),
+  attributeName: z.string().min(1),
+  value: z.string().optional(),
+});
+
 export const variantSchema = z.object({
   sku: z.string().min(1),
   size: z.string().min(1),
   color: z.string().min(1),
   stock: z.coerce.number().int().min(0).optional(),
+  attributes: z.array(variantAttributeSchema).optional(),
 });
 
 export const createProductSchema = z.object({

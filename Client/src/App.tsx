@@ -14,6 +14,7 @@ import ProductCreate from "./pages/admin/products/ProductCreate";
 import ProductEdit from "./pages/admin/products/ProductEdit";
 import ProductDetail from "./pages/admin/products/ProductDetail";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
+import StockHistoryDashboard from "./pages/admin/stock/StockHistoryDashboard";
 
 
 import HomePage from "./pages/client/HomePage";
@@ -31,6 +32,7 @@ import LoginPage from "./layouts/LoginPage";
 import ProtectedRoute from "./layouts/ProtectedRoute";
 
 import PaymentResult from "./pages/client/PaymentResult";
+import ShipperPage from "./pages/shipper/ShipperPage";
 
 function App() {
   const NotFound = () => <div>Not Found</div>;
@@ -40,6 +42,12 @@ function App() {
     {
       path: "/payment-result",
       Component: PaymentResult,
+    },
+
+    // SHIPPER
+    {
+      path: "/ship",
+      Component: ShipperPage,
     },
 
     // ADMIN
@@ -70,6 +78,7 @@ function App() {
             { path: "products/new", Component: ProductCreate },
             { path: "products/:id/edit", Component: ProductEdit },
             { path: "products/:id", Component: ProductDetail },
+            { path: "stock-history", Component: StockHistoryDashboard },
 
             // REVIEWS
             { path: "reviews", Component: ReviewsDashboard },

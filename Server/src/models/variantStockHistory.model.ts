@@ -3,14 +3,19 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface VariantStockHistoryDocument extends Document {
   productId: mongoose.Types.ObjectId;
   variantId?: mongoose.Types.ObjectId;
+  orderId?: mongoose.Types.ObjectId;
   sku: string;
   size?: string;
   color?: string;
+  quantity?: number;
   oldStock: number;
   newStock: number;
   change: number;
   action: string;
   note?: string;
+  processed?: boolean;
+  decision?: string;
+  reason?: string;
 }
 
 const variantStockHistorySchema = new Schema<VariantStockHistoryDocument>(
@@ -24,6 +29,10 @@ const variantStockHistorySchema = new Schema<VariantStockHistoryDocument>(
       type: Schema.Types.ObjectId,
       ref: "Variant",
     },
+    orderId: {
+      type: Schema.Types.ObjectId,
+      ref: "Order",
+    },
     sku: {
       type: String,
       trim: true,
@@ -35,6 +44,10 @@ const variantStockHistorySchema = new Schema<VariantStockHistoryDocument>(
     color: {
       type: String,
       trim: true,
+    },
+    quantity: {
+      type: Number,
+      default: 0,
     },
     oldStock: {
       type: Number,
@@ -53,6 +66,15 @@ const variantStockHistorySchema = new Schema<VariantStockHistoryDocument>(
       default: "update",
     },
     note: String,
+    processed: {
+      type: Boolean,
+      default: false,
+    },
+    decision: {
+      type: String,
+      default: "",
+    },
+    reason: String,
   },
   { timestamps: true }
 );

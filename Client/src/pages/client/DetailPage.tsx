@@ -1,11 +1,69 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { addToCart } from "../../api/cartService";
-import Header from "../../layouts/client/Header";
-import Footer from "../../layouts/client/Footer";
 import ReviewForm from "../../components/reviews/ReviewForm";
 import ReviewList from "../../components/reviews/ReviewList";
+
+const API_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+const luxuryFont = { fontFamily: "Playfair Display, serif" };
+const fallbackImage = "https://placehold.co/900x1200?text=DressUp";
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("vi-VN").format(Number.isFinite(value) ? value : 0);
+
+const normalizeProduct = (payload: any) => {
+  const productData = payload?.data?.product ?? payload?.product ?? payload;
+  const variants = Array.isArray(payload?.data?.variants)
+    ? payload.data.variants
+    : Array.isArray(payload?.variants)
+      ? payload.variants
+      : Array.isArray(productData?.variants)
+        ? productData.variants
+        : [];
+  return productData ? { ...productData, variants } : null;
+};
+
+const colorSwatchMap: Record<string, string> = {
+  "đỏ": "#B91C1C",
+  "do": "#B91C1C",
+  "red": "#B91C1C",
+  "đen": "#111827",
+  "den": "#111827",
+  "black": "#111827",
+  "trắng": "#F8FAFC",
+  "trang": "#F8FAFC",
+  "white": "#F8FAFC",
+  "be": "#E7D7C5",
+  "kem": "#F5EDE2",
+  "xanh": "#2563EB",
+  "blue": "#2563EB",
+  "xanh lá": "#16A34A",
+  "xanh la": "#16A34A",
+  "green": "#16A34A",
+  "hồng": "#EC4899",
+  "hong": "#EC4899",
+  "pink": "#EC4899",
+  "vàng": "#EAB308",
+  "vang": "#EAB308",
+  "yellow": "#EAB308",
+  "tím": "#7C3AED",
+  "tim": "#7C3AED",
+  "purple": "#7C3AED",
+  "nâu": "#92400E",
+  "nau": "#92400E",
+  "brown": "#92400E",
+  "xám": "#9CA3AF",
+  "xam": "#9CA3AF",
+  "gray": "#9CA3AF",
+  "grey": "#9CA3AF",
+};
+
+const resolveColorSwatch = (value?: string) => {
+  if (!value) return "#111827";
+  const key = value.toLowerCase().trim();
+  return colorSwatchMap[key] ?? "#111827";
+};
 
 function DetailPage() {
   const { id } = useParams();
@@ -13,26 +71,118 @@ function DetailPage() {
   const [product, setProduct] = useState<any>(null);
   const [activeImg, setActiveImg] = useState("");
   const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showFullDesc, setShowFullDesc] = useState(false);
 
-  // State quản lý ngày thuê và xác nhận chính sách
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0],
+  const today = useMemo(
+    () => new Date().toISOString().split("T")[0],
+    [],
   );
+  const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState("");
   const [isAgreed, setIsAgreed] = useState(false);
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:3000/products/${id}`)
-      .then((res) => {
-        const data = res.data;
-        setProduct(data);
-        if (data.images?.length > 0) setActiveImg(data.images[0]);
-        if (data.variants?.length > 0) setSelectedVariant(data.variants[0]);
-      })
-      .catch((err) => console.error("Lỗi tải chi tiết:", err));
+    let isMounted = true;
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await axios
+          .get(`${API_URL}/api/products/${id}`)
+          .catch(() => axios.get(`${API_URL}/products/${id}`));
+        const merged = normalizeProduct(res.data);
+        if (!isMounted) return;
+        if (merged?.status === "archived") {
+          setError("Sản phẩm đã được lưu trữ và không còn hiển thị.");
+          setProduct(null);
+        } else {
+          setProduct(merged);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error("Lỗi tải chi tiết:", err);
+        setError("Không thể tải chi tiết sản phẩm.");
+        setProduct(null);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchData();
     window.scrollTo(0, 0);
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
+
+  useEffect(() => {
+    if (!product) return;
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+    const initialVariant =
+      variants.find((variant: any) => variant?.isDefault) ||
+      variants[0] ||
+      null;
+    setSelectedVariant(initialVariant);
+
+    const initialColor =
+      initialVariant?.color || product.colorGroup || product.colorFamily || null;
+    setSelectedColor(initialColor);
+
+    const images =
+      Array.isArray(product.images) && product.images.length > 0
+        ? product.images
+        : [fallbackImage];
+    setActiveImg(images[0]);
+  }, [product?._id]);
+
+  const variants = useMemo(
+    () => (Array.isArray(product?.variants) ? product.variants : []),
+    [product],
+  );
+
+  const totalStock = useMemo(() => {
+    if (variants.length > 0) {
+      return variants.reduce(
+        (sum: number, variant: any) => sum + (Number(variant?.stock) || 0),
+        0,
+      );
+    }
+    return Number(product?.stock) || 0;
+  }, [variants, product]);
+
+  const colors = useMemo(() => {
+    const variantColors = variants
+      .map((variant: any) => variant?.color)
+      .filter(Boolean);
+    const baseColor = product?.colorGroup ?? product?.colorFamily;
+    const merged = variantColors.length
+      ? variantColors
+      : baseColor
+        ? [baseColor]
+        : [];
+    return Array.from(new Set(merged)) as string[];
+  }, [variants, product]);
+
+  const sizeOptions = useMemo(() => {
+    const pool = selectedColor
+      ? variants.filter((variant: any) => variant?.color === selectedColor)
+      : variants;
+    return Array.from(
+      new Set(pool.map((variant: any) => variant?.size).filter(Boolean)),
+    ) as string[];
+  }, [variants, selectedColor]);
+
+  const images = useMemo(() => {
+    const list =
+      Array.isArray(product?.images) && product.images.length > 0
+        ? product.images
+        : [];
+    return list.length ? list : [fallbackImage];
+  }, [product]);
 
   const calculateDiffDays = () => {
     if (!startDate || !endDate) return 0;
@@ -45,17 +195,28 @@ function DetailPage() {
 
   const diffDays = calculateDiffDays();
 
+  const rentalPrices = Array.isArray(product?.rentalPrices)
+    ? product.rentalPrices
+    : Array.isArray(product?.rentalTiers)
+      ? product.rentalTiers
+      : [];
+
+  const dailyTier = rentalPrices.find((t: any) => t.days === 1);
+  const dailyPrice = Number(
+    dailyTier?.price ?? rentalPrices[0]?.price ?? 0,
+  );
+
   const calculateRentalPrice = () => {
     if (diffDays <= 0) return 0;
-    const tier = product?.rentalTiers?.find((t: any) => t.days === diffDays);
+    const tier = rentalPrices.find((t: any) => t.days === diffDays);
     if (tier) return tier.price;
-    const basePrice =
-      product?.rentalTiers?.find((t: any) => t.days === 1)?.price || 0;
-    return basePrice * diffDays;
+    return dailyPrice * diffDays;
   };
 
   const rentalPrice = calculateRentalPrice();
-  const totalPayment = (product?.depositDefault || 0) + rentalPrice;
+  const deposit =
+    Number(product?.depositPrice ?? product?.depositDefault ?? 0) || 0;
+  const totalPayment = deposit + rentalPrice;
 
   const quickSelectDays = (days: number) => {
     if (!startDate) return;
@@ -65,116 +226,296 @@ function DetailPage() {
     setEndDate(end.toISOString().split("T")[0]);
   };
 
-  if (!product)
-    return (
-      <div className="h-screen flex items-center justify-center font-serif italic text-gray-400">
-        Loading...
-      </div>
-    );
+  const handleSelectColor = (color: string) => {
+    setSelectedColor(color);
+    const match =
+      variants.find(
+        (variant: any) =>
+          variant?.color === color &&
+          (!selectedVariant?.size || variant?.size === selectedVariant?.size),
+      ) || variants.find((variant: any) => variant?.color === color);
+    if (match) setSelectedVariant(match);
+  };
+
+  const handleSelectSize = (size: string) => {
+    const match =
+      variants.find(
+        (variant: any) =>
+          variant?.size === size &&
+          (!selectedColor || variant?.color === selectedColor),
+      ) || variants.find((variant: any) => variant?.size === size);
+    if (match) {
+      setSelectedVariant(match);
+      if (match?.color) setSelectedColor(match.color);
+    }
+  };
 
   const handleConfirmRental = async () => {
+    if (!product || diffDays <= 0 || !isAgreed) return;
     try {
       await addToCart(
         product._id,
         1,
         diffDays,
-        product.depositDefault,
-        rentalPrice,
-        totalPayment,
-        selectedVariant.size,
-        selectedVariant.color || product.colorFamily,
+        selectedVariant?.size,
+        selectedVariant?.color ||
+          selectedColor ||
+          product.colorGroup ||
+          product.colorFamily,
       );
-
       navigate("/cart");
     } catch (error) {
       console.log("Lỗi thêm vào giỏ hàng:", error);
     }
   };
-  // console.log("VARIANT:", selectedVariant);
+
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center font-serif italic text-gray-400">
+        Loading...
+      </div>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 text-gray-500">
+        <p className="text-lg italic" style={luxuryFont}>
+          {error || "Không tìm thấy sản phẩm."}
+        </p>
+        <button
+          onClick={() => navigate("/catalog")}
+          className="text-[10px] uppercase tracking-widest border-b border-black pb-1 hover:text-gray-400 hover:border-gray-400 transition-all font-bold"
+        >
+          Quay lại cửa hàng
+        </button>
+      </div>
+    );
+  }
+
+  const description =
+    typeof product.description === "string" ? product.description.trim() : "";
+  const descriptionPlain = description.replace(/<[^>]+>/g, "").trim();
+  const descriptionPreview =
+    descriptionPlain.length > 220
+      ? `${descriptionPlain.slice(0, 220)}...`
+      : descriptionPlain;
+  const descriptionHasHtml = /<\/?[a-z][\s\S]*>/i.test(description);
+  const canToggleDesc = descriptionPlain.length > 220;
+
+  const categoryName = product.categoryId?.name ?? "Bộ sưu tập";
+  const brandName = product.brand?.name || product.brand || "DressUp Atelier";
+
+  const conditionLabels: Record<string, string> = {
+    new: "Mới",
+    like_new: "Như mới",
+    used: "Đã sử dụng",
+  };
+  const conditionLabel =
+    conditionLabels[product.condition] || product.condition || "-";
+
+  const statusLabel =
+    product.status === "active"
+      ? "Hoạt động"
+      : product.status === "draft"
+        ? "Tạm ngừng"
+        : "Lưu trữ";
+  const statusClass =
+    product.status === "active"
+      ? "border-emerald-200 text-emerald-700 bg-emerald-50"
+      : product.status === "draft"
+        ? "border-amber-200 text-amber-700 bg-amber-50"
+        : "border-gray-200 text-gray-500 bg-gray-50";
+
+  const canRent =
+    product.status === "active" &&
+    diffDays > 0 &&
+    isAgreed &&
+    (variants.length === 0 || selectedVariant);
+
   return (
-    <div className="bg-white min-h-screen selection:bg-black selection:text-white">
-      <div className="max-w-7xl mx-auto px-6 py-32">
-        <div className="flex flex-col md:flex-row gap-20">
-          <div className="w-full md:w-1/2">
-            <div className="aspect-[3/4] overflow-hidden bg-[#F9F7F5] mb-6">
-              <img
-                src={activeImg}
-                className="w-full h-full object-cover"
-                alt={product.name}
-              />
-            </div>
-            <div className="grid grid-cols-4 gap-4">
-              {product.images?.map((img: string, index: number) => (
+    <div className="bg-[#FDFBF9] text-[#1f1f1f] min-h-screen selection:bg-black selection:text-white">
+      <div className="max-w-7xl mx-auto px-6 pt-28 pb-20">
+        <div className="flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-[0.3em] text-gray-400">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/" className="hover:text-gray-700 transition-colors">
+              Trang chủ
+            </Link>
+            <span>/</span>
+            <Link to="/catalog" className="hover:text-gray-700 transition-colors">
+              Sản phẩm
+            </Link>
+            <span>/</span>
+            <span className="text-gray-600">{product.name}</span>
+          </div>
+          <button
+            onClick={() => navigate(-1)}
+            className="text-[10px] uppercase tracking-widest border-b border-gray-400 pb-1 hover:text-gray-600 hover:border-gray-600 transition-all"
+          >
+            Quay lại
+          </button>
+        </div>
+
+        <div className="mt-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] gap-14">
+          <div className="space-y-5">
+            <div className="rounded-3xl overflow-hidden border border-[#EEE7E1] bg-white shadow-[0_30px_90px_rgba(20,20,20,0.1)]">
+              <div className="aspect-[3/4] overflow-hidden bg-[#F9F7F5]">
                 <img
-                  key={index}
-                  src={img}
-                  onClick={() => setActiveImg(img)}
-                  className={`aspect-[3/4] object-cover cursor-pointer border-b-2 transition-all ${activeImg === img ? "border-black" : "border-transparent opacity-50"}`}
+                  src={activeImg || images[0]}
+                  className="w-full h-full object-cover"
+                  alt={product.name}
+                  onError={(e: any) => {
+                    e.currentTarget.src =
+                      "https://images.unsplash.com/photo-1515378791036-0648a3ef77b2?q=80&w=900";
+                  }}
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-4">
+              {images.map((img: string, index: number) => (
+                <button
+                  key={`${img}-${index}`}
+                  onClick={() => setActiveImg(img)}
+                  className={`aspect-[3/4] overflow-hidden border transition-all ${
+                    activeImg === img
+                      ? "border-black"
+                      : "border-transparent opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <img
+                    src={img}
+                    className="w-full h-full object-cover"
+                    alt={`${product.name}-${index}`}
+                  />
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="w-full md:w-1/2 space-y-10">
+          <aside className="lg:sticky lg:top-28 space-y-10">
             <div>
-              <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400 font-bold">
-                {product.brand}
-              </span>
-              <h1 className="text-5xl font-serif italic mt-4 text-gray-900 leading-tight">
+              <div className="flex items-center gap-3 text-[9px] uppercase tracking-[0.35em] text-gray-400">
+                <span>{categoryName}</span>
+                <span
+                  className={`px-3 py-1 rounded-full border ${statusClass}`}
+                >
+                  {statusLabel}
+                </span>
+              </div>
+
+              <h1
+                className="text-4xl md:text-5xl font-serif italic mt-4 text-gray-900 leading-tight"
+                style={luxuryFont}
+              >
                 {product.name}
               </h1>
-            </div>
 
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
-                  Màu
-                </h4>
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-5 h-5 rounded-full border border-gray-200"
-                    style={{
-                      backgroundColor:
-                        product.colorFamily === "Đỏ" ? "#B91C1C" : "#222",
-                    }}
-                  />
-                  <span className="text-[10px] uppercase tracking-widest text-black font-medium">
-                    {product.colorFamily}
+              <p className="text-[11px] uppercase tracking-[0.3em] text-gray-400 mt-3">
+                {brandName}
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-end gap-6">
+                <div>
+                  <div className="text-3xl md:text-4xl font-semibold text-gray-900">
+                    {formatCurrency(dailyPrice)} VNĐ
+                  </div>
+                  <p className="text-[9px] uppercase tracking-widest text-gray-400">
+                    Giá thuê / ngày
+                  </p>
+                </div>
+                <div className="text-[10px] uppercase tracking-widest text-gray-400">
+                  Tiền cọc{" "}
+                  <span className="text-gray-900 font-semibold">
+                    {formatCurrency(deposit)} VNĐ
                   </span>
                 </div>
               </div>
 
-              <div className="flex justify-between items-center">
+              {descriptionPreview && (
+                <p className="mt-6 text-sm text-gray-600 leading-relaxed">
+                  {descriptionPreview}
+                </p>
+              )}
+            </div>
+
+            {(colors.length > 0 || selectedColor) && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
+                    Màu sắc
+                  </h4>
+                  {selectedColor && (
+                    <span className="text-[10px] uppercase tracking-widest text-gray-500">
+                      {selectedColor}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {colors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => handleSelectColor(color)}
+                      className={`flex items-center gap-2 border px-3 py-2 text-[10px] uppercase tracking-widest transition-all ${
+                        selectedColor === color
+                          ? "border-black bg-black text-white"
+                          : "border-gray-200 text-gray-500 hover:border-black hover:text-black"
+                      }`}
+                    >
+                      <span
+                        className="w-4 h-4 rounded-full border border-white/60"
+                        style={{ backgroundColor: resolveColorSwatch(color) }}
+                      />
+                      {color}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
-                  Select Size
+                  Chọn size
                 </h4>
-                {selectedVariant && (
+                {selectedVariant?.size && (
                   <span className="text-[9px] text-gray-400 italic">
-                    Color:{" "}
+                    Size:{" "}
                     <span className="text-black font-medium">
-                      {selectedVariant.color || product.colorFamily}
+                      {selectedVariant.size}
                     </span>
                   </span>
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
-                {product.variants?.map((variant: any, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedVariant(variant)}
-                    className={`min-w-[60px] px-4 py-3 text-[10px] tracking-widest uppercase border transition-all duration-300 ${
-                      selectedVariant === variant
-                        ? "border-black bg-black text-white shadow-lg"
-                        : "border-gray-100 text-gray-400 hover:border-black hover:text-black"
-                    }`}
-                  >
-                    {variant.size}
-                  </button>
-                ))}
+                {sizeOptions.length > 0 ? (
+                  sizeOptions.map((size) => (
+                    <button
+                      key={size}
+                      onClick={() => handleSelectSize(size)}
+                      className={`min-w-[60px] px-4 py-3 text-[10px] tracking-widest uppercase border transition-all duration-300 ${
+                        selectedVariant?.size === size
+                          ? "border-black bg-black text-white shadow-lg"
+                          : "border-gray-100 text-gray-400 hover:border-black hover:text-black"
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  ))
+                ) : (
+                  <span className="text-sm text-gray-400">
+                    One size available
+                  </span>
+                )}
               </div>
+              <p className="text-[10px] uppercase tracking-widest text-gray-400">
+                {selectedVariant?.stock !== undefined
+                  ? `Số lượng còn lại: ${selectedVariant.stock}`
+                  : `Số lượng còn lại: ${totalStock}`}
+              </p>
             </div>
 
-            <div className="space-y-10">
+            <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">
                   Thời gian thuê
@@ -190,7 +531,7 @@ function DetailPage() {
                           : "border-gray-100 text-gray-400 hover:border-black hover:text-black"
                       }`}
                     >
-                      {d} Day{d > 1 ? "s" : ""}
+                      {d} ngày
                     </button>
                   ))}
                 </div>
@@ -204,6 +545,7 @@ function DetailPage() {
                   <input
                     type="date"
                     value={startDate}
+                    min={today}
                     onChange={(e) => setStartDate(e.target.value)}
                     className="w-full border-b border-gray-100 py-3 outline-none focus:border-black transition-all text-xs font-light bg-transparent cursor-pointer"
                   />
@@ -215,6 +557,7 @@ function DetailPage() {
                   <input
                     type="date"
                     value={endDate}
+                    min={startDate || today}
                     onChange={(e) => setEndDate(e.target.value)}
                     className="w-full border-b border-gray-100 py-3 outline-none focus:border-black transition-all text-xs font-light bg-transparent cursor-pointer"
                   />
@@ -223,26 +566,39 @@ function DetailPage() {
                   /
                 </div>
               </div>
+
+              {rentalPrices.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {rentalPrices.map((tier: any) => (
+                    <div
+                      key={`${tier.days}-${tier.price}`}
+                      className="text-[9px] uppercase tracking-widest px-3 py-1 rounded-full border border-gray-200 text-gray-500 bg-white"
+                    >
+                      {tier.days} ngày · {formatCurrency(tier.price)} VNĐ
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <div className="bg-[#F9F7F5] p-8 space-y-5">
+            <div className="bg-white border border-[#EEE7E1] rounded-2xl p-6 shadow-[0_25px_70px_rgba(20,20,20,0.08)] space-y-4">
               <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
                 <span>Tiền cọc</span>
-                <span className="text-black font-bold">
-                  {product.depositDefault?.toLocaleString()} VNĐ
+                <span className="text-gray-900 font-bold">
+                  {formatCurrency(deposit)} VNĐ
                 </span>
               </div>
               <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
-                <span>Ngày thuê ({diffDays} days)</span>
-                <span className="text-black font-bold">
-                  {rentalPrice.toLocaleString()} VNĐ
+                <span>Phí thuê ({diffDays} ngày)</span>
+                <span className="text-gray-900 font-bold">
+                  {formatCurrency(rentalPrice)} VNĐ
                 </span>
               </div>
-              <div className="pt-4 border-t border-gray-200/50 flex justify-between items-baseline">
-                <span className="font-bold italic text-2xl">Tổng số tiền:</span>
+              <div className="pt-4 border-t border-gray-200/60 flex justify-between items-baseline">
+                <span className="font-serif italic text-2xl">Tổng</span>
                 <div className="text-right">
                   <p className="text-3xl font-bold">
-                    {totalPayment.toLocaleString()} VNĐ
+                    {formatCurrency(totalPayment)} VNĐ
                   </p>
                   <p className="text-[8px] text-gray-400 uppercase tracking-widest mt-1">
                     Gồm tiền cọc & phí thuê
@@ -257,7 +613,11 @@ function DetailPage() {
                 onClick={() => setIsAgreed(!isAgreed)}
               >
                 <div
-                  className={`mt-0.5 w-4 h-4 border flex items-center justify-center transition-all ${isAgreed ? "bg-black border-black" : "border-gray-300 group-hover:border-black"}`}
+                  className={`mt-0.5 w-4 h-4 border flex items-center justify-center transition-all ${
+                    isAgreed
+                      ? "bg-black border-black"
+                      : "border-gray-300 group-hover:border-black"
+                  }`}
                 >
                   {isAgreed && (
                     <svg
@@ -289,24 +649,167 @@ function DetailPage() {
                 </p>
               </div>
 
+              {product.status !== "active" && (
+                <div className="text-[10px] uppercase tracking-widest text-gray-500">
+                  {product.status === "draft"
+                    ? "Sản phẩm đang tạm ngừng, chưa thể cho thuê."
+                    : "Sản phẩm đã lưu trữ và không còn cho thuê."}
+                </div>
+              )}
+
               <button
                 onClick={handleConfirmRental}
-                disabled={diffDays <= 0 || !isAgreed}
+                disabled={!canRent}
                 className={`w-full py-6 text-[10px] uppercase tracking-[0.5em] transition-all shadow-xl ${
-                  diffDays <= 0 || !isAgreed
+                  !canRent
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                     : "bg-black text-white hover:bg-gray-900"
                 }`}
               >
-                Thêm vào giỏ hàng
+                Xác nhận thuê
               </button>
+            </div>
+          </aside>
+        </div>
+
+        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[
+            {
+              title: "Chăm sóc miễn phí",
+              desc: "Giặt khô và làm mới trước khi giao.",
+            },
+            {
+              title: "Đặt cọc hoàn lại",
+              desc: "Hoàn trả cọc trong 24h sau khi trả đồ.",
+            },
+            {
+              title: "Hỗ trợ đổi size",
+              desc: "Đổi size nhanh trong ngày nếu cần.",
+            },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="rounded-2xl border border-[#EEE7E1] bg-white p-6 shadow-[0_20px_50px_rgba(20,20,20,0.06)]"
+            >
+              <h3 className="text-sm uppercase tracking-[0.3em] text-gray-500">
+                {item.title}
+              </h3>
+              <p className="mt-3 text-sm text-gray-600 leading-relaxed">
+                {item.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-20 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 rounded-3xl border border-[#EEE7E1] bg-white p-8 shadow-[0_30px_90px_rgba(20,20,20,0.08)]">
+            <h3
+              className="text-2xl font-serif italic text-gray-900"
+              style={luxuryFont}
+            >
+              Mô tả sản phẩm
+            </h3>
+            <div className="mt-6 text-sm leading-relaxed text-gray-600">
+              {description ? (
+                showFullDesc ? (
+                  descriptionHasHtml ? (
+                    <div
+                      className="space-y-4"
+                      dangerouslySetInnerHTML={{ __html: description }}
+                    />
+                  ) : (
+                    <p className="whitespace-pre-line">{description}</p>
+                  )
+                ) : (
+                  <p className="whitespace-pre-line">{descriptionPreview}</p>
+                )
+              ) : (
+                <p>Chưa có mô tả chi tiết cho sản phẩm này.</p>
+              )}
+            </div>
+            {description && canToggleDesc && (
+              <button
+                onClick={() => setShowFullDesc((prev) => !prev)}
+                className="mt-5 text-[10px] uppercase tracking-widest border-b border-black pb-1 hover:text-gray-400 hover:border-gray-400 transition-all font-bold"
+              >
+                {showFullDesc ? "Thu gọn" : "Xem thêm"}
+              </button>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-[#EEE7E1] bg-white p-6 shadow-[0_20px_60px_rgba(20,20,20,0.06)]">
+              <h4 className="text-[11px] uppercase tracking-[0.4em] text-gray-400">
+                Thông tin
+              </h4>
+              <div className="mt-4 space-y-3 text-sm text-gray-600">
+                <div className="flex items-center justify-between gap-4">
+                  <span>Thương hiệu</span>
+                  <span className="text-gray-900 font-medium">{brandName}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Chất liệu</span>
+                  <span className="text-gray-900 font-medium">
+                    {product.material || "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Màu sắc</span>
+                  <span className="text-gray-900 font-medium">
+                    {product.colorGroup || product.colorFamily || "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Tình trạng</span>
+                  <span className="text-gray-900 font-medium">
+                    {conditionLabel}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span>Sản phẩm trong kho</span>
+                  <span className="text-gray-900 font-medium">
+                    {totalStock}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#EEE7E1] bg-white p-6 shadow-[0_20px_60px_rgba(20,20,20,0.06)]">
+              <h4 className="text-[11px] uppercase tracking-[0.4em] text-gray-400">
+                Lưu ý & chăm sóc
+              </h4>
+              <ul className="mt-4 space-y-3 text-sm text-gray-600">
+                <li>
+                  {product.careInstruction ||
+                    "Giặt khô chuyên nghiệp, không tự giặt tại nhà."}
+                </li>
+                <li>Tránh tiếp xúc mỹ phẩm và hóa chất trực tiếp.</li>
+                <li>Bảo quản trong túi vải và treo ngay khi nhận.</li>
+              </ul>
+              {(product.tags ?? []).length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {(product.tags ?? []).map((tag: string) => (
+                    <span
+                      key={tag}
+                      className="text-[9px] uppercase tracking-widest px-3 py-1 rounded-full border border-gray-200 text-gray-500 bg-white"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </div>
-      <ReviewList productId={id!} />
 
-      <ReviewForm productId={id!} onSuccess={() => window.location.reload()} />
+        <div className="mt-20">
+          <ReviewList productId={id!} />
+          <ReviewForm
+            productId={id!}
+            onSuccess={() => window.location.reload()}
+          />
+        </div>
+      </div>
     </div>
   );
 }

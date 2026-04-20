@@ -13,7 +13,7 @@ import {
 import { PlusOutlined, EyeOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { getProducts, deleteProduct } from "../../../services/product.service";
-import { Product } from "../../../types/product";
+import type { Product } from "../../../types/product";
 import "./product.css";
 
 const formatCurrency = (value: number) =>
@@ -44,9 +44,9 @@ const statusColor = (value?: string) => {
 };
 const statusLabel = (value?: string) => {
   if (value === "active") return "Hoạt động";
-  if (value === "draft") return "Lưu trữ";
-  if (value === "archived") return "Ngưng";
-  return "Lưu trữ";
+  if (value === "draft") return "Tạm ngừng";
+  if (value === "archived") return "Lưu trữ";
+  return "Tạm ngừng";
 };
 
 const ProductDashboard = () => {

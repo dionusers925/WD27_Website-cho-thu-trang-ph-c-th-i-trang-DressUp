@@ -1,5 +1,8 @@
 import axios from "axios";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
+
 const toDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -16,12 +19,28 @@ const toDataUrl = (file: File) =>
     reader.readAsDataURL(file);
   });
 
+const uploadToBackend = async (file: File) => {
+  const dataUrl = await toDataUrl(file);
+  try {
+    const res = await axios.post(`${API_BASE_URL}/api/uploads`, {
+      dataUrl,
+      fileName: file.name,
+    });
+    if (res?.data?.url) {
+      return res.data.url as string;
+    }
+  } catch (error) {
+    // fallback below
+  }
+  return dataUrl;
+};
+
 export const uploadImage = async (file: File) => {
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
   const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
   if (!cloudName || !uploadPreset) {
-    return toDataUrl(file);
+    return uploadToBackend(file);
   }
 
   const formData = new FormData();
@@ -37,8 +56,8 @@ export const uploadImage = async (file: File) => {
       return res.data.secure_url;
     }
   } catch (error) {
-    // fall back to data url below
+    // fall back to backend/base64 below
   }
 
-  return toDataUrl(file);
+  return uploadToBackend(file);
 };

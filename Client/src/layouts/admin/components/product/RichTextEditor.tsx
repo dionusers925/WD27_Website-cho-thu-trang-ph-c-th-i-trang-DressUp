@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { uploadImage } from "../../../../services/upload.service";
 
 type Props = {
   value?: string;
@@ -119,6 +120,25 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
           setLoadError(true);
           return;
         }
+        const createUploadAdapter = (editor: any) => {
+          if (!editor?.plugins?.get) return;
+          const repository = editor.plugins.get("FileRepository");
+          if (!repository) return;
+          repository.createUploadAdapter = (loader: any) => ({
+            upload: async () => {
+              const file = await loader.file;
+              if (!file) {
+                throw new Error("File is not available");
+              }
+              const url = await uploadImage(file);
+              if (!url) {
+                throw new Error("Upload failed");
+              }
+              return { default: url };
+            },
+            abort: () => undefined,
+          });
+        };
         try {
           editorRef.current = await Editor.create(hostRef.current, {
             placeholder,
@@ -136,6 +156,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
             });
           }
         }
+
+        createUploadAdapter(editorRef.current);
 
         if (value) {
           editorRef.current.setData(value);

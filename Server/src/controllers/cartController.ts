@@ -18,8 +18,11 @@ export const addToCart = async (req: Request, res: Response) => {
     }
 
     // lấy giá theo số ngày thuê
-    const tier = product.rentalTiers?.find((t) => t.days === days);
-    const price = tier?.price || (product.rentalTiers?.[0]?.price || 0) * (days || 1);
+    const rentalPrices =
+      (product as any).rentalPrices ?? (product as any).rentalTiers ?? [];
+    const tier = rentalPrices.find((t: any) => t.days === days);
+    const basePrice = rentalPrices?.[0]?.price ?? 0;
+    const price = tier?.price || basePrice * (days || 1);
 
     // Chuyển userId thành ObjectId
     const userObjectId = new mongoose.Types.ObjectId(userId);

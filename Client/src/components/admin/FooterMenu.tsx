@@ -1,8 +1,4 @@
-import React from "react";
-
-type Props = {};
-
-const FooterMenu = (props: Props) => {
+const FooterMenu = () => {
   return (
     <div className="flex items-center justify-center h-full">
       <h1 className="text-center">WD_27</h1>

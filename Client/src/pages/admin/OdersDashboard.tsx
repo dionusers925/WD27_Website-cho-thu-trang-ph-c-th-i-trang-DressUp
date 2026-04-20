@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -22,15 +22,17 @@ interface Product {
 
 interface OrderItem {
   productId: string;
+  variantId?: string;
   name: string;
   price: number;
   deposit: number;
   size: string;
   color: string;
+  quantity?: number;
 }
 
 const OrdersDashboard = () => {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [hasAccount, setHasAccount] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -53,7 +55,7 @@ const OrdersDashboard = () => {
         ? p.rentalPrices.map((rp: any) => ({
           label: `${Number(rp?.days ?? 0) || 0} ngày`,
           days: Number(rp?.days ?? 0) || 0,
-          price: Number(rp?.price ?? 0) || 0
+          price: Number(rp?.price ?? 0) || 0,
         }))
         : [];
 
@@ -67,13 +69,11 @@ const OrdersDashboard = () => {
       depositDefault,
       variants: Array.isArray(p?.variants)
         ? p.variants.map((v: any) => ({
-
-          size: String(v?.size ?? ""),
-          color: String(v?.color ?? ""),
-          _id: v?._id
-        }))
-        : []
-
+            size: String(v?.size ?? ""),
+            color: String(v?.color ?? ""),
+            _id: v?._id,
+          }))
+        : [],
     };
   };
 
@@ -114,15 +114,13 @@ const OrdersDashboard = () => {
     bankAccount: "",
     bankName: "",
     userId: "",
+    note: "",
     total: 0,
     paymentMethod: "Tiền mặt",
-
-    status: "delivered",
     shippingMethod: "Nhận tại cửa hàng",
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
-
-
+    status: "delivered",
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date().toISOString().split("T")[0],
     items: [] as OrderItem[],
   });
 
@@ -130,18 +128,12 @@ const OrdersDashboard = () => {
     try {
       const [ordersRes, productsRes, usersRes] = await Promise.all([
         axios.get("http://localhost:3000/orders"),
-
         axios.get("http://localhost:3000/api/products"),
-        axios.get("http://localhost:3000/users").catch(() => ({ data: [] }))
-
+        axios.get("http://localhost:3000/users").catch(() => ({ data: [] })),
       ]);
 
-      const ordersData = ordersRes.data || [];
-      const sortedOrders = ordersData.sort((a: any, b: any) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setOrders(sortedOrders);
-      setUsers(usersRes.data || []);
+      setOrders(ordersRes.data);
+      setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
 
       const productData = productsRes.data as any;
       const normalizedProducts = Array.isArray(productData)
@@ -153,7 +145,7 @@ const OrdersDashboard = () => {
             : [];
 
       setProducts(
-        normalizedProducts.map(normalizeProduct).filter((p: Product) => p._id),
+        normalizedProducts.map(normalizeProduct).filter((p: Product) => p._id)
       );
     } catch (err) {
       console.error("Lỗi lấy dữ liệu:", err);
@@ -180,7 +172,8 @@ const OrdersDashboard = () => {
     const finalTotal = newOrder.items.reduce((sum, item) => {
       const rentalPrice = (Number(item.price) || 0) * days;
       const depositPrice = Number(item.deposit) || 0;
-      return sum + rentalPrice + depositPrice;
+      const quantity = Number(item.quantity ?? 1) || 1;
+      return sum + (rentalPrice + depositPrice) * quantity;
     }, 0);
 
     setNewOrder((prev) => ({ ...prev, total: finalTotal }));
@@ -194,14 +187,19 @@ const OrdersDashboard = () => {
     const itemPrice = Number(currentProduct.rentalTiers?.[0]?.price) || 0;
     const itemDeposit = Number(currentProduct.depositDefault) || 0;
 
+    const matchedVariant = currentProduct.variants.find(
+      (v) => v.size === currentSize && v.color === currentColor
+    );
+
     const newItem: OrderItem = {
       productId: currentProduct._id,
+      variantId: matchedVariant?._id,
       name: currentProduct.name,
       price: itemPrice,
       deposit: itemDeposit,
       size: currentSize,
-
       color: currentColor,
+      quantity: 1,
     };
 
     setNewOrder((prev) => ({
@@ -217,9 +215,7 @@ const OrdersDashboard = () => {
   };
 
   const removeItemFromOrder = (indexToRemove: number) => {
-    const updatedItems = newOrder.items.filter(
-      (_, index) => index !== indexToRemove,
-    );
+    const updatedItems = newOrder.items.filter((_, index) => index !== indexToRemove);
     setNewOrder((prev) => ({ ...prev, items: updatedItems }));
   };
 
@@ -228,6 +224,10 @@ const OrdersDashboard = () => {
 
     if (newOrder.items.length === 0)
       return alert("Vui lòng thêm ít nhất 1 sản phẩm!");
+
+    if (!newOrder.customerPhone) {
+      return alert("Vui lòng nhập số điện thoại khách hàng!");
+    }
 
     setLoading(true);
     try {
@@ -242,10 +242,11 @@ const OrdersDashboard = () => {
         bankAccount: "",
         bankName: "",
         userId: "",
+        note: "",
         total: 0,
         paymentMethod: "Tiền mặt",
-        status: "delivered",
         shippingMethod: "Nhận tại cửa hàng",
+        status: "delivered",
         startDate: new Date().toISOString().split("T")[0],
         endDate: new Date().toISOString().split("T")[0],
         items: [],
@@ -255,23 +256,31 @@ const OrdersDashboard = () => {
       setCurrentColor("");
       setSearchProductTerm("");
       setShowProductDropdown(false);
-    } catch (err) {
-      alert("❌ Lỗi hệ thống.");
+    } catch (err: any) {
+      console.error("Lỗi tạo đơn hàng:", err);
+      const message =
+        err?.response?.data?.message || err?.message || "Lỗi hệ thống.";
+      alert(`❌ ${message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatStatus = (status: string) => {
-    const statusMap: any = {
-      pending: { text: "Chờ xử lý", style: "bg-yellow-100 text-yellow-800" },
-      delivered: { text: "Đã giao hàng", style: "bg-blue-100 text-blue-800" },
-      completed: { text: "Hoàn thành", style: "bg-green-100 text-green-800" },
-      cancelled: { text: "Đã hủy", style: "bg-red-100 text-red-800" },
-      confirmed: { text: "Xác nhận", style: "bg-indigo-100 text-indigo-800" },
-      fee_incurred: { text: "Phát sinh phí", style: "bg-orange-100 text-orange-800" },
+  const getStatusBadge = (status: string) => {
+    const styles: any = {
+      completed: "bg-green-100 text-green-800",
+      pending: "bg-yellow-100 text-yellow-800",
+      cancelled: "bg-red-100 text-red-800",
+      confirmed: "bg-blue-100 text-blue-800",
+      shipped: "bg-purple-100 text-purple-800",
+      delivered: "bg-yellow-100 text-yellow-800",
+      renting: "bg-cyan-100 text-cyan-800",
+      returning: "bg-indigo-100 text-indigo-800",
+      picked_up: "bg-blue-100 text-blue-800",
+      returned: "bg-teal-100 text-teal-800",
+      fee_incurred: "bg-orange-100 text-orange-800",
     };
-    return statusMap[status || 'pending'] || { text: status, style: "bg-gray-100 text-gray-800" };
+    return styles[status] || "bg-gray-100 text-gray-800";
   };
 
   const handlePhoneChange = (phone: string) => {
@@ -299,16 +308,20 @@ const OrdersDashboard = () => {
     <div className="p-8 bg-gray-50 min-h-screen font-sans">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">
-            Quản lý đơn hàng DressUp
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-800">Quản lý đơn hàng DressUp</h1>
         </div>
         <div className="flex items-center gap-4">
-
-          <button onClick={() => setShowHistoryModal(true)} className="text-gray-700 bg-white border border-gray-300 px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-sm transition-all active:scale-95 hover:bg-gray-50">
+          <button
+            onClick={() => setShowHistoryModal(true)}
+            className="text-blue-800 bg-blue-100 px-5 py-2 rounded-xl font-semibold shadow-sm transition-all active:scale-95 border border-blue-200"
+          >
             Lịch sử tạo đơn
           </button>
-          <button onClick={() => setShowModal(true)} style={{ backgroundColor: '#1e3a8a' }} className="text-white px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-lg transition-all active:scale-95">
+          <button
+            onClick={() => setShowModal(true)}
+            style={{ backgroundColor: "#1e3a8a" }}
+            className="text-white px-5 py-2 rounded-xl flex items-center gap-2 font-semibold shadow-lg transition-all active:scale-95"
+          >
             <span className="text-xl">+</span> Tạo đơn trực tiếp
           </button>
           <span className="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-lg text-sm font-bold border border-blue-200">
@@ -321,27 +334,12 @@ const OrdersDashboard = () => {
         <table className="w-full text-left">
           <thead className="bg-gray-100 border-b border-gray-200">
             <tr>
-              <th className="p-4 text-sm font-semibold text-gray-600">
-                Mã đơn
-              </th>
-              <th className="p-4 text-sm font-semibold text-gray-600">
-                Khách hàng
-              </th>
-              <th className="p-4 text-sm font-semibold text-gray-600">
-                Tổng tiền
-              </th>
-
-
               <th className="p-4 text-sm font-semibold text-gray-600">Mã đơn</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Ngày tạo</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Khách hàng</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Tổng tiền</th>
-
               <th className="p-4 text-sm font-semibold text-gray-600">Thanh toán</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Trạng thái</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Thao tác</th>
-
-
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -350,32 +348,35 @@ const OrdersDashboard = () => {
                 <td className="p-4 font-mono text-sm text-blue-600 font-semibold">
                   {order._id?.slice(-6).toUpperCase()}
                 </td>
-                <td className="p-4 text-sm ">
-                  {order.userId?.name || "Khách tại quầy"}
+                <td className="p-4 text-sm">
+                  {order.customerName || order.userId?.name || "Khách tại quầy"}
                 </td>
-                <td className="p-4 text-sm ">
+                <td className="p-4 text-sm">
                   {(order.total ?? 0).toLocaleString()}đ
                 </td>
-
-
-                <td className="p-4 font-mono text-sm text-blue-600 font-semibold">{order._id?.slice(-6).toUpperCase()}</td>
                 <td className="p-4 text-sm text-gray-600">
-                  {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN", {
-                    hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric"
-                  }) : "N/A"}
+                  {order.paymentMethod || "Nhận tại cửa hàng"}
                 </td>
-                <td className="p-4 text-sm ">{order.customerName || order.userId?.name || "Khách tại quầy"}</td>
-                <td className="p-4 text-sm ">{(order.total ?? 0).toLocaleString()}đ</td>
-
-                <td className="p-4 text-sm text-gray-600">{order.paymentMethod || "Nhận tại cửa hàng"}</td>
                 <td className="p-4">
-
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${formatStatus(order.status).style}`}>
-                    {formatStatus(order.status).text}
-
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(
+                      order.status
+                    )}`}
+                  >
+                    {order.status === 'pending' ? 'Chờ xử lý' :
+                     order.status === 'confirmed' ? 'Đã xác nhận' :
+                     order.status === 'shipped' ? 'Đang giao' :
+                     order.status === 'delivered' ? 'Đã giao' :
+                     order.status === 'renting' ? 'Đang thuê' :
+                     order.status === 'returning' ? 'Đang trả đồ' :
+                     order.status === 'picked_up' ? 'Đã lấy đơn' :
+                     order.status === 'returned' ? 'Đã nhận đồ' :
+                     order.status === 'fee_incurred' ? 'Phát sinh phí' :
+                     order.status === 'completed' ? 'Hoàn tất' :
+                     order.status === 'cancelled' ? 'Đã hủy' : (order.status || "pending")}
                   </span>
                 </td>
-                <td className="p-4 text-sm ">
+                <td className="p-4 text-sm">
                   <button
                     onClick={() => navigate(`/admin/order/${order._id}`)}
                     className="px-4 text-sm py-1.5 bg-blue-50 text-white rounded-lg text-xs font-bold transition-all shadow-sm border border-blue-100"
@@ -401,44 +402,136 @@ const OrdersDashboard = () => {
             </h2>
 
             <form onSubmit={handleCreateOrder} className="space-y-4 text-sm">
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Loại khách hàng</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" checked={hasAccount} onChange={() => setHasAccount(true)} className="accent-blue-600 w-4 h-4" />
-                    <span className="font-semibold text-gray-700">Đã có tài khoản</span>
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+                <p className="text-[10px] font-bold text-gray-400 uppercase italic">
+                  Thông tin khách hàng
+                </p>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Loại khách hàng
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="radio" checked={!hasAccount} onChange={() => { setHasAccount(false); setNewOrder(prev => ({ ...prev, userId: "" })); }} className="accent-blue-600 w-4 h-4" />
-                    <span className="font-semibold text-gray-700">Chưa có tài khoản</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="col-span-1">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Số điện thoại</label>
-                  <input type="tel" required placeholder="Nhập số điện thoại..." className={`w-full p-2 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${hasAccount && newOrder.userId ? "border-green-300 ring-1 ring-green-300 bg-green-50" : "border-gray-200"}`} value={newOrder.customerPhone} onChange={(e) => handlePhoneChange(e.target.value)} />
-                  {hasAccount && newOrder.userId && <p className="text-xs text-green-600 mt-1">✓ Đã tìm thấy khách hàng</p>}
-                  {hasAccount && newOrder.customerPhone && newOrder.customerPhone.length >= 8 && !newOrder.userId && <p className="text-xs text-yellow-600 mt-1">Không tìm thấy khách hàng</p>}
-                </div>
-                <div className="col-span-1">
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Họ và tên</label>
-                  <input type="text" required placeholder="Nhập họ và tên..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerName} onChange={(e) => setNewOrder({ ...newOrder, customerName: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Địa chỉ</label>
-                  <input type="text" required placeholder="Nhập địa chỉ..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.customerAddress} onChange={(e) => setNewOrder({ ...newOrder, customerAddress: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Số tài khoản</label>
-                  <input type="text" placeholder="Nhập số tài khoản..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.bankAccount} onChange={(e) => setNewOrder({ ...newOrder, bankAccount: e.target.value })} />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Ngân hàng</label>
-                  <input type="text" placeholder="Nhập tên ngân hàng..." className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={newOrder.bankName} onChange={(e) => setNewOrder({ ...newOrder, bankName: e.target.value })} />
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={hasAccount}
+                        onChange={() => setHasAccount(true)}
+                        className="accent-blue-600 w-4 h-4"
+                      />
+                      <span className="font-semibold text-gray-700">
+                        Đã có tài khoản
+                      </span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={!hasAccount}
+                        onChange={() => {
+                          setHasAccount(false);
+                          setNewOrder((prev) => ({ ...prev, userId: "" }));
+                        }}
+                        className="accent-blue-600 w-4 h-4"
+                      />
+                      <span className="font-semibold text-gray-700">
+                        Chưa có tài khoản
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-1">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Số điện thoại *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="Nhập số điện thoại..."
+                      className={`w-full p-2 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${
+                        hasAccount && newOrder.userId
+                          ? "border-green-300 ring-1 ring-green-300 bg-green-50"
+                          : "border-gray-200"
+                      }`}
+                      value={newOrder.customerPhone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                    />
+                    {hasAccount && newOrder.userId && (
+                      <p className="text-xs text-green-600 mt-1">
+                        Đã tìm thấy khách hàng
+                      </p>
+                    )}
+                    {hasAccount &&
+                      newOrder.customerPhone &&
+                      newOrder.customerPhone.length >= 8 &&
+                      !newOrder.userId && (
+                        <p className="text-xs text-yellow-600 mt-1">
+                          Không tìm thấy khách hàng
+                        </p>
+                      )}
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Họ và tên *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Nhập họ và tên..."
+                      className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      value={newOrder.customerName}
+                      onChange={(e) =>
+                        setNewOrder({ ...newOrder, customerName: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Địa chỉ *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Nhập địa chỉ..."
+                      className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      value={newOrder.customerAddress}
+                      onChange={(e) =>
+                        setNewOrder({
+                          ...newOrder,
+                          customerAddress: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Số tài khoản
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nhập số tài khoản..."
+                      className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      value={newOrder.bankAccount}
+                      onChange={(e) =>
+                        setNewOrder({ ...newOrder, bankAccount: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Ngân hàng
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nhập tên ngân hàng..."
+                      className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
+                      value={newOrder.bankName}
+                      onChange={(e) =>
+                        setNewOrder({ ...newOrder, bankName: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
@@ -453,94 +546,120 @@ const OrdersDashboard = () => {
                     className="w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
                     value={searchProductTerm}
                     onChange={(e) => {
-                       setSearchProductTerm(e.target.value);
-                       setShowProductDropdown(true);
-                       if (!e.target.value) {
-                          setCurrentProduct(null);
-                          setCurrentSize("");
-                          setCurrentColor("");
-                       }
+                      setSearchProductTerm(e.target.value);
+                      setShowProductDropdown(true);
+                      if (!e.target.value) {
+                        setCurrentProduct(null);
+                        setCurrentSize("");
+                        setCurrentColor("");
+                      }
                     }}
                     onFocus={() => setShowProductDropdown(true)}
                     onBlur={() => setTimeout(() => setShowProductDropdown(false), 200)}
                   />
                   {showProductDropdown && (
                     <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto mt-1 top-full">
-                      {products.filter(p => !searchProductTerm || p.name.toLowerCase().includes(searchProductTerm.toLowerCase())).length > 0 ? (
-                        products.filter(p => !searchProductTerm || p.name.toLowerCase().includes(searchProductTerm.toLowerCase())).map(p => (
-                          <li
-                            key={p._id}
-                            className="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0 text-sm transition-colors"
-                            onClick={async () => {
-                              setSearchProductTerm(p.name);
-                              setShowProductDropdown(false);
-                              
-                              const id = p._id;
-                              const prod = p;
-                              if (!id || !prod) {
-                                setCurrentProduct(null);
-                                setCurrentSize("");
-                                setCurrentColor("");
-                                return;
-                              }
+                      {products.filter(
+                        (p) =>
+                          !searchProductTerm ||
+                          p.name.toLowerCase().includes(searchProductTerm.toLowerCase())
+                      ).length > 0 ? (
+                        products
+                          .filter(
+                            (p) =>
+                              !searchProductTerm ||
+                              p.name
+                                .toLowerCase()
+                                .includes(searchProductTerm.toLowerCase())
+                          )
+                          .map((p) => (
+                            <li
+                              key={p._id}
+                              className="p-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-0 text-sm transition-colors"
+                              onClick={async () => {
+                                setSearchProductTerm(p.name);
+                                setShowProductDropdown(false);
 
-                              try {
-                                const detailRes = await axios.get(`http://localhost:3000/api/products/${id}`);
-                                const detail = detailRes.data as any;
-                                const rawVariants = Array.isArray(detail?.data?.variants) && detail.data.variants.length > 0
-                                  ? detail.data.variants
-                                  : Array.isArray(detail?.data?.product?.variants) && detail.data.product.variants.length > 0
-                                    ? detail.data.product.variants
-                                    : Array.isArray(detail?.variants) && detail.variants.length > 0
+                                const id = p._id;
+                                const prod = p;
+                                if (!id || !prod) {
+                                  setCurrentProduct(null);
+                                  setCurrentSize("");
+                                  setCurrentColor("");
+                                  return;
+                                }
+
+                                try {
+                                  const detailRes = await axios.get(
+                                    `http://localhost:3000/api/products/${id}`
+                                  );
+                                  const detail = detailRes.data as any;
+                                  const rawVariants =
+                                    Array.isArray(detail?.data?.variants) &&
+                                    detail.data.variants.length > 0
+                                      ? detail.data.variants
+                                      : Array.isArray(detail?.data?.product?.variants) &&
+                                        detail.data.product.variants.length > 0
+                                      ? detail.data.product.variants
+                                      : Array.isArray(detail?.variants) &&
+                                        detail.variants.length > 0
                                       ? detail.variants
                                       : [];
 
-                                const mappedVariants = normalizeVariants(rawVariants);
+                                  const mappedVariants =
+                                    normalizeVariants(rawVariants);
 
+                                  const merged: Product = {
+                                    ...prod,
+                                    variants: mappedVariants,
+                                  };
 
-                                const merged: Product = {
-                                  ...prod,
-                                  variants: mappedVariants
-                                };
-
-
-                                setCurrentProduct(merged);
-                                if (mappedVariants.length === 0) {
+                                  setCurrentProduct(merged);
+                                  if (mappedVariants.length === 0) {
+                                    setCurrentSize("");
+                                    setCurrentColor("");
+                                    alert(
+                                      "Sản phẩm này chưa có biến thể Size/Màu trong hệ thống."
+                                    );
+                                    return;
+                                  }
+                                  const sizes = Array.from(
+                                    new Set(merged.variants.map((v) => v.size))
+                                  );
+                                  setCurrentSize(sizes[0] || "");
+                                  const colorsForSize = merged.variants.filter(
+                                    (v) => v.size === sizes[0]
+                                  );
+                                  setCurrentColor(colorsForSize[0]?.color || "");
+                                } catch (err) {
+                                  console.error("Lỗi lấy chi tiết sản phẩm:", err);
+                                  alert(
+                                    "Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại."
+                                  );
+                                  setCurrentProduct(null);
                                   setCurrentSize("");
                                   setCurrentColor("");
-                                  alert("Sản phẩm này chưa có biến thể Size/Màu trong hệ thống.");
-                                  return;
                                 }
-                                const sizes = Array.from(new Set(merged.variants.map(v => v.size)));
-                                setCurrentSize(sizes[0] || "");
-                                const colorsForSize = merged.variants.filter(v => v.size === sizes[0]);
-
-                                setCurrentColor(colorsForSize[0]?.color || "");
-                              } catch (err) {
-                                console.error("Lỗi lấy chi tiết sản phẩm:", err);
-                                alert("Không lấy được chi tiết sản phẩm (size/màu). Vui lòng thử lại.");
-                                setCurrentProduct(null);
-                                setCurrentSize("");
-                                setCurrentColor("");
-                              }
-                            }}
-                          >
-                            <span className="font-semibold text-gray-800 block truncate">{p.name}</span>
-                            <span className="text-[11px] text-gray-500 font-medium">
-                              Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ
-                            </span>
-                          </li>
-                        ))
+                              }}
+                            >
+                              <span className="font-semibold text-gray-800 block truncate">
+                                {p.name}
+                              </span>
+                              <span className="text-[11px] text-gray-500 font-medium">
+                                Thuê: {(p.rentalTiers?.[0]?.price ?? 0).toLocaleString()}đ - Cọc: {(p.depositDefault ?? 0).toLocaleString()}đ
+                              </span>
+                            </li>
+                          ))
                       ) : (
-                        <li className="p-3 text-sm text-gray-500 text-center">Không tìm thấy sản phẩm...</li>
+                        <li className="p-3 text-sm text-gray-500 text-center">
+                          Không tìm thấy sản phẩm...
+                        </li>
                       )}
                     </ul>
                   )}
                 </div>
-
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
-
                     <label className="text-[10px] text-gray-400 font-bold uppercase italic">
                       Size
                     </label>
@@ -552,13 +671,12 @@ const OrdersDashboard = () => {
                     >
                       {currentProduct &&
                         Array.from(
-                          new Set(currentProduct.variants.map((v) => v.size)),
+                          new Set(currentProduct.variants.map((v) => v.size))
                         ).map((s) => (
                           <option key={s} value={s}>
                             {s}
                           </option>
                         ))}
-
                     </select>
                   </div>
                   <div>
@@ -601,8 +719,7 @@ const OrdersDashboard = () => {
                     <div>
                       <p className="font-bold text-gray-800">{item.name}</p>
                       <p className="text-[10px] text-blue-600 font-bold uppercase italic">
-                        Cọc: {item.deposit.toLocaleString()}đ | Thuê:{" "}
-                        {item.price.toLocaleString()}đ/ngày
+                        Cọc: {item.deposit.toLocaleString()}đ | Thuê: {item.price.toLocaleString()}đ/ngày
                       </p>
                     </div>
                     <button
@@ -639,9 +756,22 @@ const OrdersDashboard = () => {
 
               <div>
                 <label className="block font-semibold text-gray-700 mb-1">
+                  Ghi chú đơn hàng
+                </label>
+                <textarea
+                  placeholder="Ghi chú thêm về đơn hàng..."
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none h-16 resize-none"
+                  value={newOrder.note}
+                  onChange={(e) =>
+                    setNewOrder({ ...newOrder, note: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
                   Tổng cộng (Đã gồm tiền cọc)
                 </label>
-
                 <div className="w-full p-3 bg-gray-100 border rounded-xl font-bold text-lg text-blue-900 text-center">
                   {newOrder.total.toLocaleString()} đ
                 </div>
@@ -671,46 +801,89 @@ const OrdersDashboard = () => {
 
       {showHistoryModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 w-full max-w-4xl shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div className="flex justify-between items-center border-b pb-4 mb-6">
-              <h2 className="text-xl font-bold text-gray-800">Lịch sử tạo đơn hàng</h2>
-              <button onClick={() => setShowHistoryModal(false)} className="text-gray-400 hover:text-gray-600 font-bold text-xl">✕</button>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            <div className="flex justify-between items-center mb-6 border-b pb-4">
+              <h2 className="text-xl font-bold text-gray-800">
+                Lịch sử tạo đơn hàng
+              </h2>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-gray-400 font-bold hover:text-gray-800 text-xl"
+              >
+                ✕
+              </button>
             </div>
-            
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-gray-100 border-b border-gray-200">
-                  <tr>
-                    <th className="p-3 text-sm font-semibold text-gray-600">Mã đơn</th>
-                    <th className="p-3 text-sm font-semibold text-gray-600">Ngày tạo</th>
-                    <th className="p-3 text-sm font-semibold text-gray-600">Khách hàng</th>
-                    <th className="p-3 text-sm font-semibold text-gray-600">Loại đơn</th>
-                    <th className="p-3 text-sm font-semibold text-gray-600">Tổng tiền</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {orders.map((order: any) => (
-                    <tr key={order._id} className="hover:bg-gray-50">
-                      <td className="p-3 font-mono text-sm text-blue-600">{order._id?.slice(-6).toUpperCase()}</td>
-                      <td className="p-3 text-sm text-gray-600">
-                        {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN", {
-                          hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric"
-                        }) : "N/A"}
-                      </td>
-                      <td className="p-3 text-sm">{order.customerName || order.userId?.name || "Khách tại quầy"}</td>
-                      <td className="p-3">
-                        {order.paymentMethod === "Tiền mặt" || order.customerName ? (
-                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">Tại quầy</span>
-                        ) : (
-                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">Online</span>
-                        )}
-                      </td>
-                      <td className="p-3 text-sm font-medium">{(order.total ?? 0).toLocaleString()}đ</td>
-                    </tr>
+
+            {orders.length === 0 ? (
+              <p className="text-center text-gray-500 py-10">
+                Chưa có đơn hàng nào.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {[...orders]
+                  .sort(
+                    (a, b) =>
+                      new Date(b.createdAt || 0).getTime() -
+                      new Date(a.createdAt || 0).getTime()
+                  )
+                  .map((o: any) => (
+                    <div
+                      key={o._id}
+                      className="p-4 border border-gray-200 rounded-xl flex justify-between items-center bg-gray-50 hover:bg-gray-100 transition"
+                    >
+                      <div>
+                        <p className="font-bold text-blue-800 mb-1">
+                          Mã đơn: {o._id?.slice(-6).toUpperCase()}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Khách hàng:{" "}
+                          {o.customerName ||
+                            o.userId?.name ||
+                            "Khách tại quầy"}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Ngày tạo:{" "}
+                          {o.createdAt
+                            ? new Date(o.createdAt).toLocaleString("vi-VN")
+                            : "Không rõ"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-800 mb-1">
+                          {(o.total ?? 0).toLocaleString()}đ
+                        </p>
+                        <span
+                          className={`px-2 py-1 rounded-full text-[10px] font-bold ${getStatusBadge(
+                            o.status
+                          )}`}
+                        >
+                          {o.status === "pending"
+                            ? "Chờ xử lý"
+                            : o.status === "confirmed"
+                            ? "Đã xác nhận"
+                            : o.status === "shipped"
+                            ? "Đang giao"
+                            : o.status === "delivered"
+                            ? "Đã giao"
+                            : o.status === "renting"
+                            ? "Đang thuê"
+                            : o.status === "returning"
+                            ? "Đang trả đồ"
+                            : o.status === "returned"
+                            ? "Đã nhận đồ"
+                            : o.status === "fee_incurred"
+                            ? "Phát sinh phí"
+                            : o.status === "completed"
+                            ? "Hoàn tất"
+                            : o.status === "cancelled"
+                            ? "Đã hủy"
+                            : o.status || "pending"}
+                        </span>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
