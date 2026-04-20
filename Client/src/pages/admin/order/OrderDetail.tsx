@@ -476,10 +476,10 @@ const OrderDetail = () => {
             <option value="confirmed" disabled={!getAvailableStatuses(order.status).includes("confirmed")}>Đã xác nhận</option>
             <option value="preparing" disabled={!getAvailableStatuses(order.status).includes("preparing")}>Đang chuẩn bị hàng</option>
             <option value="shipped" disabled={!getAvailableStatuses(order.status).includes("shipped")}>Đang giao</option>
-            <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao</option>
+            <option value="delivered" disabled={order?.status !== "delivered"}>Đã giao (Shipper cập nhật)</option>
             <option value="renting" disabled={!getAvailableStatuses(order.status).includes("renting")}>Đang thuê</option>
             <option value="returning" disabled={!getAvailableStatuses(order.status).includes("returning")}>Đang trả đồ</option>
-            <option value="picked_up" disabled={!getAvailableStatuses(order.status).includes("picked_up")}>Đã lấy đơn</option>
+            <option value="picked_up" disabled={order?.status !== "picked_up"}>Đã lấy đơn (Shipper cập nhật)</option>
             <option value="returned" disabled={!getAvailableStatuses(order.status).includes("returned")}>Đã nhận đồ</option>
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
             <option value="completed" disabled={!getAvailableStatuses(order.status).includes("completed")}>Hoàn tất</option>
@@ -901,14 +901,14 @@ const OrderDetail = () => {
                           <span className="w-2 h-2 bg-orange-500 rounded-full animate-ping"></span>
                           Đang chuẩn bị {adminFiles.length} tệp:
                         </div>
-                        <button 
+                        <button
                           onClick={() => setAdminFiles([])}
                           className="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase tracking-widest transition-colors"
                         >
                           Hủy tất cả
                         </button>
                       </div>
-                      
+
                       <div className="grid grid-cols-4 gap-2 bg-orange-50/30 p-2 rounded-2xl border-2 border-dashed border-orange-200">
                         {adminFiles.map((f, idx) => (
                           <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border-2 border-white bg-white shadow-md group ring-2 ring-orange-100/50">
@@ -925,9 +925,9 @@ const OrderDetail = () => {
                             </button>
                           </div>
                         ))}
-                        
+
                         {/* Nút thêm nhanh ngay trong Grid */}
-                        <button 
+                        <button
                           onClick={() => adminFileInputRef.current?.click()}
                           className="aspect-square rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/50 flex flex-col items-center justify-center hover:bg-orange-100 hover:border-orange-500 transition-all group"
                         >
