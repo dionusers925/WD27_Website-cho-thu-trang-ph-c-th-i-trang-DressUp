@@ -134,29 +134,21 @@ const calcRentalDays = (start?: string, end?: string) => {
 };
 
 const getAvailableStatuses = (currentStatus?: string) => {
-  const statuses = [
-    "pending",
-    "confirmed",
-    "preparing",
-    "shipped",
-    "delivered",
-    "renting",
-    "returning",
-    "picked_up",
-    "returned",
-    "fee_incurred",
-    "completed",
-    "cancelled",
-  ];
-  const currentIndex = statuses.indexOf(currentStatus || "pending");
-
-  if (currentIndex === -1) return statuses;
-  if (currentStatus === "completed") return ["completed"];
-  if (currentStatus === "fee_incurred") return ["fee_incurred", "completed"];
-  if (currentStatus === "cancelled") return ["cancelled"];
-
-  // Trả về trạng thái hiện tại và tất cả các trạng thái phía sau nó
-  return statuses.slice(currentIndex);
+  switch (currentStatus) {
+    case "pending": return ["pending", "confirmed", "cancelled"];
+    case "confirmed": return ["confirmed", "preparing", "cancelled"];
+    case "preparing": return ["preparing", "shipped", "cancelled"];
+    case "shipped": return ["shipped", "delivered"];
+    case "delivered": return ["delivered", "renting"];
+    case "renting": return ["renting", "returning"];
+    case "returning": return ["returning", "picked_up"];
+    case "picked_up": return ["picked_up", "returned"];
+    case "returned": return ["returned", "fee_incurred", "completed"];
+    case "fee_incurred": return ["fee_incurred", "completed"];
+    case "completed": return ["completed"];
+    case "cancelled": return ["cancelled"];
+    default: return ["pending", "confirmed", "cancelled"];
+  }
 };
 
 const getAvailablePaymentStatuses = (currentStatus?: string) => {
