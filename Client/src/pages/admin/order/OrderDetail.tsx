@@ -103,18 +103,16 @@ const statusBadge = (status?: string) => {
 };
 
 const paymentStatusLabel = (value?: string) => {
-  if (!value) return "Chưa thanh toánn";
+  if (!value) return "Chưa thanh toán";
   if (value === "pending") return "Chưa thanh toán";
-  if (value === "paid") return "Đã thanh toán";
-  if (value === "deposit_returned") return "Đã hoàn cọc";
-  if (value === "completed" || value === "success") return "Hoàn thành";
+  if (value === "deposit_returned") return "Đã thanh toán";
+  if (value === "completed" || value === "success" || value === "paid") return "Hoàn thành";
   return value;
 };
 
 const paymentBadge = (value?: string) => {
-  if (value === "paid") return "bg-green-100 text-green-800";
+  if (value === "paid" || value === "completed" || value === "success") return "bg-emerald-100 text-emerald-800";
   if (value === "deposit_returned") return "bg-teal-100 text-teal-800";
-  if (value === "completed" || value === "success") return "bg-emerald-100 text-emerald-800";
   return "bg-gray-100 text-gray-800";
 };
 
@@ -154,16 +152,15 @@ const getAvailableStatuses = (currentStatus?: string) => {
 const getAvailablePaymentStatuses = (currentStatus?: string) => {
   switch (currentStatus) {
     case "pending":
-      return ["pending", "paid", "deposit_returned", "success"];
+      return ["pending", "deposit_returned", "success"];
     case "paid":
-      return ["paid", "deposit_returned", "success"];
-    case "deposit_returned":
-      return ["deposit_returned", "success"];
     case "success":
     case "completed":
-      return [currentStatus];
+      return ["success", "deposit_returned"];
+    case "deposit_returned":
+      return ["deposit_returned", "success"];
     default:
-      return ["pending", "paid", "deposit_returned", "success"];
+      return ["pending", "deposit_returned", "success"];
   }
 };
 
@@ -194,7 +191,7 @@ const OrderDetail = () => {
   const isLocked = useMemo(() => {
     if (!order) return false;
     const isTerminalStatus = order.status === "completed";
-    const isPaymentDone = order.paymentStatus === "success" || order.paymentStatus === "paid" || order.paymentStatus === "completed";
+    const isPaymentDone = order.paymentStatus === "success" || order.paymentStatus === "completed";
     return isTerminalStatus && isPaymentDone;
   }, [order]);
 
@@ -438,17 +435,16 @@ const OrderDetail = () => {
         {/* Nút lưu tích hợp cả phí và trạng thái */}
         <button
           onClick={handleUpdateOrder}
-          disabled={isUpdating || isLocked}
-          className={`px-6 py-2 text-white rounded-lg font-bold text-sm transition-all ${
-            isLocked
+          disabled={isUpdating || (isLocked && paymentStatus === order.paymentStatus)}
+          className={`px-6 py-2 text-white rounded-lg font-bold text-sm transition-all ${isLocked && paymentStatus === order.paymentStatus
               ? "bg-gray-400 cursor-not-allowed"
               : (status !== order.status || paymentStatus !== order.paymentStatus)
                 ? "bg-orange-500 hover:bg-orange-600 animate-pulse shadow-lg shadow-orange-200"
                 : "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
-          }`}
-          title={isLocked ? "Đơn hàng đã chốt và thanh toán hoàn tất, không thể chỉnh sửa" : ""}
+            }`}
+          title={isLocked && paymentStatus === order.paymentStatus ? "Đơn hàng đã chốt và thanh toán hoàn tất, không thể chỉnh sửa" : ""}
         >
-          {isUpdating ? "Đang lưu..." : isLocked ? "Đã chốt đơn" : "Lưu thay đổi"}
+          {isUpdating ? "Đang lưu..." : (isLocked && paymentStatus === order.paymentStatus) ? "Đã chốt đơn" : "Lưu thay đổi"}
         </button>
       </div>
 
@@ -468,9 +464,8 @@ const OrderDetail = () => {
             value={status}
             onChange={(e) => setStatus(e.target.value)}
             disabled={isLocked || status !== order.status}
-            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${
-              isLocked || status !== order.status ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
-            } ${statusBadge(status)}`}
+            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${isLocked || status !== order.status ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+              } ${statusBadge(status)}`}
             title={status !== order.status ? "Hãy lưu thay đổi trước khi chuyển sang trạng thái tiếp theo" : ""}
           >
             <option value="pending" disabled={!getAvailableStatuses(order.status).includes("pending")}>Chờ xử lý</option>
@@ -492,15 +487,13 @@ const OrderDetail = () => {
           <select
             value={paymentStatus}
             onChange={(e) => setPaymentStatus(e.target.value)}
-            disabled={isLocked || paymentStatus !== order.paymentStatus}
-            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${
-              isLocked || paymentStatus !== order.paymentStatus ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
-            } ${paymentBadge(paymentStatus)}`}
+            disabled={paymentStatus !== order.paymentStatus}
+            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${paymentStatus !== order.paymentStatus ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+              } ${paymentBadge(paymentStatus)}`}
             title={paymentStatus !== order.paymentStatus ? "Hãy lưu thay đổi trước khi chuyển sang trạng thái tiếp theo" : ""}
           >
             <option value="pending" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("pending")}>Chưa thanh toán</option>
-            <option value="paid" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("paid")}>Đã thanh toán</option>
-            <option value="deposit_returned" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("deposit_returned")}>Đã hoàn cọc</option>
+            <option value="deposit_returned" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("deposit_returned")}>Đã thanh toán</option>
             <option value="success" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("success")}>Hoàn thành</option>
           </select>
         </div>
