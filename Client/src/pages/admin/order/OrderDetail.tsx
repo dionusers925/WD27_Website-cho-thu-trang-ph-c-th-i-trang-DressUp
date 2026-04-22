@@ -494,7 +494,7 @@ const OrderDetail = () => {
           >
             <option value="pending" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("pending")}>Chưa thanh toán</option>
             <option value="deposit_returned" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("deposit_returned")}>Đã thanh toán</option>
-            <option value="success" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("success")}>Hoàn thành</option>
+            <option value="success" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("success") || status !== 'completed'} title={status !== 'completed' ? "Chỉ chọn được khi trạng thái đơn hàng là 'Hoàn tất'" : ""}>Hoàn thành</option>
           </select>
         </div>
       </div>
