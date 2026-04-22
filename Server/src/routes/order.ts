@@ -1723,23 +1723,45 @@ const handleUpdateOrder = async (req: express.Request, res: express.Response) =>
 
 
 
-    updates.total = nextTotal;
+        updates.total = nextTotal;
 
+    // Ghi lich su thay doi trang thai
+    const updatedBy = typeof req.body.updatedBy === 'string' && req.body.updatedBy.trim()
+      ? req.body.updatedBy.trim()
+      : 'He thong';
 
+    const historyPushOps = {};
 
+    if (updates.status && updates.status !== order.status) {
+      historyPushOps.statusHistory = {
+        status: updates.status,
+        updatedBy,
+        date: new Date(),
+      };
+    }
 
+    if (updates.paymentStatus && updates.paymentStatus !== order.paymentStatus) {
+      historyPushOps.paymentStatusHistory = {
+        status: updates.paymentStatus,
+        updatedBy,
+        date: new Date(),
+      };
+    }
 
-    const updated = await Order.findByIdAndUpdate(id, updates, {
+    // Luu cac field thuong truoc
+    await Order.findByIdAndUpdate(id, { $set: updates });
 
-
-      returnDocument: "after",
-
-
-    });
-
-
-
-
+    // Neu co lich su moi thi push vao
+    let updated;
+    if (Object.keys(historyPushOps).length > 0) {
+      updated = await Order.findByIdAndUpdate(
+        id,
+        { $push: historyPushOps },
+        { returnDocument: 'after' }
+      );
+    } else {
+      updated = await Order.findById(id);
+    }
 
     res.json(updated);
 

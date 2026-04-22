@@ -695,13 +695,13 @@ const OrderDetail = () => {
                         }`}
                     >
                       <div className="flex items-start gap-4 flex-1">
-                        <label className={`flex flex-col items-center gap-1.5 pt-1 ${isLocked ? "cursor-not-allowed" : "cursor-pointer"}`} title="Đánh dấu sản phẩm bị mất">
+                        <label className={`flex flex-col items-center gap-1.5 pt-1 ${(isLocked || status !== 'fee_incurred') ? "cursor-not-allowed" : "cursor-pointer"}`} title={(isLocked) ? "Đơn hàng đã chốt" : (status !== 'fee_incurred') ? "Chỉ chọn được ở trạng thái 'Phát sinh phí'" : "Đánh dấu sản phẩm bị mất"}>
                           <input
                             type="checkbox"
                             checked={isLost}
-                            disabled={isLocked}
+                            disabled={isLocked || status !== 'fee_incurred'}
                             onChange={toggleLost}
-                            className={`w-4 h-4 rounded text-red-600 focus:ring-red-500 ${isLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+                            className={`w-4 h-4 rounded text-red-600 focus:ring-red-500 ${(isLocked || status !== 'fee_incurred') ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
                           />
                           <span className="text-[10px] text-red-500 font-bold uppercase leading-tight text-center">Mất</span>
                         </label>
@@ -777,9 +777,30 @@ const OrderDetail = () => {
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
                       </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        Người cập nhật: <span className="font-bold text-gray-800">{history.updatedBy || 'Hệ thống'}</span>
-                      </div>
+                      {/* Badge tài khoản thay đổi trạng thái */}
+                      {(() => {
+                        const who = history.updatedBy || 'Hệ thống';
+                        const isSystem = who === 'Hệ thống' || who === 'System';
+                        const isShipper = /shipper|ship/i.test(who);
+                        const isCustomer = /khách|customer|user/i.test(who);
+                        const badgeClass = isSystem
+                          ? 'bg-gray-100 text-gray-500 border-gray-200'
+                          : isShipper
+                            ? 'bg-purple-100 text-purple-700 border-purple-200'
+                            : isCustomer
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : 'bg-blue-100 text-blue-700 border-blue-200';
+                        const icon = isSystem ? '🤖' : isShipper ? '🚚' : isCustomer ? '👤' : '🛡️';
+                        return (
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase">Bởi:</span>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${badgeClass}`}>
+                              <span>{icon}</span>
+                              {who}
+                            </span>
+                          </div>
+                        );
+                      })()}
 
                       {/* Hiển thị đính kèm nếu là trạng thái 'returned' (Đã nhận đồ) */}
                       {history.status === 'returned' && (
@@ -1050,9 +1071,9 @@ const OrderDetail = () => {
                     { id: 'burn', label: 'Cháy/Thủng', fee: 200000 },
                     { id: 'lost_item', label: 'Mất đồ/Phụ kiện', fee: 300000 },
                   ].map(error => {
-                    const isDisabled = lostItemIds.length > 0 || (error.id !== 'lost_item' && selectedErrors.includes('lost_item'));
+                    const isDisabled = lostItemIds.length > 0 || (error.id !== 'lost_item' && selectedErrors.includes('lost_item')) || status !== 'fee_incurred';
                     return (
-                      <label key={error.id} className={`flex items-start gap-2.5 group ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                      <label key={error.id} className={`flex items-start gap-2.5 group ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} title={status !== 'fee_incurred' ? "Chỉ chọn được ở trạng thái 'Phát sinh phí'" : ""}>
                         <input
                           type="checkbox"
                           disabled={isDisabled}
@@ -1091,11 +1112,12 @@ const OrderDetail = () => {
                 <div className="relative">
                   <input
                     type="number"
-                    disabled={lostItemIds.length > 0 || selectedErrors.includes('lost_item')}
+                    disabled={lostItemIds.length > 0 || selectedErrors.includes('lost_item') || status !== 'fee_incurred'}
                     value={damageFee === 0 ? '' : damageFee}
                     onChange={(e) => setDamageFee(Number(e.target.value) || 0)}
                     placeholder="Nhập tổn thất khác..."
-                    className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white ${(lostItemIds.length > 0 || selectedErrors.includes('lost_item')) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white ${(lostItemIds.length > 0 || selectedErrors.includes('lost_item') || status !== 'fee_incurred') ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={status !== 'fee_incurred' ? "Chỉ nhập được ở trạng thái 'Phát sinh phí'" : ""}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">đ</span>
                 </div>
