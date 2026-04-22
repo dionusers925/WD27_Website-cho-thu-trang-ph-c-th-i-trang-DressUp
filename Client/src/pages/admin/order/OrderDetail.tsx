@@ -439,8 +439,13 @@ const OrderDetail = () => {
         <button
           onClick={handleUpdateOrder}
           disabled={isUpdating || isLocked}
-          className={`px-6 py-2 text-white rounded-lg font-bold text-sm transition-all ${isLocked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
-            }`}
+          className={`px-6 py-2 text-white rounded-lg font-bold text-sm transition-all ${
+            isLocked
+              ? "bg-gray-400 cursor-not-allowed"
+              : (status !== order.status || paymentStatus !== order.paymentStatus)
+                ? "bg-orange-500 hover:bg-orange-600 animate-pulse shadow-lg shadow-orange-200"
+                : "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+          }`}
           title={isLocked ? "Đơn hàng đã chốt và thanh toán hoàn tất, không thể chỉnh sửa" : ""}
         >
           {isUpdating ? "Đang lưu..." : isLocked ? "Đã chốt đơn" : "Lưu thay đổi"}
@@ -458,20 +463,24 @@ const OrderDetail = () => {
         </div>
         <div className="flex items-center gap-2">
           {/* Dropdown thay đổi trạng thái đơn hàng */}
+          {/* Bị khóa khi có thay đổi chưa lưu (status khác order.status đã lưu) */}
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            disabled={isLocked}
-            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${isLocked ? "opacity-70 cursor-not-allowed" : "cursor-pointer"} ${statusBadge(status)}`}
+            disabled={isLocked || status !== order.status}
+            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${
+              isLocked || status !== order.status ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+            } ${statusBadge(status)}`}
+            title={status !== order.status ? "Hãy lưu thay đổi trước khi chuyển sang trạng thái tiếp theo" : ""}
           >
             <option value="pending" disabled={!getAvailableStatuses(order.status).includes("pending")}>Chờ xử lý</option>
             <option value="confirmed" disabled={!getAvailableStatuses(order.status).includes("confirmed")}>Đã xác nhận</option>
             <option value="preparing" disabled={!getAvailableStatuses(order.status).includes("preparing")}>Đang chuẩn bị hàng</option>
             <option value="shipped" disabled={!getAvailableStatuses(order.status).includes("shipped")}>Đang giao</option>
-            <option value="delivered" disabled={order?.status !== "delivered"}>Đã giao (Shipper cập nhật)</option>
-            <option value="renting" disabled={order?.status !== "renting"}>Đang thuê (Khách cập nhật)</option>
-            <option value="returning" disabled={order?.status !== "returning"}>Đang trả đồ (Khách cập nhật)</option>
-            <option value="picked_up" disabled={order?.status !== "picked_up"}>Đã lấy đơn (Shipper cập nhật)</option>
+            <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao (Shipper cập nhật)</option>
+            <option value="renting" disabled={!getAvailableStatuses(order.status).includes("renting")}>Đang thuê (Khách cập nhật)</option>
+            <option value="returning" disabled={!getAvailableStatuses(order.status).includes("returning")}>Đang trả đồ (Khách cập nhật)</option>
+            <option value="picked_up" disabled={!getAvailableStatuses(order.status).includes("picked_up")}>Đã lấy đơn (Shipper cập nhật)</option>
             <option value="returned" disabled={!getAvailableStatuses(order.status).includes("returned")}>Đã nhận đồ</option>
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
             <option value="completed" disabled={!getAvailableStatuses(order.status).includes("completed")}>Hoàn tất</option>
@@ -479,11 +488,15 @@ const OrderDetail = () => {
           </select>
 
           {/* Dropdown thay đổi trạng thái thanh toán */}
+          {/* Bị khóa khi có thay đổi chưa lưu */}
           <select
             value={paymentStatus}
             onChange={(e) => setPaymentStatus(e.target.value)}
-            disabled={isLocked}
-            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${isLocked ? "opacity-70 cursor-not-allowed" : "cursor-pointer"} ${paymentBadge(paymentStatus)}`}
+            disabled={isLocked || paymentStatus !== order.paymentStatus}
+            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${
+              isLocked || paymentStatus !== order.paymentStatus ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+            } ${paymentBadge(paymentStatus)}`}
+            title={paymentStatus !== order.paymentStatus ? "Hãy lưu thay đổi trước khi chuyển sang trạng thái tiếp theo" : ""}
           >
             <option value="pending" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("pending")}>Chưa thanh toán</option>
             <option value="paid" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("paid")}>Đã thanh toán</option>
@@ -493,6 +506,26 @@ const OrderDetail = () => {
         </div>
       </div>
 
+      {/* BANNER CẢNH BÁO KHI CÓ TRẠNG THÁI CHƯA LƯU */}
+      {!isLocked && (status !== order.status || paymentStatus !== order.paymentStatus) && (
+        <div className="mb-4 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-sm font-semibold text-orange-700 shadow-sm">
+          <svg className="w-5 h-5 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <span>
+            Bạn đã chọn trạng thái mới —
+            <strong className="mx-1">hãy nhấn "Lưu thay đổi"</strong>
+            để xác nhận trước khi chuyển sang bước tiếp theo.
+          </span>
+          <button
+            onClick={handleUpdateOrder}
+            disabled={isUpdating}
+            className="ml-auto shrink-0 px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-60"
+          >
+            {isUpdating ? "Đang lưu..." : "Lưu ngay"}
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* CỘT TRÁI (Sản phẩm & Lịch sử) */}
         <div className="lg:col-span-2 space-y-6">

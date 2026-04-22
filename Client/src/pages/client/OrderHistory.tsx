@@ -273,7 +273,7 @@ export default function OrderHistory() {
                   )}
 
                   {/* Nút trả đồ - hiển thị khi đang thuê */}
-                  {(order.status === "delivered" || order.status === "renting") && (
+                  {order.status === "renting" && (
                     <button
                       onClick={() => handleReturnOrder(order._id)}
                       className="px-3 py-1.5 text-sm text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition"
