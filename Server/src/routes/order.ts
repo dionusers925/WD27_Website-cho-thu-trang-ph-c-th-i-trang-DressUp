@@ -1334,6 +1334,10 @@ const handleUpdateOrder = async (req: express.Request, res: express.Response) =>
       updates.adminReturnMedia = req.body.adminReturnMedia;
     }
 
+    if (typeof req.body.depositReturnProof === "string" && req.body.depositReturnProof.length > 0) {
+      updates.depositReturnProof = req.body.depositReturnProof;
+    }
+
 
 
 
