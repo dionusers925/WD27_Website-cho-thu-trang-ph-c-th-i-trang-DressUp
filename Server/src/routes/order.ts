@@ -52,6 +52,7 @@ const allowedStatuses = [
   "returned",
   "fee_incurred",
   "completed",
+  "laundry",
   "cancelled",
 ];
 
