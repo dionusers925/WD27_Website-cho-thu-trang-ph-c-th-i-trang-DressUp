@@ -102,11 +102,13 @@ const statusBadge = (status?: string) => {
   return styles[status ?? ""] || "bg-gray-100 text-gray-800";
 };
 
-const paymentStatusLabel = (value?: string) => {
+const paymentStatusLabel = (value?: string, orderStatus?: string) => {
   if (!value) return "Chưa thanh toán";
   if (value === "pending") return "Chưa thanh toán";
   if (value === "deposit_returned") return "Đã thanh toán";
-  if (value === "completed" || value === "success" || value === "paid") return "Hoàn thành";
+  if (value === "completed" || value === "success" || value === "paid") {
+    return orderStatus === "completed" ? "Hoàn thành" : "Đã thanh toán";
+  }
   return value;
 };
 
@@ -156,7 +158,7 @@ const getAvailablePaymentStatuses = (currentStatus?: string) => {
     case "paid":
     case "success":
     case "completed":
-      return ["success", "deposit_returned"];
+      return ["success"];
     case "deposit_returned":
       return ["deposit_returned", "success"];
     default:
@@ -494,7 +496,9 @@ const OrderDetail = () => {
           >
             <option value="pending" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("pending")}>Chưa thanh toán</option>
             <option value="deposit_returned" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("deposit_returned")}>Đã thanh toán</option>
-            <option value="success" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("success") || status !== 'completed'} title={status !== 'completed' ? "Chỉ chọn được khi trạng thái đơn hàng là 'Hoàn tất'" : ""}>Hoàn thành</option>
+            <option value="success" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("success") || status !== 'completed'} title={status !== 'completed' ? "Chỉ chọn được khi trạng thái đơn hàng là 'Hoàn tất'" : ""}>
+              {status === 'completed' ? "Hoàn thành" : "Đã thanh toán"}
+            </option>
           </select>
         </div>
       </div>
