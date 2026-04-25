@@ -44,9 +44,9 @@ export default function CartItem({
 
         {/* <div className="flex justify-between items-center text-[10px] uppercase tracking-widest text-gray-400">
           <span>Security Deposit (Tiền cọc)</span>
-          {/* <span className="text-black font-bold">
-            {product.depositDefault?.toLocaleString()} VNĐ
-          </span> 
+          <span className="text-black font-bold">
+            {item.deposit?.toLocaleString()} VNĐ
+          </span>
         </div> */}
 
         <div className="flex items-center gap-4 mt-4">

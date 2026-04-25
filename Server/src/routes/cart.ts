@@ -30,7 +30,7 @@ router.post("/cart", async (req, res) => {
       ? tier.price
       : (rentalPrices?.[0]?.price || 0) * days;
 
-    const deposit = product.depositDefault || 0;
+    const deposit = Number((product as any).depositPrice ?? product.depositDefault ?? 0) || 0;
 
     const total = deposit + rentalPrice;
 
