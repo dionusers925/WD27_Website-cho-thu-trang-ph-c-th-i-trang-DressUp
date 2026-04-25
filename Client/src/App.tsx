@@ -15,6 +15,7 @@ import ProductEdit from "./pages/admin/products/ProductEdit";
 import ProductDetail from "./pages/admin/products/ProductDetail";
 import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
 import StockHistoryDashboard from "./pages/admin/stock/StockHistoryDashboard";
+import ProductRevenueDashboard from "./pages/admin/ProductRevenueDashboard";
 
 
 import HomePage from "./pages/client/HomePage";
@@ -79,6 +80,7 @@ function App() {
             { path: "products/:id/edit", Component: ProductEdit },
             { path: "products/:id", Component: ProductDetail },
             { path: "stock-history", Component: StockHistoryDashboard },
+            { path: "revenue", Component: ProductRevenueDashboard },
 
             // REVIEWS
             { path: "reviews", Component: ReviewsDashboard },
