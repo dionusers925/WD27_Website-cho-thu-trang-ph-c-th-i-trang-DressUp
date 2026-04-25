@@ -25,6 +25,10 @@ const SidebarMenu = () => {
           label: "Tổng quan",
         },
         {
+          key: "total-revenue",
+          label: "Tổng doanh thu",
+        },
+        {
           key: "revenue",
           label: "Doanh thu sản phẩm",
         },
