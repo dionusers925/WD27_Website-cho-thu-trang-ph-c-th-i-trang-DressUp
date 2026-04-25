@@ -789,6 +789,7 @@ const OrdersDashboard = () => {
                 <input
                   type="date"
                   required
+                  min={new Date().toISOString().split("T")[0]}
                   className="w-full p-2 bg-gray-50 border rounded-xl"
                   value={newOrder.startDate}
                   onChange={(e) =>
@@ -798,6 +799,7 @@ const OrdersDashboard = () => {
                 <input
                   type="date"
                   required
+                  min={newOrder.startDate || new Date().toISOString().split("T")[0]}
                   className="w-full p-2 bg-gray-50 border rounded-xl"
                   value={newOrder.endDate}
                   onChange={(e) =>
