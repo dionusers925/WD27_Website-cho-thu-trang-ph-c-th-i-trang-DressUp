@@ -145,7 +145,7 @@ const getAvailableStatuses = (currentStatus?: string) => {
     case "renting": return ["renting", "returning"];
     case "returning": return ["returning", "picked_up"];
     case "picked_up": return ["picked_up", "returned"];
-    case "returned": return ["returned", "fee_incurred", "completed"];
+    case "returned": return ["returned", "fee_incurred"];
     case "fee_incurred": return ["fee_incurred", "completed"];
     case "completed": return ["completed"];
     case "laundry": return ["laundry"];
@@ -891,6 +891,23 @@ const OrderDetail = () => {
                               })}
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* Hiển thị minh chứng chuyển cọc nếu là trạng thái 'completed' (Hoàn tất) */}
+                      {history.status === 'completed' && order.depositReturnProof && (
+                        <div className="mt-3 bg-teal-50/50 border border-teal-100 rounded-lg p-3 shadow-sm">
+                          <div className="text-[10px] font-bold text-teal-600 uppercase mb-2 flex items-center gap-1.5">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                            Minh chứng chuyển cọc:
+                          </div>
+                          <div className="aspect-video w-32 rounded-md border border-teal-200 overflow-hidden bg-white shadow-sm hover:ring-2 hover:ring-teal-300 transition-all">
+                            <img
+                              src={order.depositReturnProof}
+                              className="w-full h-full object-cover cursor-pointer"
+                              onClick={() => window.open(order.depositReturnProof, '_blank')}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
