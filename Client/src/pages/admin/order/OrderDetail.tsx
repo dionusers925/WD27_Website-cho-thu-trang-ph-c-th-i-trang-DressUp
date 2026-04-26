@@ -100,6 +100,7 @@ const statusBadge = (status?: string) => {
     shipped: "bg-purple-100 text-purple-800",
     fee_incurred: "bg-orange-100 text-orange-800",
     laundry: "bg-violet-100 text-violet-800",
+    in_warehouse: "bg-fuchsia-100 text-fuchsia-800",
   };
   return styles[status ?? ""] || "bg-gray-100 text-gray-800";
 };
@@ -148,7 +149,8 @@ const getAvailableStatuses = (currentStatus?: string) => {
     case "returned": return ["returned", "fee_incurred"];
     case "fee_incurred": return ["fee_incurred", "completed"];
     case "completed": return ["completed"];
-    case "laundry": return ["laundry"];
+    case "laundry": return ["laundry", "in_warehouse"];
+    case "in_warehouse": return ["in_warehouse"];
     case "cancelled": return ["cancelled"];
     default: return ["pending", "confirmed", "cancelled"];
   }
@@ -386,6 +388,25 @@ const OrderDetail = () => {
     }
   };
 
+  const handleInWarehouse = async () => {
+    if (!window.confirm("Xác nhận đã nhập kho các sản phẩm trong đơn?")) return;
+    setIsUpdating(true);
+    try {
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      const updatedBy = userData?.name || userData?.email || "Quản trị viên";
+      const res = await axios.put(`http://localhost:3000/orders/${id}`, {
+        status: "in_warehouse",
+        updatedBy,
+      });
+      setOrder(res.data);
+      setStatus("in_warehouse");
+    } catch {
+      alert("Không thể cập nhật trạng thái. Vui lòng thử lại.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const items = useMemo(
     () => (Array.isArray(order?.items) ? order?.items : []),
     [order]
@@ -540,6 +561,7 @@ const OrderDetail = () => {
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
             <option value="completed" disabled={!getAvailableStatuses(order.status).includes("completed")}>Hoàn tất</option>
             <option value="laundry" disabled={!getAvailableStatuses(order.status).includes("laundry")}>Chờ về kho</option>
+            <option value="in_warehouse" disabled={!getAvailableStatuses(order.status).includes("in_warehouse")}>Đã về kho</option>
             <option value="cancelled" disabled={!getAvailableStatuses(order.status).includes("cancelled")}>Đã hủy</option>
           </select>
 
@@ -830,7 +852,8 @@ const OrderDetail = () => {
                                           history.status === 'fee_incurred' ? 'Phát sinh phí' :
                                             history.status === 'completed' ? 'Hoàn tất' :
                                               history.status === 'laundry' ? '🧺 Chờ về kho (Giặt là & Sửa chữa)' :
-                                                history.status === 'cancelled' ? 'Đã hủy' : history.status}
+                                                history.status === 'in_warehouse' ? '📥 Đã về kho' :
+                                                  history.status === 'cancelled' ? 'Đã hủy' : history.status}
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
                       </div>
@@ -1324,14 +1347,40 @@ const OrderDetail = () => {
 
             {/* TRẠNG THÁI LAUNDRY - Chờ về kho */}
             {order.status === "laundry" && (
-              <div className="mx-4 my-3 bg-violet-50 border border-violet-200 rounded-xl p-4 flex items-start gap-3">
-                <div className="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center shrink-0 text-xl">🧺</div>
-                <div className="flex-1">
-                  <div className="text-[11px] font-black text-violet-700 uppercase tracking-wider mb-1">
-                    Đang giặt là &amp; sửa chữa — Chờ về kho
+              <div className="mx-4 my-3 bg-violet-50 border border-violet-200 rounded-xl p-4 flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center shrink-0 text-xl">🧺</div>
+                  <div className="flex-1">
+                    <div className="text-[11px] font-black text-violet-700 uppercase tracking-wider mb-1">
+                      Đang giặt là &amp; sửa chữa — Chờ về kho
+                    </div>
+                    <div className="text-xs text-violet-600/80">
+                      Đơn hàng đang trong quá trình xử lý sau thuê. Trang phục sẽ được giặt là, kiểm tra và nhập kho sau khi hoàn thành.
+                    </div>
                   </div>
-                  <div className="text-xs text-violet-600/80">
-                    Đơn hàng đang trong quá trình xử lý sau thuê. Trang phục sẽ được giặt là, kiểm tra và nhập kho sau khi hoàn thành.
+                </div>
+                {status === "laundry" && (
+                  <button
+                    onClick={handleInWarehouse}
+                    disabled={isUpdating}
+                    className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-fuchsia-500 to-fuchsia-600 hover:from-fuchsia-600 hover:to-fuchsia-700 text-white rounded-lg font-bold text-sm shadow-md shadow-fuchsia-200 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? "Đang xử lý..." : "📥 Xác nhận Đã Về Kho"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* TRẠNG THÁI IN_WAREHOUSE - Đã về kho */}
+            {order.status === "in_warehouse" && (
+              <div className="mx-4 my-3 bg-fuchsia-50 border border-fuchsia-200 rounded-xl p-4 flex items-start gap-3">
+                <div className="w-9 h-9 bg-fuchsia-100 rounded-full flex items-center justify-center shrink-0 text-xl">📥</div>
+                <div className="flex-1">
+                  <div className="text-[11px] font-black text-fuchsia-700 uppercase tracking-wider mb-1">
+                    Đã về kho an toàn
+                  </div>
+                  <div className="text-xs text-fuchsia-600/80">
+                    Sản phẩm trong đơn hàng đã hoàn tất quá trình kiểm tra, giặt là và được nhập lại vào kho để sẵn sàng cho các đơn hàng tiếp theo.
                   </div>
                 </div>
               </div>

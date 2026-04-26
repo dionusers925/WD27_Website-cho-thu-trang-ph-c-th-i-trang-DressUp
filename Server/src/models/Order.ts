@@ -69,6 +69,7 @@ export interface IOrder extends Document {
     | "fee_incurred"
     | "completed"
     | "laundry"
+    | "in_warehouse"
     | "cancelled";
 
   deliveryProof?: string;
@@ -154,6 +155,7 @@ const orderSchema: Schema = new Schema(
         "fee_incurred",
         "completed",
         "laundry",
+        "in_warehouse",
         "cancelled",
       ],
       default: "pending",
