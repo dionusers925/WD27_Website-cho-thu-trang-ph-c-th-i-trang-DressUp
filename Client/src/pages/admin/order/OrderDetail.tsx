@@ -532,10 +532,10 @@ const OrderDetail = () => {
             <option value="confirmed" disabled={!getAvailableStatuses(order.status).includes("confirmed")}>Đã xác nhận</option>
             <option value="preparing" disabled={!getAvailableStatuses(order.status).includes("preparing")}>Đang chuẩn bị hàng</option>
             <option value="shipped" disabled={!getAvailableStatuses(order.status).includes("shipped")}>Đang giao</option>
-            <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao (Shipper cập nhật)</option>
+            <option value="delivered" disabled={true} title="Chỉ Shipper mới có thể cập nhật trạng thái này">Đã giao (Shipper cập nhật)</option>
             <option value="renting" disabled={!getAvailableStatuses(order.status).includes("renting")}>Đang thuê (Khách cập nhật)</option>
             <option value="returning" disabled={!getAvailableStatuses(order.status).includes("returning")}>Đang trả đồ (Khách cập nhật)</option>
-            <option value="picked_up" disabled={!getAvailableStatuses(order.status).includes("picked_up")}>Đã lấy đơn (Shipper cập nhật)</option>
+            <option value="picked_up" disabled={true} title="Chỉ Shipper mới có thể cập nhật trạng thái này">Đã lấy đơn (Shipper cập nhật)</option>
             <option value="returned" disabled={!getAvailableStatuses(order.status).includes("returned")}>Đã nhận đồ</option>
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
             <option value="completed" disabled={!getAvailableStatuses(order.status).includes("completed")}>Hoàn tất</option>
