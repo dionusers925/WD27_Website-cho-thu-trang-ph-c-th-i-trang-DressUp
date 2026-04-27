@@ -33,17 +33,11 @@ export interface IShippingAddress {
   country?: string;
 }
 
-export interface IStatusHistory {
-  status: string;
-  timestamp: Date;
-  changedBy: string;
-  notes?: string;
-}
-
 export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;
   orderNumber: string;
   items: IOrderItem[];
+
   customerInfo?: {
     fullName: string;
     email: string;
@@ -51,7 +45,9 @@ export interface IOrder extends Document {
     address: string;
     note?: string;
   };
+
   shippingAddress?: IShippingAddress;
+
   subtotal: number;
   discount: number;
   shippingFee: number;
@@ -59,25 +55,65 @@ export interface IOrder extends Document {
   couponDiscount: number;
   totalDeposit: number;
   total: number;
+
   paymentMethod: string;
   paymentStatus: string;
-  status: string;
-  statusHistory: IStatusHistory[];
+
+  status:
+    | "pending"
+    | "confirmed"
+    | "preparing"
+    | "shipped"
+    | "delivered"
+    | "renting"
+    | "returning"
+    | "picked_up"
+    | "returned"
+    | "fee_incurred"
+    | "completed"
+    | "laundry"
+    | "in_warehouse"
+    | "cancelled";
+
+  // media & proof
+  deliveryProof?: string;
+  returnMedia?: string[];
+  adminReturnMedia?: string[];
+  depositReturnProof?: string;
+
+  vnpTransactionNo?: string;
+
+  // history
+  statusHistory?: Array<{
+    status: string;
+    updatedBy?: string;
+    date: Date;
+  }>;
+
+  paymentStatusHistory?: Array<{
+    status: string;
+    updatedBy?: string;
+    date: Date;
+  }>;
+
+  // business fields từ HEAD
   notes?: string;
   pickupDeadline?: Date;
   lateFee: number;
   depositRefunded?: number;
+
   confirmedAt?: Date;
   shippedAt?: Date;
   deliveredAt?: Date;
   actualReturnDate?: Date;
   returnedAt?: Date;
   inspectedAt?: Date;
+
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Sub-schemas
+// ===== Sub schemas =====
 const orderItemRentalSchema = new Schema<IOrderItemRental>({
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
@@ -93,11 +129,11 @@ const orderItemVariantSchema = new Schema<IOrderItemVariant>({
 const orderItemSchema = new Schema<IOrderItem>({
   productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
   name: { type: String, required: true },
-  image: { type: String },
+  image: String,
   rental: { type: orderItemRentalSchema, required: true },
   variant: { type: orderItemVariantSchema, required: true },
-  deposit: { type: Number, required: true, default: 0 },
-  quantity: { type: Number, required: true, default: 1 },
+  deposit: { type: Number, default: 0 },
+  quantity: { type: Number, default: 1 },
   lineTotal: { type: Number, required: true }
 });
 
@@ -111,51 +147,83 @@ const shippingAddressSchema = new Schema<IShippingAddress>({
   country: String
 });
 
-const statusHistorySchema = new Schema<IStatusHistory>({
-  status: { type: String, required: true },
-  timestamp: { type: Date, default: Date.now },
-  changedBy: { type: String, default: "Hệ thống" },
-  notes: String
-});
-
-// Main Order Schema
+// ===== Main schema =====
 const orderSchema: Schema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     orderNumber: { type: String, required: true, unique: true },
-    
+
     items: { type: [orderItemSchema], required: true },
-    
+
     shippingAddress: { type: shippingAddressSchema },
-    
-    subtotal: { type: Number, required: true, default: 0 },
+
+    subtotal: { type: Number, default: 0 },
     discount: { type: Number, default: 0 },
     shippingFee: { type: Number, default: 0 },
     serviceFee: { type: Number, default: 0 },
     couponDiscount: { type: Number, default: 0 },
-    totalDeposit: { type: Number, required: true, default: 0 },
+    totalDeposit: { type: Number, default: 0 },
     total: { type: Number, required: true },
-    
+
     paymentMethod: { type: String, default: "cod" },
     paymentStatus: { type: String, default: "pending" },
-    
-    status: { type: String, default: "pending" },
-    
-    statusHistory: { type: [statusHistorySchema], default: [] },
-    
-    notes: { type: String },
-    
+
+    status: {
+      type: String,
+      enum: [
+        "pending",
+        "confirmed",
+        "preparing",
+        "shipped",
+        "delivered",
+        "renting",
+        "returning",
+        "picked_up",
+        "returned",
+        "fee_incurred",
+        "completed",
+        "laundry",
+        "in_warehouse",
+        "cancelled",
+      ],
+      default: "pending",
+    },
+
+    deliveryProof: { type: String, default: "" },
+    returnMedia: { type: [String], default: [] },
+    adminReturnMedia: { type: [String], default: [] },
+    depositReturnProof: { type: String, default: "" },
+
+    vnpTransactionNo: { type: String, default: "" },
+
+    statusHistory: [
+      {
+        status: String,
+        date: { type: Date, default: Date.now },
+        updatedBy: String,
+      },
+    ],
+
+    paymentStatusHistory: [
+      {
+        status: String,
+        date: { type: Date, default: Date.now },
+        updatedBy: String,
+      },
+    ],
+
+    // giữ từ HEAD
+    notes: String,
     pickupDeadline: Date,
-    
     lateFee: { type: Number, default: 0 },
-    depositRefunded: { type: Number },
-    
+    depositRefunded: Number,
+
     confirmedAt: Date,
     shippedAt: Date,
     deliveredAt: Date,
     actualReturnDate: Date,
     returnedAt: Date,
-    inspectedAt: Date
+    inspectedAt: Date,
   },
   { timestamps: true }
 );

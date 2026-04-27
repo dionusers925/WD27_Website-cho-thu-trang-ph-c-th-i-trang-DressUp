@@ -343,6 +343,9 @@ export default function OrderHistory() {
                     </button>
                   )}
 
+
+                  {/* Nút trả đồ - hiển thị khi đang thuê */}
+
                   {order.status === "renting" && (
                     <button
                       onClick={() => handleReturnOrder(order._id)}

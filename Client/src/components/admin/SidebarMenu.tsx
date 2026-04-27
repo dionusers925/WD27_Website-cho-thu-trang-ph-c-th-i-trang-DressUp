@@ -6,16 +6,33 @@ import {
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Menu } from "antd";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 type MenuItem = Required<MenuProps>["items"][number];
 
 const SidebarMenu = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const items: MenuItem[] = [
     {
-      key: "/",
+      key: "dashboard-group",
       icon: <DashboardOutlined />,
       label: "Dashboard",
+      children: [
+        {
+          key: "",
+          label: "Tổng quan",
+        },
+        {
+          key: "total-revenue",
+          label: "Tổng doanh thu",
+        },
+        {
+          key: "revenue",
+          label: "Doanh thu sản phẩm",
+        },
+      ],
     },
     {
       key: "order",
@@ -49,15 +66,20 @@ const SidebarMenu = () => {
     },
   ];
 
-  const navigate = useNavigate();
-
   const handleClick = ({ key }: any) => {
-    navigate(`/admin/${key}`);
+    if (key === "") {
+      navigate(`/admin`);
+    } else {
+      navigate(`/admin/${key}`);
+    }
   };
+
+  const currentPath = location.pathname.replace("/admin", "").replace(/^\//, "");
 
   return (
     <Menu
-      defaultSelectedKeys={["dashboard"]}
+      defaultSelectedKeys={[currentPath]}
+      defaultOpenKeys={["dashboard-group"]}
       mode="inline"
       theme="dark"
       items={items}

@@ -47,6 +47,9 @@ const OrdersDashboard = () => {
   const [currentColor, setCurrentColor] = useState("");
   const [searchProductTerm, setSearchProductTerm] = useState("");
   const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [searchOrderCode, setSearchOrderCode] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   const normalizeProduct = (p: any): Product => {
     const rentalTiers = Array.isArray(p?.rentalTiers)
@@ -304,6 +307,20 @@ const OrdersDashboard = () => {
     setNewOrder(updatedOrder);
   };
 
+  const filteredOrders = orders.filter((order: any) => {
+    if (!searchOrderCode) return true;
+    const shortId = order._id?.slice(-6).toUpperCase() || "";
+    const fullId = order._id?.toUpperCase() || "";
+    const term = searchOrderCode.toUpperCase().trim();
+    return shortId.includes(term) || fullId.includes(term);
+  });
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const currentOrders = filteredOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="p-8 bg-gray-50 min-h-screen font-sans">
       <div className="flex justify-between items-center mb-6">
@@ -325,9 +342,22 @@ const OrdersDashboard = () => {
             <span className="text-xl">+</span> Tạo đơn trực tiếp
           </button>
           <span className="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-lg text-sm font-bold border border-blue-200">
-            Tổng số: {orders.length}
+            Tổng số: {filteredOrders.length}
           </span>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Tìm kiếm theo mã đơn hàng..."
+          className="w-full md:w-1/3 p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm outline-none focus:ring-2 focus:ring-blue-500"
+          value={searchOrderCode}
+          onChange={(e) => {
+            setSearchOrderCode(e.target.value);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
@@ -343,7 +373,7 @@ const OrdersDashboard = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {orders.map((order: any) => (
+            {currentOrders.map((order: any) => (
               <tr key={order._id} className="hover:bg-gray-50 transition">
                 <td className="p-4 font-mono text-sm text-blue-600 font-semibold">
                   {order._id?.slice(-6).toUpperCase()}
@@ -392,6 +422,28 @@ const OrdersDashboard = () => {
             ))}
           </tbody>
         </table>
+
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 p-4 border-t border-gray-200 bg-gray-50">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-600 disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
+            >
+              Trước
+            </button>
+            <span className="text-sm text-gray-700 font-bold px-4">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-600 disabled:opacity-50 transition-all hover:bg-gray-50 active:scale-95"
+            >
+              Sau
+            </button>
+          </div>
+        )}
       </div>
 
       {showModal && (
@@ -737,6 +789,7 @@ const OrdersDashboard = () => {
                 <input
                   type="date"
                   required
+                  min={new Date().toISOString().split("T")[0]}
                   className="w-full p-2 bg-gray-50 border rounded-xl"
                   value={newOrder.startDate}
                   onChange={(e) =>
@@ -746,6 +799,7 @@ const OrdersDashboard = () => {
                 <input
                   type="date"
                   required
+                  min={newOrder.startDate || new Date().toISOString().split("T")[0]}
                   className="w-full p-2 bg-gray-50 border rounded-xl"
                   value={newOrder.endDate}
                   onChange={(e) =>

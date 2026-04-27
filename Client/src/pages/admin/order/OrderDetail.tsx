@@ -80,6 +80,7 @@ interface Order {
   deliveryProof?: string;
   returnMedia?: string[];
   adminReturnMedia?: string[];
+  depositReturnProof?: string;
   penaltyNote?: string;
 }
 
@@ -107,23 +108,25 @@ const statusBadge = (status?: string) => {
     preparing: "bg-sky-100 text-sky-800",
     shipped: "bg-purple-100 text-purple-800",
     fee_incurred: "bg-orange-100 text-orange-800",
+    laundry: "bg-violet-100 text-violet-800",
+    in_warehouse: "bg-fuchsia-100 text-fuchsia-800",
   };
   return styles[status ?? ""] || "bg-gray-100 text-gray-800";
 };
 
-const paymentStatusLabel = (value?: string) => {
-  if (!value) return "Chưa thanh toánn";
+const paymentStatusLabel = (value?: string, orderStatus?: string) => {
+  if (!value) return "Chưa thanh toán";
   if (value === "pending") return "Chưa thanh toán";
-  if (value === "paid") return "Đã thanh toán";
-  if (value === "deposit_returned") return "Đã hoàn cọc";
-  if (value === "completed" || value === "success") return "Hoàn thành";
+  if (value === "deposit_returned") return "Đã thanh toán";
+  if (value === "completed" || value === "success" || value === "paid") {
+    return orderStatus === "completed" ? "Hoàn thành" : "Đã thanh toán";
+  }
   return value;
 };
 
 const paymentBadge = (value?: string) => {
-  if (value === "paid") return "bg-green-100 text-green-800";
+  if (value === "paid" || value === "completed" || value === "success") return "bg-emerald-100 text-emerald-800";
   if (value === "deposit_returned") return "bg-teal-100 text-teal-800";
-  if (value === "completed" || value === "success") return "bg-emerald-100 text-emerald-800";
   return "bg-gray-100 text-gray-800";
 };
 
@@ -143,44 +146,37 @@ const calcRentalDays = (start?: string, end?: string) => {
 };
 
 const getAvailableStatuses = (currentStatus?: string) => {
-  const statuses = [
-    "pending",
-    "confirmed",
-    "preparing",
-    "shipped",
-    "delivered",
-    "renting",
-    "returning",
-    "picked_up",
-    "returned",
-    "fee_incurred",
-    "completed",
-    "cancelled",
-  ];
-  const currentIndex = statuses.indexOf(currentStatus || "pending");
-
-  if (currentIndex === -1) return statuses;
-  if (currentStatus === "completed") return ["completed"];
-  if (currentStatus === "fee_incurred") return ["fee_incurred"];
-  if (currentStatus === "cancelled") return ["cancelled"];
-
-  // Trả về trạng thái hiện tại và tất cả các trạng thái phía sau nó
-  return statuses.slice(currentIndex);
+  switch (currentStatus) {
+    case "pending": return ["pending", "confirmed", "cancelled"];
+    case "confirmed": return ["confirmed", "preparing", "cancelled"];
+    case "preparing": return ["preparing", "shipped", "cancelled"];
+    case "shipped": return ["shipped", "delivered"];
+    case "delivered": return ["delivered", "renting"];
+    case "renting": return ["renting", "returning"];
+    case "returning": return ["returning", "picked_up"];
+    case "picked_up": return ["picked_up", "returned"];
+    case "returned": return ["returned", "fee_incurred"];
+    case "fee_incurred": return ["fee_incurred", "completed"];
+    case "completed": return ["completed"];
+    case "laundry": return ["laundry", "in_warehouse"];
+    case "in_warehouse": return ["in_warehouse"];
+    case "cancelled": return ["cancelled"];
+    default: return ["pending", "confirmed", "cancelled"];
+  }
 };
 
 const getAvailablePaymentStatuses = (currentStatus?: string) => {
   switch (currentStatus) {
     case "pending":
-      return ["pending", "paid", "deposit_returned", "success"];
+      return ["pending", "deposit_returned", "success"];
     case "paid":
-      return ["paid", "deposit_returned", "success"];
-    case "deposit_returned":
-      return ["deposit_returned", "success"];
     case "success":
     case "completed":
-      return [currentStatus];
+      return ["success"];
+    case "deposit_returned":
+      return ["deposit_returned", "success"];
     default:
-      return ["pending", "paid", "deposit_returned", "success"];
+      return ["pending", "deposit_returned", "success"];
   }
 };
 
@@ -207,11 +203,16 @@ const OrderDetail = () => {
   const adminFileInputRef = useRef<HTMLInputElement>(null);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
+  // Deposit return proof
+  const [depositReturnFile, setDepositReturnFile] = useState<{ file: File; preview: string } | null>(null);
+  const depositReturnInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingDepositProof, setIsUploadingDepositProof] = useState(false);
+
   // Kiểm tra đơn đã chốt cứng chưa (không cho sửa)
   const isLocked = useMemo(() => {
     if (!order) return false;
-    const isTerminalStatus = order.status === "fee_incurred" || order.status === "completed";
-    const isPaymentDone = order.paymentStatus === "success" || order.paymentStatus === "paid" || order.paymentStatus === "completed";
+    const isTerminalStatus = order.status === "completed";
+    const isPaymentDone = order.paymentStatus === "success" || order.paymentStatus === "completed";
     return isTerminalStatus && isPaymentDone;
   }, [order]);
 
@@ -306,7 +307,7 @@ const OrderDetail = () => {
         setIsUploadingMedia(false);
       }
 
-      const res = await axios.put(`http://localhost:3000/orders/${id}`, {
+      const payload: any = {
         lateFee,
         damageFee,
         status,
@@ -317,7 +318,26 @@ const OrderDetail = () => {
         adminReturnMedia: uploadedUrls,
         penaltyNote: penaltyNoteState,
         updatedBy
-      });
+      };
+
+      // Upload deposit return proof if selected
+      if (status === "completed" && depositReturnFile) {
+        setIsUploadingDepositProof(true);
+        try {
+          const res = await axios.post("http://localhost:3000/api/uploads", {
+            dataUrl: depositReturnFile.preview,
+            fileName: depositReturnFile.file.name
+          });
+          if (res.data.url) {
+            payload.depositReturnProof = res.data.url;
+          }
+        } catch (uploadErr) {
+          console.error("Lỗi upload minh chứng chuyển cọc:", uploadErr);
+        }
+        setIsUploadingDepositProof(false);
+      }
+
+      const res = await axios.put(`http://localhost:3000/orders/${id}`, payload);
       setOrder(res.data); // Cập nhật lại UI sau khi lưu thành công
       setAdminFiles([]); // Clear local files after upload
       alert("Cập nhật đơn hàng thành công!");
@@ -344,6 +364,56 @@ const OrderDetail = () => {
 
   const removeAdminFile = (idx: number) => {
     setAdminFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleDepositReturnFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (re) => {
+        setDepositReturnFile({ file, preview: re.target?.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+    e.target.value = "";
+  };
+
+  const handleLaundry = async () => {
+    if (!window.confirm("Xác nhận chuyển đơn sang trạng thái \"Giặt là & Sửa chữa - Chờ về kho\"?")) return;
+    setIsUpdating(true);
+    try {
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      const updatedBy = userData?.name || userData?.email || "Quản trị viên";
+      const res = await axios.put(`http://localhost:3000/orders/${id}`, {
+        status: "laundry",
+        updatedBy,
+      });
+      setOrder(res.data);
+      setStatus("laundry");
+    } catch {
+      alert("Không thể cập nhật trạng thái. Vui lòng thử lại.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleInWarehouse = async () => {
+    if (!window.confirm("Xác nhận đã nhập kho các sản phẩm trong đơn?")) return;
+    setIsUpdating(true);
+    try {
+      const userData = JSON.parse(localStorage.getItem("user") || "{}");
+      const updatedBy = userData?.name || userData?.email || "Quản trị viên";
+      const res = await axios.put(`http://localhost:3000/orders/${id}`, {
+        status: "in_warehouse",
+        updatedBy,
+      });
+      setOrder(res.data);
+      setStatus("in_warehouse");
+    } catch {
+      alert("Không thể cập nhật trạng thái. Vui lòng thử lại.");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const items = useMemo(
@@ -455,12 +525,16 @@ const OrderDetail = () => {
         {/* Nút lưu tích hợp cả phí và trạng thái */}
         <button
           onClick={handleUpdateOrder}
-          disabled={isUpdating || isLocked}
-          className={`px-6 py-2 text-white rounded-lg font-bold text-sm transition-all ${isLocked ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+          disabled={isUpdating || (isLocked && paymentStatus === order.paymentStatus)}
+          className={`px-6 py-2 text-white rounded-lg font-bold text-sm transition-all ${isLocked && paymentStatus === order.paymentStatus
+              ? "bg-gray-400 cursor-not-allowed"
+              : (status !== order.status || paymentStatus !== order.paymentStatus)
+                ? "bg-orange-500 hover:bg-orange-600 animate-pulse shadow-lg shadow-orange-200"
+                : "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
             }`}
-          title={isLocked ? "Đơn hàng đã chốt và thanh toán hoàn tất, không thể chỉnh sửa" : ""}
+          title={isLocked && paymentStatus === order.paymentStatus ? "Đơn hàng đã chốt và thanh toán hoàn tất, không thể chỉnh sửa" : ""}
         >
-          {isUpdating ? "Đang lưu..." : isLocked ? "Đã chốt đơn" : "Lưu thay đổi"}
+          {isUpdating ? "Đang lưu..." : (isLocked && paymentStatus === order.paymentStatus) ? "Đã chốt đơn" : "Lưu thay đổi"}
         </button>
       </div>
 
@@ -475,41 +549,70 @@ const OrderDetail = () => {
         </div>
         <div className="flex items-center gap-2">
           {/* Dropdown thay đổi trạng thái đơn hàng */}
+          {/* Bị khóa khi có thay đổi chưa lưu (status khác order.status đã lưu) */}
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            disabled={isLocked}
-            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${isLocked ? "opacity-70 cursor-not-allowed" : "cursor-pointer"} ${statusBadge(status)}`}
+            disabled={isLocked || status !== order.status}
+            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${isLocked || status !== order.status ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+              } ${statusBadge(status)}`}
+            title={status !== order.status ? "Hãy lưu thay đổi trước khi chuyển sang trạng thái tiếp theo" : ""}
           >
             <option value="pending" disabled={!getAvailableStatuses(order.status).includes("pending")}>Chờ xử lý</option>
             <option value="confirmed" disabled={!getAvailableStatuses(order.status).includes("confirmed")}>Đã xác nhận</option>
             <option value="preparing" disabled={!getAvailableStatuses(order.status).includes("preparing")}>Đang chuẩn bị hàng</option>
             <option value="shipped" disabled={!getAvailableStatuses(order.status).includes("shipped")}>Đang giao</option>
-            <option value="delivered" disabled={!getAvailableStatuses(order.status).includes("delivered")}>Đã giao</option>
-            <option value="renting" disabled={!getAvailableStatuses(order.status).includes("renting")}>Đang thuê</option>
-            <option value="returning" disabled={!getAvailableStatuses(order.status).includes("returning")}>Đang trả đồ</option>
-            <option value="picked_up" disabled={!getAvailableStatuses(order.status).includes("picked_up")}>Đã lấy đơn</option>
+            <option value="delivered" disabled={true} title="Chỉ Shipper mới có thể cập nhật trạng thái này">Đã giao (Shipper cập nhật)</option>
+            <option value="renting" disabled={true} title="Chỉ Khách hàng mới có thể cập nhật trạng thái này">Đang thuê (Khách cập nhật)</option>
+            <option value="returning" disabled={true} title="Chỉ Khách hàng mới có thể cập nhật trạng thái này">Đang trả đồ (Khách cập nhật)</option>
+            <option value="picked_up" disabled={true} title="Chỉ Shipper mới có thể cập nhật trạng thái này">Đã lấy đơn (Shipper cập nhật)</option>
             <option value="returned" disabled={!getAvailableStatuses(order.status).includes("returned")}>Đã nhận đồ</option>
             <option value="fee_incurred" disabled={!getAvailableStatuses(order.status).includes("fee_incurred")}>Phát sinh phí</option>
             <option value="completed" disabled={!getAvailableStatuses(order.status).includes("completed")}>Hoàn tất</option>
+            <option value="laundry" disabled={!getAvailableStatuses(order.status).includes("laundry")}>Chờ về kho</option>
+            <option value="in_warehouse" disabled={!getAvailableStatuses(order.status).includes("in_warehouse")}>Đã về kho</option>
             <option value="cancelled" disabled={!getAvailableStatuses(order.status).includes("cancelled")}>Đã hủy</option>
           </select>
 
           {/* Dropdown thay đổi trạng thái thanh toán */}
+          {/* Bị khóa khi có thay đổi chưa lưu */}
           <select
             value={paymentStatus}
             onChange={(e) => setPaymentStatus(e.target.value)}
-            disabled={isLocked}
-            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${isLocked ? "opacity-70 cursor-not-allowed" : "cursor-pointer"} ${paymentBadge(paymentStatus)}`}
+            disabled={paymentStatus !== order.paymentStatus}
+            className={`px-3 py-1 rounded-full text-xs font-semibold outline-none border-none shadow-sm ${paymentStatus !== order.paymentStatus ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+              } ${paymentBadge(paymentStatus)}`}
+            title={paymentStatus !== order.paymentStatus ? "Hãy lưu thay đổi trước khi chuyển sang trạng thái tiếp theo" : ""}
           >
             <option value="pending" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("pending")}>Chưa thanh toán</option>
-            <option value="paid" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("paid")}>Đã thanh toán</option>
-            <option value="deposit_returned" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("deposit_returned")}>Đã hoàn cọc</option>
-            <option value="success" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("success")}>Hoàn thành</option>
+            <option value="deposit_returned" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("deposit_returned")}>Đã thanh toán</option>
+            <option value="success" disabled={!getAvailablePaymentStatuses(order.paymentStatus).includes("success") || status !== 'completed'} title={status !== 'completed' ? "Chỉ chọn được khi trạng thái đơn hàng là 'Hoàn tất'" : ""}>
+              {status === 'completed' ? "Hoàn thành" : "Đã thanh toán"}
+            </option>
           </select>
         </div>
       </div>
 
+      {/* BANNER CẢNH BÁO KHI CÓ TRẠNG THÁI CHƯA LƯU */}
+      {!isLocked && (status !== order.status || paymentStatus !== order.paymentStatus) && (
+        <div className="mb-4 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-sm font-semibold text-orange-700 shadow-sm">
+          <svg className="w-5 h-5 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <span>
+            Bạn đã chọn trạng thái mới —
+            <strong className="mx-1">hãy nhấn "Lưu thay đổi"</strong>
+            để xác nhận trước khi chuyển sang bước tiếp theo.
+          </span>
+          <button
+            onClick={handleUpdateOrder}
+            disabled={isUpdating}
+            className="ml-auto shrink-0 px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-60"
+          >
+            {isUpdating ? "Đang lưu..." : "Lưu ngay"}
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* CỘT TRÁI (Sản phẩm & Lịch sử) */}
         <div className="lg:col-span-2 space-y-6">
@@ -713,13 +816,13 @@ const OrderDetail = () => {
                         }`}
                     >
                       <div className="flex items-start gap-4 flex-1">
-                        <label className={`flex flex-col items-center gap-1.5 pt-1 ${isLocked ? "cursor-not-allowed" : "cursor-pointer"}`} title="Đánh dấu sản phẩm bị mất">
+                        <label className={`flex flex-col items-center gap-1.5 pt-1 ${(isLocked || status !== 'fee_incurred') ? "cursor-not-allowed" : "cursor-pointer"}`} title={(isLocked) ? "Đơn hàng đã chốt" : (status !== 'fee_incurred') ? "Chỉ chọn được ở trạng thái 'Phát sinh phí'" : "Đánh dấu sản phẩm bị mất"}>
                           <input
                             type="checkbox"
                             checked={isLost}
-                            disabled={isLocked}
+                            disabled={isLocked || status !== 'fee_incurred'}
                             onChange={toggleLost}
-                            className={`w-4 h-4 rounded text-red-600 focus:ring-red-500 ${isLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+                            className={`w-4 h-4 rounded text-red-600 focus:ring-red-500 ${(isLocked || status !== 'fee_incurred') ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
                           />
                           <span className="text-[10px] text-red-500 font-bold uppercase leading-tight text-center">Mất</span>
                         </label>
@@ -791,13 +894,36 @@ const OrderDetail = () => {
                                         history.status === 'returned' ? 'Đã nhận đồ' :
                                           history.status === 'fee_incurred' ? 'Phát sinh phí' :
                                             history.status === 'completed' ? 'Hoàn tất' :
-                                              history.status === 'cancelled' ? 'Đã hủy' : history.status}
+                                              history.status === 'laundry' ? '🧺 Chờ về kho (Giặt là & Sửa chữa)' :
+                                                history.status === 'in_warehouse' ? '📥 Đã về kho' :
+                                                  history.status === 'cancelled' ? 'Đã hủy' : history.status}
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
                       </div>
-                      <div className="text-sm text-gray-600 mb-2">
-                        Người cập nhật: <span className="font-bold text-gray-800">{history.updatedBy || 'Hệ thống'}</span>
-                      </div>
+                      {/* Badge tài khoản thay đổi trạng thái */}
+                      {(() => {
+                        const who = history.updatedBy || 'Hệ thống';
+                        const isSystem = who === 'Hệ thống' || who === 'System';
+                        const isShipper = /shipper|ship/i.test(who);
+                        const isCustomer = /khách|customer|user/i.test(who);
+                        const badgeClass = isSystem
+                          ? 'bg-gray-100 text-gray-500 border-gray-200'
+                          : isShipper
+                            ? 'bg-purple-100 text-purple-700 border-purple-200'
+                            : isCustomer
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : 'bg-blue-100 text-blue-700 border-blue-200';
+                        const icon = isSystem ? '🤖' : isShipper ? '🚚' : isCustomer ? '👤' : '🛡️';
+                        return (
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-[10px] font-semibold text-gray-400 uppercase">Bởi:</span>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold border ${badgeClass}`}>
+                              <span>{icon}</span>
+                              {who}
+                            </span>
+                          </div>
+                        );
+                      })()}
 
                       {/* Hiển thị đính kèm nếu là trạng thái 'returned' (Đã nhận đồ) */}
                       {history.status === 'returned' && (
@@ -831,6 +957,23 @@ const OrderDetail = () => {
                               })}
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* Hiển thị minh chứng chuyển cọc nếu là trạng thái 'completed' (Hoàn tất) */}
+                      {history.status === 'completed' && order.depositReturnProof && (
+                        <div className="mt-3 bg-teal-50/50 border border-teal-100 rounded-lg p-3 shadow-sm">
+                          <div className="text-[10px] font-bold text-teal-600 uppercase mb-2 flex items-center gap-1.5">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                            Minh chứng chuyển cọc:
+                          </div>
+                          <div className="aspect-video w-32 rounded-md border border-teal-200 overflow-hidden bg-white shadow-sm hover:ring-2 hover:ring-teal-300 transition-all">
+                            <img
+                              src={order.depositReturnProof}
+                              className="w-full h-full object-cover cursor-pointer"
+                              onClick={() => window.open(order.depositReturnProof, '_blank')}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -944,14 +1087,14 @@ const OrderDetail = () => {
                           <span className="w-2 h-2 bg-orange-500 rounded-full animate-ping"></span>
                           Đang chuẩn bị {adminFiles.length} tệp:
                         </div>
-                        <button 
+                        <button
                           onClick={() => setAdminFiles([])}
                           className="text-[10px] font-bold text-gray-400 hover:text-red-500 uppercase tracking-widest transition-colors"
                         >
                           Hủy tất cả
                         </button>
                       </div>
-                      
+
                       <div className="grid grid-cols-4 gap-2 bg-orange-50/30 p-2 rounded-2xl border-2 border-dashed border-orange-200">
                         {adminFiles.map((f, idx) => (
                           <div key={idx} className="relative aspect-square rounded-xl overflow-hidden border-2 border-white bg-white shadow-md group ring-2 ring-orange-100/50">
@@ -968,9 +1111,9 @@ const OrderDetail = () => {
                             </button>
                           </div>
                         ))}
-                        
+
                         {/* Nút thêm nhanh ngay trong Grid */}
-                        <button 
+                        <button
                           onClick={() => adminFileInputRef.current?.click()}
                           className="aspect-square rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/50 flex flex-col items-center justify-center hover:bg-orange-100 hover:border-orange-500 transition-all group"
                         >
@@ -1068,9 +1211,9 @@ const OrderDetail = () => {
                     { id: 'burn', label: 'Cháy/Thủng', fee: 200000 },
                     { id: 'lost_item', label: 'Mất đồ/Phụ kiện', fee: 300000 },
                   ].map(error => {
-                    const isDisabled = lostItemIds.length > 0 || (error.id !== 'lost_item' && selectedErrors.includes('lost_item'));
+                    const isDisabled = lostItemIds.length > 0 || (error.id !== 'lost_item' && selectedErrors.includes('lost_item')) || status !== 'fee_incurred';
                     return (
-                      <label key={error.id} className={`flex items-start gap-2.5 group ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+                      <label key={error.id} className={`flex items-start gap-2.5 group ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`} title={status !== 'fee_incurred' ? "Chỉ chọn được ở trạng thái 'Phát sinh phí'" : ""}>
                         <input
                           type="checkbox"
                           disabled={isDisabled}
@@ -1109,11 +1252,12 @@ const OrderDetail = () => {
                 <div className="relative">
                   <input
                     type="number"
-                    disabled={lostItemIds.length > 0 || selectedErrors.includes('lost_item')}
+                    disabled={lostItemIds.length > 0 || selectedErrors.includes('lost_item') || status !== 'fee_incurred'}
                     value={damageFee === 0 ? '' : damageFee}
                     onChange={(e) => setDamageFee(Number(e.target.value) || 0)}
                     placeholder="Nhập tổn thất khác..."
-                    className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white ${(lostItemIds.length > 0 || selectedErrors.includes('lost_item')) ? "opacity-50 cursor-not-allowed" : ""}`}
+                    className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-red-500 outline-none transition-all font-bold text-red-600 pr-7 bg-red-50 focus:bg-white ${(lostItemIds.length > 0 || selectedErrors.includes('lost_item') || status !== 'fee_incurred') ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={status !== 'fee_incurred' ? "Chỉ nhập được ở trạng thái 'Phát sinh phí'" : ""}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">đ</span>
                 </div>
@@ -1145,6 +1289,145 @@ const OrderDetail = () => {
                 </div>
               </div>
             </div>
+
+            {/* MINH CHỨNG CHUYỂN CỌC - Hiện ngay khi chọn Hoàn tất dù chưa lưu */}
+            {status === "completed" && (
+              <div className="mx-4 my-3 bg-teal-50 border border-teal-200 rounded-xl p-4">
+                <div className="text-[10px] font-black text-teal-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  📸 Minh chứng chuyển cọc (Bắt buộc khi Hoàn tất)
+                </div>
+
+                {order.depositReturnProof ? (
+                  <div className="relative group aspect-video rounded-xl overflow-hidden border-2 border-teal-100 bg-white shadow-sm">
+                    <img
+                      src={order.depositReturnProof}
+                      alt="Minh chứng chuyển cọc"
+                      className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-500"
+                      onClick={() => window.open(order.depositReturnProof, '_blank')}
+                    />
+                    <div className="absolute top-2 right-2 bg-teal-500 text-white rounded-full p-1 shadow-md">
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <div className="text-[10px] font-bold text-white bg-teal-600/80 backdrop-blur px-2 py-1 rounded text-center">✓ Đã tải lên minh chứng</div>
+                    </div>
+                  </div>
+                ) : depositReturnFile ? (
+                  <div className="space-y-3">
+                    <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-orange-200 bg-white shadow-md">
+                      <img src={depositReturnFile.preview} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setDepositReturnFile(null)}
+                        className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors border-2 border-white"
+                      >
+                        ✕
+                      </button>
+                      <div className="absolute bottom-2 left-2 right-2">
+                        <div className="text-[10px] font-bold text-white bg-orange-500/80 backdrop-blur px-2 py-1 rounded text-center animate-pulse">
+                          ⏳ Sẵn sàng — Nhấn "Lưu thay đổi" để tải lên
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div
+                      onClick={() => depositReturnInputRef.current?.click()}
+                      className="cursor-pointer border-2 border-dashed border-teal-300 rounded-xl p-5 text-center bg-white/60 hover:bg-teal-50 hover:border-teal-500 transition-all group"
+                    >
+                      <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">💸</div>
+                      <div className="text-[11px] font-black text-teal-700 uppercase tracking-wider">Tải ảnh minh chứng chuyển cọc</div>
+                      <div className="text-[10px] text-gray-400 mt-1">Ảnh bill chuyển khoản, biên lai,...</div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        ref={depositReturnInputRef}
+                        className="hidden"
+                        onChange={handleDepositReturnFilePick}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* NÚT HÀNH ĐỘNG: GIẶT LÀ & SỬA CHỮA - chỉ hiện khi đơn đã LƯU ở trạng thái Hoàn tất */}
+            {order.status === "completed" && status === "completed" && (
+              <div className="mx-4 my-3">
+                <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-xl p-4">
+                  <div className="text-[10px] font-black text-violet-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span>🧺</span> Bước tiếp theo sau hoàn tất
+                  </div>
+                  <button
+                    onClick={handleLaundry}
+                    disabled={isUpdating}
+                    className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md shadow-violet-200 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Đang cập nhật...
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-xl">🧺</span>
+                        <span>Giặt là &amp; Sửa chữa — Chờ về kho</span>
+                      </>
+                    )}
+                  </button>
+                  <div className="mt-2 text-[10px] text-violet-500 text-center">
+                    Chuyển đơn sang trạng thái xử lý sau thuê (giặt là, vá sửa, kiểm tra kho)
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TRẠNG THÁI LAUNDRY - Chờ về kho */}
+            {order.status === "laundry" && (
+              <div className="mx-4 my-3 bg-violet-50 border border-violet-200 rounded-xl p-4 flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center shrink-0 text-xl">🧺</div>
+                  <div className="flex-1">
+                    <div className="text-[11px] font-black text-violet-700 uppercase tracking-wider mb-1">
+                      Đang giặt là &amp; sửa chữa — Chờ về kho
+                    </div>
+                    <div className="text-xs text-violet-600/80">
+                      Đơn hàng đang trong quá trình xử lý sau thuê. Trang phục sẽ được giặt là, kiểm tra và nhập kho sau khi hoàn thành.
+                    </div>
+                  </div>
+                </div>
+                {status === "laundry" && (
+                  <button
+                    onClick={handleInWarehouse}
+                    disabled={isUpdating}
+                    className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-fuchsia-500 to-fuchsia-600 hover:from-fuchsia-600 hover:to-fuchsia-700 text-white rounded-lg font-bold text-sm shadow-md shadow-fuchsia-200 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? "Đang xử lý..." : "📥 Xác nhận Đã Về Kho"}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* TRẠNG THÁI IN_WAREHOUSE - Đã về kho */}
+            {order.status === "in_warehouse" && (
+              <div className="mx-4 my-3 bg-fuchsia-50 border border-fuchsia-200 rounded-xl p-4 flex items-start gap-3">
+                <div className="w-9 h-9 bg-fuchsia-100 rounded-full flex items-center justify-center shrink-0 text-xl">📥</div>
+                <div className="flex-1">
+                  <div className="text-[11px] font-black text-fuchsia-700 uppercase tracking-wider mb-1">
+                    Đã về kho an toàn
+                  </div>
+                  <div className="text-xs text-fuchsia-600/80">
+                    Sản phẩm trong đơn hàng đã hoàn tất quá trình kiểm tra, giặt là và được nhập lại vào kho để sẵn sàng cho các đơn hàng tiếp theo.
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* BANNER HOÀN CỌC */}
             {(paymentStatus === 'deposit_returned' || paymentStatus === 'success' || paymentStatus === 'completed') && (() => {
