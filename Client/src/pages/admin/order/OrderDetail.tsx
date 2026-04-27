@@ -15,6 +15,15 @@ interface OrderItem {
   deposit?: number;
   quantity?: number;
   price?: number;
+  startDate?: string;
+  endDate?: string;
+  days?: number;
+  rental?: {
+    startDate: string;
+    endDate: string;
+    days: number;
+    pricePerDay: number;
+  };
 }
 
 interface Order {
@@ -731,9 +740,43 @@ const OrderDetail = () => {
                 <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                   Sản phẩm ({items.length})
                 </div>
-                <div className="text-xs text-gray-500 mt-1.5 font-medium">
-                  Thời gian thuê: {formatDate(order.startDate)} - {formatDate(order.endDate)} <span className="mx-2 text-gray-300">|</span> {rentalDays} ngày
-                </div>
+                {(() => {
+  // Lấy ngày từ item đầu tiên (cấu trúc mới: item.rental)
+  const firstItem = items[0];
+  let startDate = order?.startDate;
+  let endDate = order?.endDate;
+  let days = rentalDays;
+  
+  if (firstItem) {
+    // Cấu trúc mới: item.rental
+    if ((firstItem as any).rental) {
+      startDate = (firstItem as any).rental.startDate;
+      endDate = (firstItem as any).rental.endDate;
+      days = (firstItem as any).rental.days;
+    }
+    // Cấu trúc cũ: item.startDate
+    else if (firstItem.startDate) {
+      startDate = firstItem.startDate;
+      endDate = firstItem.endDate;
+      days = firstItem.days || rentalDays;
+    }
+  }
+  
+  if (!startDate || !endDate) {
+    return (
+      <div className="text-xs text-gray-500 mt-1.5 font-medium">
+        Thời gian thuê: -- <span className="mx-2 text-gray-300">|</span> -- ngày
+      </div>
+    );
+  }
+  
+  return (
+    <div className="text-xs text-gray-500 mt-1.5 font-medium">
+      Thời gian thuê: {formatDate(startDate as string)} - {formatDate(endDate as string)} 
+      <span className="mx-2 text-gray-300">|</span> {days} ngày
+    </div>
+  );
+})()}
               </div>
             </div>
 

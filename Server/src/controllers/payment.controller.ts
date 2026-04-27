@@ -4,15 +4,23 @@ import Order from "../models/Order";
 import Cart from "../models/Cart";
 import { createVnpayUrl } from "../services/vnpay.service";
 
+const calcRentalDays = (start: Date, end: Date) => {
+  const diffTime = end.getTime() - start.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  return diffDays > 0 ? diffDays : 1;
+};
+
 // Lưu tạm thông tin thanh toán
 const tempPayments: any = {};
+const tempExtendPayments: any = {}; 
 
-// 1. API tạo link thanh toán (KHÔNG tạo order)
+// 1. API tạo link thanh toán
 export const createPaymentUrl = async (req: Request, res: Response) => {
   try {
-    console.log("BODY createPaymentUrl:", req.body);
-
-    const { userId, total, items, customerInfo, paymentMethod, bankName, bankAccount, bankHolder } = req.body;
+    const { 
+      userId, total, subtotal, shippingFee, items, customerInfo, 
+      returnAddress, bankName, bankAccount, bankHolder, paymentMethod 
+    } = req.body;
 
     if (!userId) {
       return res.status(400).json({ message: "Thiếu userId" });
@@ -25,15 +33,17 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
     if (!total || total <= 0) {
       return res.status(400).json({ message: "Số tiền không hợp lệ" });
     }
-    
 
     const tempOrderNumber = `TMP${Date.now()}`;
 
     tempPayments[tempOrderNumber] = {
       userId,
       total,
+      subtotal,
+      shippingFee,
       items,
       customerInfo,
+      returnAddress,
       bankName,
       bankAccount,
       bankHolder,
@@ -60,8 +70,7 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Lỗi tạo payment URL:", error);
-    const message =
-      error?.message || "Lỗi server";
+    const message = error?.message || "Lỗi server";
     return res.status(500).json({ message });
   }
 };
@@ -69,14 +78,47 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
 // 2. API xử lý sau khi thanh toán thành công
 export const paymentSuccess = async (req: Request, res: Response) => {
   try {
-    console.log("BODY paymentSuccess:", req.body);
-
-    const { vnp_TxnRef, vnp_ResponseCode, vnp_Amount, vnp_TransactionNo } = req.body;
+    const { vnp_TxnRef, vnp_ResponseCode, vnp_TransactionNo } = req.body;
 
     if (vnp_ResponseCode !== "00") {
       return res.status(400).json({ success: false, message: "Thanh toán thất bại" });
     }
 
+    // Kiểm tra xem có phải thanh toán gia hạn không
+    if (vnp_TxnRef.startsWith("EXT")) {
+      const extendData = tempExtendPayments[vnp_TxnRef];
+      if (!extendData) {
+        return res.status(404).json({ success: false, message: "Không tìm thấy thông tin thanh toán gia hạn" });
+      }
+
+      if (extendData.processed) {
+        return res.json({ success: true, message: "Đã xử lý", alreadyProcessed: true });
+      }
+
+      tempExtendPayments[vnp_TxnRef].processed = true;
+
+      // Gọi API xác nhận gia hạn
+      const confirmResponse = await fetch(`http://localhost:3000/orders/confirm-extend`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId: extendData.requestId,
+          vnp_ResponseCode: "00"
+        })
+      });
+
+      const result = await confirmResponse.json();
+      
+      delete tempExtendPayments[vnp_TxnRef];
+
+      return res.json({
+        success: true,
+        message: result.message || "Gia hạn thành công",
+        order: result.order
+      });
+    }
+
+    // Thanh toán đơn hàng thông thường
     const tempData = tempPayments[vnp_TxnRef];
     if (!tempData) {
       return res.status(404).json({ success: false, message: "Không tìm thấy thông tin thanh toán" });
@@ -89,41 +131,100 @@ export const paymentSuccess = async (req: Request, res: Response) => {
 
     tempPayments[vnp_TxnRef].processed = true;
 
-    const formattedItems = tempData.items.map((item: any) => ({
-      productId: item.productId,
-      name: item.name,
-      size: item.size,
-      color: item.color,
-      deposit: item.deposit || 0,
-      quantity: item.quantity,
-      price: item.price,
-    }));
+    // Format items theo đúng cấu trúc Order model mới
+    const formattedItems = tempData.items.map((item: any) => {
+      const startDate = item.startDate ? new Date(item.startDate) : new Date();
+      const endDate = item.endDate ? new Date(item.endDate) : new Date();
+      const days = calcRentalDays(startDate, endDate);
+      const pricePerDay = item.price || item.rentalPrice || 0;
+      const lineTotal = pricePerDay * days * (item.quantity || 1);
+      
+      return {
+        productId: new mongoose.Types.ObjectId(item.productId),
+        name: item.name,
+        image: item.image || "",
+        rental: {
+          startDate: startDate,
+          endDate: endDate,
+          days: days,
+          pricePerDay: pricePerDay
+        },
+        variant: {
+          size: item.size || "M",
+          color: item.color || "Đen"
+        },
+        deposit: item.deposit || 0,
+        quantity: item.quantity || 1,
+        lineTotal: lineTotal
+      };
+    });
 
-    // Tạo order
+    // Tính toán lại các tổng
+    interface FormattedItem {
+      lineTotal: number;
+      deposit: number;
+      quantity: number;
+    }
+
+    const subtotal = formattedItems.reduce((sum: number, item: FormattedItem) => sum + item.lineTotal, 0);
+    const totalDeposit = formattedItems.reduce((sum: number, item: FormattedItem) => sum + (item.deposit * item.quantity), 0);
+    const total = subtotal + totalDeposit + (tempData.shippingFee || 0);
+
+    // Tạo order với cấu trúc mới
     const order = await Order.create({
-      userId: tempData.userId,
+      userId: new mongoose.Types.ObjectId(tempData.userId),
       orderNumber: `DH${Date.now()}`,
       items: formattedItems,
-      subtotal: tempData.total,
+      customerInfo: tempData.customerInfo,
+      shippingAddress: {
+        receiverName: tempData.customerInfo?.fullName || "",
+        receiverPhone: tempData.customerInfo?.phone || "",
+        line1: tempData.customerInfo?.address || "",
+        ward: "",
+        district: "",
+        province: "Hà Nội",
+        country: "VN"
+      },
+      subtotal: subtotal,
+      discount: 0,
+      shippingFee: tempData.shippingFee || 0,
       serviceFee: 0,
-      total: tempData.total,
+      couponDiscount: 0,
+      totalDeposit: totalDeposit,
+      total: total,
       paymentMethod: tempData.paymentMethod || "vnpay",
       paymentStatus: "paid",
       status: "confirmed",
-      customerName: tempData.customerInfo?.fullName || "",
-      customerPhone: tempData.customerInfo?.phone || "",
-      customerAddress: tempData.customerInfo?.address || "",
-      bankName: tempData.bankName || "",
-      bankAccount: tempData.bankAccount || "",
-      bankHolder: tempData.bankHolder || "",
-      note: tempData.customerInfo?.note || "",
-      vnpTransactionNo: vnp_TransactionNo,
+      statusHistory: [{
+        status: "confirmed",
+        timestamp: new Date(),
+        changedBy: tempData.userId,
+        notes: "Thanh toán VNPay thành công"
+      }],
+      notes: tempData.customerInfo?.note || "",
+      pickupDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      lateFee: 0,
+      vnpTransactionNo: vnp_TransactionNo
+    }) as any;
+
+    console.log("✅ ORDER CREATED với cấu trúc mới:", {
+      id: order._id,
+      orderNumber: order.orderNumber,
+      items: formattedItems.map((i: any) => ({
+        name: i.name,
+        startDate: i.rental.startDate,
+        endDate: i.rental.endDate,
+        days: i.rental.days
+      }))
     });
 
-    console.log("ORDER CREATED:", {
-      id: (order as any)._id,
-      orderNumber: (order as any).orderNumber,
-    });
+    // Xóa giỏ hàng sau khi tạo order thành công
+    try {
+      await Cart.findOneAndDelete({ user: new mongoose.Types.ObjectId(tempData.userId) });
+      console.log("✅ Đã xóa giỏ hàng sau khi thanh toán");
+    } catch (cartError) {
+      console.error("Lỗi xóa giỏ hàng:", cartError);
+    }
 
     delete tempPayments[vnp_TxnRef];
 
@@ -134,7 +235,48 @@ export const paymentSuccess = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Lỗi xử lý thanh toán thành công:", error);
-    return res.status(500).json({ success: false, message: "Lỗi server" });
+    return res.status(500).json({ success: false, message: "Lỗi server: " + String(error) });
+  }
+};
+
+// ==================== API TẠO LINK THANH TOÁN CHO GIA HẠN ====================
+export const createExtendPaymentUrl = async (req: Request, res: Response) => {
+  try {
+    const { requestId, amount, userId } = req.body;
+
+    if (!requestId || !amount || !userId) {
+      return res.status(400).json({ message: "Thiếu thông tin" });
+    }
+
+    const tempOrderNumber = `EXT${Date.now()}`;
+    
+    // Lưu tạm thông tin gia hạn
+    tempExtendPayments[tempOrderNumber] = {
+      type: "extend",
+      requestId,
+      userId,
+      amount,
+      createdAt: new Date(),
+      processed: false
+    };
+
+    const fakeOrder = {
+      _id: tempOrderNumber,
+      orderNumber: tempOrderNumber,
+      total: amount
+    };
+
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || '127.0.0.1';
+    const paymentUrl = createVnpayUrl(amount, fakeOrder, clientIp);
+
+    return res.json({
+      message: "Tạo link thanh toán thành công",
+      paymentUrl,
+      tempOrderNumber
+    });
+  } catch (error: any) {
+    console.error("Lỗi tạo payment URL gia hạn:", error);
+    return res.status(500).json({ message: error.message || "Lỗi server" });
   }
 };
 

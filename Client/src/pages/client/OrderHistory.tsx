@@ -21,12 +21,13 @@ interface Order {
   _id: string;
   orderNumber: string;
   total: number;
-  status: "pending" | "confirmed" | "shipped" | "delivered" | "returning" | "fee_incurred" | "completed" | "cancelled";
+  status: "pending" | "confirmed" | "shipped" | "delivered" | "returning" | "renting" | "fee_incurred" | "completed" | "cancelled" |"returned";
   paymentMethod: string;
   paymentStatus: string;
   createdAt: string;
   items: OrderItem[];
   customerName?: string;
+  startDate?: string;       
   customerPhone?: string;
   customerAddress?: string;
   bankName?: string;
@@ -36,9 +37,26 @@ interface Order {
     status: string;
     updatedBy?: string;
     date: string;
+    notes?: string;
   }[];
   adminReturnMedia?: string[];
   penaltyNote?: string;
+  endDate?: string;
+  shippingAddress?: {
+    receiverName?: string;
+    receiverPhone?: string;
+    name?: string;
+    phone?: string;
+    line1?: string;
+    address?: string;
+  };
+  customerInfo?: {
+    fullName: string;
+    email: string;
+    phone: string;
+    address: string;
+    note?: string;
+  };
 }
 
 export default function OrderHistory() {
@@ -52,6 +70,11 @@ export default function OrderHistory() {
   const [returnFiles, setReturnFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [selectedOrderForExtend, setSelectedOrderForExtend] = useState<Order | null>(null);
+  const [extendDays, setExtendDays] = useState("");
+  const [isExtending, setIsExtending] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -77,7 +100,6 @@ export default function OrderHistory() {
     }
   };
 
-  // Hàm xử lý nhận đồ
   const handleReceiveOrder = async (orderId: string) => {
     if (!confirm("Bạn xác nhận đã nhận được đồ?")) return;
 
@@ -103,11 +125,62 @@ export default function OrderHistory() {
     }
   };
 
-  // Hàm xử lý trả đồ (mở modal)
   const handleReturnOrder = (orderId: string) => {
     setReturnOrderId(orderId);
     setReturnFiles([]);
   };
+
+  const handleExtendOrder = async () => {
+  if (!selectedOrderForExtend) return;
+  if (!extendDays) {
+    alert("Vui lòng chọn ngày kết thúc mới");
+    return;
+  }
+  
+  setIsExtending(true);
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    if (!user) {
+      alert("Vui lòng đăng nhập");
+      return;
+    }
+
+    const formattedDate = new Date(extendDays).toISOString();
+
+    // Bước 1: Gửi yêu cầu gia hạn
+    const response = await axios.post(
+      `http://localhost:3000/orders/${selectedOrderForExtend._id}/extend`,
+      {
+        userId: user._id,
+        newEndDate: formattedDate,
+      }
+    );
+
+    if (response.data.success && response.data.needPayment) {
+      // Bước 2: Cần thanh toán thêm - tạo link VNPay
+      const paymentResponse = await axios.post(
+        "http://localhost:3000/api/payment/create-extend-payment-url",
+        {
+          requestId: response.data.requestId,
+          amount: response.data.additionalPayment,
+          userId: user._id,
+        }
+      );
+      
+      // Chuyển hướng sang VNPay
+      window.location.href = paymentResponse.data.paymentUrl;
+    } else {
+      alert(response.data.message);
+      setShowExtendModal(false);
+      fetchOrders();
+    }
+  } catch (error: any) {
+    console.error("Lỗi gia hạn:", error);
+    alert(error.response?.data?.message || "Có lỗi xảy ra khi gia hạn");
+  } finally {
+    setIsExtending(false);
+  }
+};
 
   const handleReturnFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -132,7 +205,6 @@ export default function OrderHistory() {
       setIsUploading(true);
       const uploadedUrls: string[] = [];
 
-      // Upload từng file
       for (const file of returnFiles) {
         const reader = new FileReader();
         const base64Promise = new Promise<string>((resolve, reject) => {
@@ -170,21 +242,23 @@ export default function OrderHistory() {
   };
 
   const getStatusText = (status: string) => {
-    const statusMap: Record<string, { text: string; color: string }> = {
-      pending: { text: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50" },
-      confirmed: { text: "Đã xác nhận", color: "text-blue-600 bg-blue-50" },
-      shipped: { text: "Đang giao", color: "text-purple-600 bg-purple-50" },
-      delivered: { text: "Đã giao", color: "text-green-600 bg-green-50" },
-      returning: { text: "Đang trả đồ", color: "text-orange-600 bg-orange-50" },
-      picked_up: { text: "Đã lấy đơn", color: "text-blue-600 bg-blue-50" },
-      returned: { text: "Đã trả đồ", color: "text-teal-600 bg-teal-50" },
-      renting: { text: "Đang thuê", color: "text-cyan-600 bg-cyan-50" },
-      fee_incurred: { text: "Phát sinh phí", color: "text-red-600 bg-red-50" },
-      completed: { text: "Hoàn thành", color: "text-green-600 bg-green-50" },
-      cancelled: { text: "Đã hủy", color: "text-gray-600 bg-gray-50" },
-    };
-    return statusMap[status] || { text: status, color: "text-gray-600 bg-gray-50" };
+  const statusMap: Record<string, { text: string; color: string }> = {
+    pending: { text: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50" },
+    confirmed: { text: "Đã xác nhận", color: "text-blue-600 bg-blue-50" },
+    shipped: { text: "Đang giao", color: "text-purple-600 bg-purple-50" },
+    delivered: { text: "Đã giao", color: "text-green-600 bg-green-50" },
+    returning: { text: "Đang trả đồ", color: "text-orange-600 bg-orange-50" },
+    picked_up: { text: "Đã lấy đơn", color: "text-blue-600 bg-blue-50" },
+    returned: { text: "Đã trả đồ", color: "text-teal-600 bg-teal-50" },
+    renting: { text: "Đang thuê", color: "text-cyan-600 bg-cyan-50" },
+    fee_incurred: { text: "Phát sinh phí", color: "text-red-600 bg-red-50" },
+    completed: { text: "Hoàn thành", color: "text-green-600 bg-green-50" },
+    cancelled: { text: "Đã hủy", color: "text-gray-600 bg-gray-50" },
+    "đã gia hạn": { text: "Đã gia hạn", color: "text-blue-600 bg-blue-50" },
+    "đã rút ngắn": { text: "Đã rút ngắn", color: "text-orange-600 bg-orange-50" },
   };
+  return statusMap[status] || { text: status, color: "text-gray-600 bg-gray-50" };
+};
 
   const getPaymentStatusText = (status: string) => {
     return status === "paid" ? "Đã thanh toán" : "Chưa thanh toán";
@@ -221,7 +295,6 @@ export default function OrderHistory() {
                 key={order._id}
                 className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition"
               >
-                {/* Header đơn hàng */}
                 <div className="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap justify-between items-center gap-2">
                   <div>
                     <span className="text-gray-500 text-sm">Mã đơn hàng</span>
@@ -236,7 +309,7 @@ export default function OrderHistory() {
                   <div>
                     <span className="text-gray-500 text-sm">Tổng tiền</span>
                     <p className="text-lg font-bold text-blue-600">
-                      {order.total.toLocaleString()}đ
+                      {(order.total || 0).toLocaleString()}đ
                     </p>
                   </div>
                   <div>
@@ -251,8 +324,7 @@ export default function OrderHistory() {
                     </p>
                   </div>
 
-                  {/* Thông báo mới từ cửa hàng - Ấn vào xem nhanh */}
-                   {order.status === 'returned' && (
+                  {order.status === 'returned' && (
                     <button 
                       onClick={(e) => { e.stopPropagation(); setViewingInspection(order); }}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500 text-white rounded-lg text-[10px] font-black animate-pulse border border-orange-400 uppercase tracking-tighter hover:bg-orange-600 transition-all shadow-[0_0_15px_rgba(249,115,22,0.4)]"
@@ -262,23 +334,37 @@ export default function OrderHistory() {
                     </button>
                   )}
 
-                  {/* Nút đã nhận */}
                   {(order.status === "shipped" || order.status === "delivered") && (
                     <button
                       onClick={() => handleReceiveOrder(order._id)}
                       className="px-3 py-1.5 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition"
                     >
-                      ✅ Đã nhận
+                      Đã nhận
                     </button>
                   )}
 
+
                   {/* Nút trả đồ - hiển thị khi đang thuê */}
+
                   {order.status === "renting" && (
                     <button
                       onClick={() => handleReturnOrder(order._id)}
                       className="px-3 py-1.5 text-sm text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition"
                     >
-                      📦 Trả đồ
+                      Trả đồ
+                    </button>
+                  )}
+
+                  {order.status === "renting" && (
+                    <button
+                      onClick={() => {
+                        setSelectedOrderForExtend(order);
+                        setExtendDays("");
+                        setShowExtendModal(true);
+                      }}
+                      className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition"
+                    >
+                      Gia hạn
                     </button>
                   )}
 
@@ -290,7 +376,6 @@ export default function OrderHistory() {
                   </button>
                 </div>
 
-                {/* Danh sách sản phẩm */}
                 <div className="p-4 space-y-3">
                   {order.items.slice(0, 2).map((item, idx) => (
                     <div key={idx} className="flex gap-4">
@@ -302,14 +387,14 @@ export default function OrderHistory() {
                       <div className="flex-1">
                         <h3 className="font-medium">{item.name || item.productId?.name}</h3>
                         <div className="flex gap-4 text-sm text-gray-500 mt-1">
-                          <span>Số lượng: {item.quantity}</span>
+                          <span>Số lượng: {item.quantity || 1}</span>
                           <span>Size: {item.size || "M"}</span>
                           <span>Màu: {item.color || "Đen"}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{item.price.toLocaleString()}đ</p>
-                        <p className="text-sm text-gray-500">Tiền cọc: {item.deposit?.toLocaleString()}đ</p>
+                        <p className="font-medium">{(item.price || 0).toLocaleString()}đ</p>
+                        <p className="text-sm text-gray-500">Tiền cọc: {(item.deposit || 0).toLocaleString()}đ</p>
                       </div>
                     </div>
                   ))}
@@ -326,243 +411,171 @@ export default function OrderHistory() {
       )}
 
       {/* Modal chi tiết đơn hàng */}
+      
       {selectedOrder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Header - cố định ở trên, thêm rounded-t-xl */}
-            <div className="bg-white rounded-t-xl px-4 py-3 border-b flex justify-between items-center shrink-0">
-              <h2 className="text-xl font-bold">Chi tiết đơn hàng</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+          <div className="bg-white rounded-xl w-full max-w-4xl max-h-[95vh] md:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+            {/* Header - cố định */}
+            <div className="bg-white px-4 md:px-6 py-3 md:py-4 border-b flex justify-between items-center shrink-0 sticky top-0 z-10">
+              <h2 className="text-lg md:text-xl font-bold">Chi tiết đơn hàng #{selectedOrder.orderNumber}</h2>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
               >
                 ×
               </button>
             </div>
 
             {/* Nội dung cuộn */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/20">
-              {/* PHẦN 1: HỒ SƠ KIỂM ĐỒ (Ưu tiên hiển thị lên đầu khi có thông báo) */}
-              {(selectedOrder.penaltyNote || (selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0)) && (
-                <div className="bg-orange-50/80 border-2 border-orange-200 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 overflow-hidden relative">
-                  <div className="absolute top-0 right-0 px-3 py-1 bg-orange-500 text-white text-[10px] font-black uppercase rounded-bl-xl shadow-sm">Minh chứng từ cửa hàng</div>
-                  
-                  <div className="flex items-center gap-2 mb-4 border-b border-orange-100 pb-3">
-                    <span className="text-xl">📷</span>
-                    <h3 className="font-black text-orange-600 uppercase tracking-tight text-sm">Hồ sơ khách trả đồ (Đang xử lý)</h3>
-                  </div>
-                  
-                  {selectedOrder.penaltyNote && (
-                    <div className="bg-white p-4 rounded-xl border border-orange-100 text-sm text-gray-700 mb-4 italic shadow-sm relative pl-6">
-                      <svg className="w-4 h-4 text-orange-300 absolute left-2 top-3" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM5.884 6.68a1 1 0 10-1.415-1.414l.707-.707a1 1 0 001.415 1.415l-.707.707zm1.414 8.486a1 1 0 00-1.415-1.415l-.707.707a1 1 0 101.415 1.415l.707-.707zM8.25 4.5a.75.75 0 01.75.75v1a.75.75 0 01-1.5 0v-1a.75.75 0 01.75-.75zM15.75 9a.75.75 0 01.75.75h1a.75.75 0 010 1.5h-1a.75.75 0 01-.75-.75v-1a.75.75 0 01.75-.75z" /></svg>
-                      <span className="font-black text-orange-600 not-italic block mb-1.5 text-[10px] uppercase tracking-widest">Ghi chú kiểm định:</span>
-                      "{selectedOrder.penaltyNote}"
-                    </div>
-                  )}
-
-                  {selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {selectedOrder.adminReturnMedia.map((url, idx) => {
-                        const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
-                        return (
-                          <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border-2 border-white bg-white shadow-sm hover:shadow-md transition-all group">
-                            {isVideo ? (
-                              <video src={url} controls className="w-full h-full object-cover" />
-                            ) : (
-                              <img 
-                                src={url} 
-                                alt="Inspection" 
-                                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-500" 
-                                onClick={() => window.open(url, '_blank')}
-                              />
-                            )}
-                            <div className="absolute top-1 right-1 bg-orange-500/80 p-1 rounded-full text-white scale-0 group-hover:scale-100 transition-transform">
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* PHẦN 2: THÔNG TIN ĐƠN HÀNG CƠ BẢN */}
-              <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 bg-gray-50/20">
+              {/* Thông tin cơ bản - Grid responsive */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 bg-white p-3 md:p-4 rounded-xl border border-gray-100 shadow-sm">
                 <div>
-                  <p className="text-gray-500 text-sm">Mã đơn hàng</p>
-                  <p className="font-mono">{selectedOrder.orderNumber}</p>
+                  <p className="text-gray-400 text-[10px] md:text-xs uppercase tracking-wider">Mã đơn</p>
+                  <p className="font-mono text-xs md:text-sm font-medium break-all">{selectedOrder.orderNumber}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">Ngày đặt</p>
-                  <p>{new Date(selectedOrder.createdAt).toLocaleString("vi-VN")}</p>
+                  <p className="text-gray-400 text-[10px] md:text-xs uppercase tracking-wider">Ngày đặt</p>
+                  <p className="text-xs md:text-sm">{new Date(selectedOrder.createdAt).toLocaleString("vi-VN")}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">Trạng thái</p>
-                  <p className={getStatusText(selectedOrder.status).color}>
+                  <p className="text-gray-400 text-[10px] md:text-xs uppercase tracking-wider">Trạng thái</p>
+                  <p className={`text-xs md:text-sm font-semibold ${getStatusText(selectedOrder.status).color} inline-block px-2 py-0.5 rounded-full`}>
                     {getStatusText(selectedOrder.status).text}
                   </p>
                 </div>
                 <div>
-                  <p className="text-gray-500 text-sm">Thanh toán</p>
-                  <p>{selectedOrder.paymentMethod === "vnpay" ? "VNPay" : "Tiền mặt"}</p>
+                  <p className="text-gray-400 text-[10px] md:text-xs uppercase tracking-wider">Thanh toán</p>
+                  <p className="text-xs md:text-sm">{selectedOrder.paymentMethod === "vnpay" ? "VNPay" : "Tiền mặt"}</p>
                 </div>
               </div>
 
+              {/* Thông tin ngày thuê - Lấy từ item */}
+              {(() => {
+                const firstItem = selectedOrder.items?.[0] as any;
+                const startDate = firstItem?.rental?.startDate;
+                const endDate = firstItem?.rental?.endDate;
+                const days = firstItem?.rental?.days;
+                if (!startDate || !endDate) return null;
+                return (
+                  <div className="bg-blue-50/50 p-3 md:p-4 rounded-xl border border-blue-100">
+                    <p className="text-blue-600 text-[11px] md:text-xs font-semibold uppercase tracking-wider mb-2">📅 Thời gian thuê</p>
+                    <p className="text-sm md:text-base font-medium">
+                      {new Date(startDate).toLocaleDateString("vi-VN")} → {new Date(endDate).toLocaleDateString("vi-VN")}
+                      <span className="ml-2 text-blue-500">({days} ngày)</span>
+                    </p>
+                  </div>
+                );
+              })()}
+
+
+              {/* Thông tin nhận hàng */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-3">Thông tin nhận hàng</h3>
-                <p><span className="text-gray-500">Người nhận:</span> {selectedOrder.customerName || "Khách hàng"}</p>
-                <p><span className="text-gray-500">SĐT:</span> {selectedOrder.customerPhone || "Chưa cập nhật"}</p>
-                <p><span className="text-gray-500">Địa chỉ:</span> {selectedOrder.customerAddress || "Chưa cập nhật"}</p>
+                <h3 className="font-semibold text-sm md:text-base mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  Thông tin nhận hàng
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs md:text-sm">
+                  {(() => {
+                    // Lấy từ customerInfo (đã lưu trong order)
+                    const customerName = (selectedOrder as any).customerInfo?.fullName ||
+                      selectedOrder.customerName ||
+                      selectedOrder.shippingAddress?.receiverName ||
+                      "Khách hàng";
+                    
+                    const customerPhone = (selectedOrder as any).customerInfo?.phone ||
+                      selectedOrder.customerPhone ||
+                      selectedOrder.shippingAddress?.receiverPhone ||
+                      "Chưa cập nhật";
+                    
+                    const customerAddress = (selectedOrder as any).customerInfo?.address ||
+                      selectedOrder.customerAddress ||
+                      selectedOrder.shippingAddress?.line1 ||
+                      "Chưa cập nhật";
+                    
+                    return (
+                      <>
+                        <p><span className="text-gray-500">Người nhận:</span> {customerName}</p>
+                        <p><span className="text-gray-500">SĐT:</span> {customerPhone}</p>
+                        <p><span className="text-gray-500">Địa chỉ:</span> {customerAddress}</p>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Thông tin ngân hàng */}
               {(selectedOrder.bankName || selectedOrder.bankAccount || selectedOrder.bankHolder) && (
                 <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-3">Thông tin nhận hoàn cọc</h3>
-                  {selectedOrder.bankName && <p><span className="text-gray-500">Ngân hàng:</span> {selectedOrder.bankName}</p>}
-                  {selectedOrder.bankAccount && <p><span className="text-gray-500">Số tài khoản:</span> {selectedOrder.bankAccount}</p>}
-                  {selectedOrder.bankHolder && <p><span className="text-gray-500">Chủ tài khoản:</span> {selectedOrder.bankHolder}</p>}
+                  <h3 className="font-semibold text-sm md:text-base mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                    Thông tin nhận hoàn cọc
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs md:text-sm">
+                    {selectedOrder.bankName && <p><span className="text-gray-500">Ngân hàng:</span> {selectedOrder.bankName}</p>}
+                    {selectedOrder.bankAccount && <p><span className="text-gray-500">Số TK:</span> {selectedOrder.bankAccount}</p>}
+                    {selectedOrder.bankHolder && <p><span className="text-gray-500">Chủ TK:</span> {selectedOrder.bankHolder}</p>}
+                  </div>
                 </div>
               )}
 
+              {/* Danh sách sản phẩm - Cuộn ngang trên mobile */}
               <div className="border-t pt-4">
-                <h3 className="font-semibold mb-3">Sản phẩm</h3>
-                <div className="space-y-3">
+                <h3 className="font-semibold text-sm md:text-base mb-3">Sản phẩm ({selectedOrder.items.length})</h3>
+                <div className="space-y-3 max-h-[300px] md:max-h-[400px] overflow-y-auto">
                   {selectedOrder.items.map((item, idx) => (
-                    <div key={idx} className="flex gap-4 pb-3 border-b">
+                    <div key={idx} className="flex gap-3 md:gap-4 pb-3 border-b">
                       <img
                         src={item.productId?.images?.[0] || "/placeholder.jpg"}
                         alt={item.name}
-                        className="w-20 h-20 object-cover rounded-lg"
+                        className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg shrink-0"
                       />
-                      <div className="flex-1">
-                        <h4 className="font-medium">{item.name || item.productId?.name}</h4>
-                        <div className="flex gap-3 text-sm text-gray-500">
-                          <span>Số lượng: {item.quantity}</span>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm md:text-base truncate">{item.name || item.productId?.name}</h4>
+                        <div className="flex flex-wrap gap-2 md:gap-3 text-xs text-gray-500 mt-1">
+                          <span>SL: {item.quantity || 1}</span>
                           <span>Size: {item.size || "M"}</span>
                           <span>Màu: {item.color || "Đen"}</span>
                         </div>
-                        <p className="text-sm text-gray-500">Tiền cọc: {item.deposit?.toLocaleString()}đ</p>
+                        <p className="text-xs text-gray-500 mt-1">Cọc: {(item.deposit || 0).toLocaleString()}đ</p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-blue-600">{item.price.toLocaleString()}đ</p>
+                      <div className="text-right shrink-0">
+                        <p className="font-bold text-blue-600 text-sm md:text-base">{(item.price || 0).toLocaleString()}đ</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
+              {/* Tổng cộng */}
               <div className="border-t pt-4">
-                <div className="flex justify-between py-2 font-bold text-lg">
+                <div className="flex justify-between py-2 font-bold text-base md:text-lg">
                   <span>Tổng cộng</span>
-                  <span className="text-blue-600">{selectedOrder.total.toLocaleString()}đ</span>
+                  <span className="text-blue-600">{(selectedOrder.total || 0).toLocaleString()}đ</span>
                 </div>
               </div>
 
-              {/* Hồ sơ khách trả đồ (Đang xử lý) - Minh chứng Admin */}
-              {(selectedOrder.penaltyNote || (selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0)) && (
-                <div className="border-t pt-4 bg-orange-50/50 -mx-4 px-4 pb-4">
-                  <div className="flex items-center justify-between mb-3 border-b border-orange-100 pb-2">
-                    <h3 className="font-bold text-sm flex items-center gap-2 text-orange-600">
-                      <span className="text-lg">📷</span>
-                      Hồ sơ khách trả đồ (Đang xử lý)
-                    </h3>
-                    <span className="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Thông tin từ cửa hàng</span>
-                  </div>
-                  
-                  {selectedOrder.penaltyNote && (
-                    <div className="bg-white p-4 rounded-xl border border-orange-200 text-sm text-gray-700 mb-4 italic shadow-sm relative overflow-hidden">
-                      <div className="absolute top-0 left-0 w-1 h-full bg-orange-400"></div>
-                      <span className="font-black text-orange-600 not-italic block mb-2 text-[10px] uppercase">Ghi chú từ nhân viên kiểm đồ:</span>
-                      "{selectedOrder.penaltyNote}"
-                    </div>
-                  )}
-
-                  {selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0 && (
-                    <div className="space-y-3">
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1">Minh chứng hình ảnh/video:</div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {selectedOrder.adminReturnMedia.map((url, idx) => {
-                          const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
-                          return (
-                            <div key={idx} className="relative aspect-video rounded-xl overflow-hidden border-2 border-white bg-white shadow-md hover:shadow-lg transition-all group">
-                              {isVideo ? (
-                                <video src={url} controls className="w-full h-full object-cover" />
-                              ) : (
-                                <img 
-                                  src={url} 
-                                  alt="Inspection" 
-                                  className="w-full h-full object-cover cursor-pointer hover:scale-110 transition-transform duration-500" 
-                                  onClick={() => window.open(url, '_blank')}
-                                />
-                              )}
-                              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Lịch sử đơn hàng */}
+              {/* Lịch sử đơn hàng - Cuộn ngang nếu cần */}
               {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 && (
                 <div className="border-t pt-4">
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <h3 className="font-semibold text-sm md:text-base mb-3 flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     Lịch sử đơn hàng
                   </h3>
-                  <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">
+                  <div className="space-y-3 max-h-[250px] overflow-y-auto">
                     {selectedOrder.statusHistory.map((history, idx) => (
-                      <div key={idx} className="relative flex items-center gap-4">
-                        <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-blue-100 text-blue-600 shadow shrink-0 z-10">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                      <div key={idx} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div className="flex flex-wrap justify-between items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${getStatusText(history.status).color}`}>
+                            {getStatusText(history.status).text}
+                          </span>
+                          <time className="text-[10px] md:text-xs text-gray-500">
+                            {new Date(history.date || new Date()).toLocaleString("vi-VN")}
+                          </time>
                         </div>
-                        <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex-1">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${getStatusText(history.status).color}`}>
-                              {getStatusText(history.status).text}
-                            </span>
-                            <time className="text-xs font-semibold text-gray-500">
-                              {new Date(history.date || new Date()).toLocaleString("vi-VN")}
-                            </time>
-                          </div>
-
-                          {/* Hiển thị đính kèm cho khách xem nếu là trạng thái 'returned' */}
-                          {history.status === 'returned' && (
-                            <div className="mt-2 bg-orange-50/50 border border-orange-100 rounded-lg p-2.5">
-                              <div className="text-[10px] font-bold text-orange-600 uppercase mb-1.5 font-sans">Minh chứng từ cửa hàng:</div>
-                              {selectedOrder.penaltyNote && (
-                                <div className="text-xs text-gray-700 italic mb-2 px-2 py-1.5 bg-white/80 rounded border border-orange-50">
-                                  "{selectedOrder.penaltyNote}"
-                                </div>
-                              )}
-                              {selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0 && (
-                                <div className="grid grid-cols-5 gap-1.5">
-                                  {selectedOrder.adminReturnMedia.map((url, i) => {
-                                    const isVideo = url.toLowerCase().match(/\.(mp4|webm|ogg|mov)$/) || url.includes("video");
-                                    return (
-                                      <div key={i} className="aspect-square rounded border border-orange-200 overflow-hidden bg-white shadow-sm">
-                                        {isVideo ? (
-                                          <video src={url} className="w-full h-full object-cover" />
-                                        ) : (
-                                          <img 
-                                            src={url} 
-                                            alt="Inspection" 
-                                            className="w-full h-full object-cover cursor-pointer" 
-                                            onClick={() => window.open(url, '_blank')}
-                                          />
-                                        )}
-                                      </div>
-                                    )
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                        {history.notes && (
+                          <p className="text-xs text-gray-500 mt-1">{history.notes}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -572,6 +585,7 @@ export default function OrderHistory() {
           </div>
         </div>
       )}
+
       {/* Modal Trả Đồ */}
       {returnOrderId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
@@ -656,11 +670,90 @@ export default function OrderHistory() {
         </div>
       )}
 
-      {/* MODAL XEM NHANH HỒ SƠ KIỂM ĐỒ (Dedicated Quick View - Identical to Admin Panel Style) */}
+      {/* Modal Gia hạn / Rút ngắn */}
+{showExtendModal && selectedOrderForExtend && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
+    <div className="bg-white rounded-xl max-w-md w-full">
+      <div className="px-6 py-4 border-b flex justify-between items-center">
+        <h2 className="text-xl font-bold">Thay đổi thời gian thuê</h2>
+        <button
+          onClick={() => setShowExtendModal(false)}
+          className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+        >
+          ×
+        </button>
+      </div>
+      
+      <div className="p-6 space-y-4">
+        <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+          {(() => {
+            const firstItem = selectedOrderForExtend.items?.[0] as any;
+            const startDate = firstItem?.rental?.startDate || selectedOrderForExtend.startDate;
+            const endDate = firstItem?.rental?.endDate || selectedOrderForExtend.endDate;
+            const days = firstItem?.rental?.days || 1;
+            
+            return (
+              <>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Ngày bắt đầu:</span> 
+                  {startDate ? new Date(startDate).toLocaleDateString("vi-VN") : "Chưa có dữ liệu"}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Ngày kết thúc hiện tại:</span> 
+                  {endDate ? new Date(endDate).toLocaleDateString("vi-VN") : "Chưa có dữ liệu"}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Số ngày thuê:</span> {days} ngày
+                </p>
+              </>
+            );
+          })()}
+        </div>
+
+        <div>
+          <label className="block text-gray-700 font-medium mb-2">
+            Chọn ngày kết thúc mới
+          </label>
+          <input
+            type="date"
+            value={extendDays}
+            onChange={(e) => setExtendDays(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+          />
+        </div>
+
+        <div className="bg-yellow-50 p-3 rounded-lg">
+          <p className="text-sm text-yellow-800">
+            💡 <strong>Lưu ý:</strong> 
+            <br />- Gia hạn sẽ phát sinh thêm phí
+            <br />- Vui lòng thanh toán để hoàn tất
+          </p>
+        </div>
+      </div>
+
+      <div className="p-4 border-t flex gap-3">
+        <button
+          onClick={() => setShowExtendModal(false)}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+        >
+          Hủy
+        </button>
+        <button
+          onClick={handleExtendOrder}
+          disabled={isExtending || !extendDays}
+          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
+        >
+          {isExtending ? "Đang xử lý..." : "Xác nhận thay đổi"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+      {/* MODAL XEM NHANH HỒ SƠ KIỂM ĐỒ */}
       {viewingInspection && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[70] p-4 animate-in fade-in duration-300">
           <div className={`bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border-2 transition-all ${['completed', 'fee_incurred'].includes(viewingInspection.status) ? "border-emerald-200 ring-4 ring-emerald-50" : "border-orange-200 ring-4 ring-orange-50"}`}>
-            {/* Header Mirroring Admin Style */}
             <div className={`text-[11px] font-black uppercase tracking-[0.2em] p-5 border-b flex justify-between items-center transition-colors ${['completed', 'fee_incurred'].includes(viewingInspection.status) ? "text-emerald-700 bg-emerald-50/30 border-emerald-100" : "text-orange-600 bg-orange-50/30 border-orange-100"}`}>
               <div className="flex items-center gap-2">
                 <span className="text-lg">{['completed', 'fee_incurred'].includes(viewingInspection.status) ? "✅" : "📷"}</span>
@@ -674,8 +767,7 @@ export default function OrderHistory() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              {/* PHẦN 1: GHI CHÚ KIỂM ĐỊNH */}
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                   <svg className={`w-3 h-3 ${['completed', 'fee_incurred'].includes(viewingInspection.status) ? "text-emerald-500" : "text-orange-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -693,7 +785,6 @@ export default function OrderHistory() {
                 )}
               </div>
 
-              {/* PHẦN 2: HÌNH ẢNH / VIDEO MINH CHỨNG */}
               {viewingInspection.adminReturnMedia && viewingInspection.adminReturnMedia.length > 0 && (
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -730,7 +821,6 @@ export default function OrderHistory() {
               )}
             </div>
 
-            {/* Footer Mirroring Admin Action Tone */}
             <div className="p-5 border-t border-gray-100 bg-white flex justify-center shadow-[0_-5px_20px_rgba(0,0,0,0.02)]">
               <button 
                 onClick={() => setViewingInspection(null)}

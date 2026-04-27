@@ -33,6 +33,8 @@ const cartItemSchema = new mongoose.Schema(
     deposit: Number,
     rentalPrice: Number,
     total: Number,
+    startDate: { type: String, default: "" },   
+    endDate: { type: String, default: "" },  
   },
   { _id: true },
 );

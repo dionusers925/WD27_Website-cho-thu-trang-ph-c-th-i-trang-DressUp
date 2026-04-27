@@ -66,7 +66,10 @@ function Header() {
         <a href="/policy" className="hover:opacity-50 transition-all">
           Hướng dẫn mua hàng
         </a>
-        <Link to="/orders" className="hover:text-blue-600 transition relative">
+
+        <Link to="/orders" className="hover:opacity-50 transition-all">
+
+
           Lịch sử đơn hàng
           {hasNewReturn && (
             <span className="absolute -top-1.5 -right-3 w-2.5 h-2.5 bg-red-600 rounded-full border-2 border-black animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.8)]"></span>

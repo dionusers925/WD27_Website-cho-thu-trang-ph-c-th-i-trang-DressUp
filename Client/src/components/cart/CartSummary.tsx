@@ -41,12 +41,7 @@ export default function CartSummary({
         <span>Tạm tính</span>
         <span>{formatPrice(total)}</span>
       </div>
-
-      <div className="flex justify-between mb-4">
-        <span>Vận chuyển</span>
-        <span>0 đ</span>
-      </div>
-
+      
       <hr className="mb-4" />
 
       <div className="flex justify-between font-semibold text-lg mb-6">
@@ -59,7 +54,7 @@ export default function CartSummary({
           onClick={onCheckout}
           className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 transition"
         >
-          Thanh toán VNPAY
+          CHECK OUT
         </button>
 
         <button
