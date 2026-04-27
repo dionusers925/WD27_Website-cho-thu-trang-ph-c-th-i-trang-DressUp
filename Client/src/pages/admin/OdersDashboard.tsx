@@ -573,15 +573,28 @@ const OrdersDashboard = () => {
                     <label className="block text-sm font-semibold text-gray-700 mb-1">
                       Ngân hàng
                     </label>
-                    <input
-                      type="text"
-                      placeholder="Nhập tên ngân hàng..."
+                    <select
                       className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
                       value={newOrder.bankName}
                       onChange={(e) =>
                         setNewOrder({ ...newOrder, bankName: e.target.value })
                       }
-                    />
+                    >
+                      <option value="">Chọn ngân hàng...</option>
+                      <option value="Vietcombank">Vietcombank</option>
+                      <option value="VietinBank">VietinBank</option>
+                      <option value="BIDV">BIDV</option>
+                      <option value="Agribank">Agribank</option>
+                      <option value="Techcombank">Techcombank</option>
+                      <option value="MBBank">MBBank</option>
+                      <option value="ACB">ACB</option>
+                      <option value="VPBank">VPBank</option>
+                      <option value="TPBank">TPBank</option>
+                      <option value="Sacombank">Sacombank</option>
+                      <option value="VIB">VIB</option>
+                      <option value="HDBank">HDBank</option>
+                      <option value="Khác">Khác</option>
+                    </select>
                   </div>
                 </div>
               </div>
