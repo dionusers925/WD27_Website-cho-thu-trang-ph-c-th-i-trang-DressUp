@@ -78,8 +78,8 @@ export default function OrderHistory() {
         `http://localhost:3000/orders/my-orders?userId=${user._id}`
       );
       console.log("Đơn hàng đầu tiên:", response.data[0]);
-console.log("startDate:", response.data[0]?.startDate);
-console.log("endDate:", response.data[0]?.endDate);
+      console.log("startDate:", response.data[0]?.startDate);
+      console.log("endDate:", response.data[0]?.endDate);
       setOrders(response.data);
     } catch (error) {
       console.error("Lỗi lấy lịch sử đơn hàng:", error);
@@ -319,7 +319,7 @@ console.log("endDate:", response.data[0]?.endDate);
                       onClick={() => handleReceiveOrder(order._id)}
                       className="px-3 py-1.5 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition"
                     >
-                      ✅ Đã nhận
+                       Đã nhận
                     </button>
                   )}
 
@@ -329,7 +329,7 @@ console.log("endDate:", response.data[0]?.endDate);
                       onClick={() => handleReturnOrder(order._id)}
                       className="px-3 py-1.5 text-sm text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition"
                     >
-                      📦 Trả đồ
+                      Trả đồ
                     </button>
                   )}
 
@@ -343,7 +343,7 @@ console.log("endDate:", response.data[0]?.endDate);
                       }}
                       className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition"
                     >
-                      ⏰ Gia hạn
+                      Gia hạn
                     </button>
                   )}
 
@@ -767,7 +767,7 @@ console.log("endDate:", response.data[0]?.endDate);
           <input
             type="date"
             value={extendDays}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setExtendDays(e.target.value)}
+            onChange={(e: any) => setExtendDays(e.target.value)}
             min={selectedOrderForExtend.startDate ? new Date(selectedOrderForExtend.startDate).toISOString().split("T")[0] : undefined}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />

@@ -75,7 +75,7 @@ function DetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showFullDesc, setShowFullDesc] = useState(false);
-
+  
   const today = useMemo(
     () => new Date().toISOString().split("T")[0],
     [],
@@ -188,12 +188,21 @@ function DetailPage() {
     if (!startDate || !endDate) return 0;
     const start = new Date(startDate);
     const end = new Date(endDate);
+    if (end < start) return 0;
     const diffTime = end.getTime() - start.getTime();
-    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const days = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
     return days > 0 ? days : 0;
   };
 
   const diffDays = calculateDiffDays();
+
+  const quickSelectDays = (days: number) => {
+    if (!startDate) return;
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + days - 1);
+    setEndDate(end.toISOString().split("T")[0]);
+  };
 
   const rentalPrices = Array.isArray(product?.rentalPrices)
     ? product.rentalPrices
@@ -217,14 +226,6 @@ function DetailPage() {
   const deposit =
     Number(product?.depositPrice ?? product?.depositDefault ?? 0) || 0;
   const totalPayment = deposit + rentalPrice;
-
-  const quickSelectDays = (days: number) => {
-    if (!startDate) return;
-    const start = new Date(startDate);
-    const end = new Date(start);
-    end.setDate(start.getDate() + days);
-    setEndDate(end.toISOString().split("T")[0]);
-  };
 
   const handleSelectColor = (color: string) => {
     setSelectedColor(color);
@@ -250,22 +251,62 @@ function DetailPage() {
     }
   };
 
-  const handleConfirmRental = async () => {
-    if (!product || diffDays <= 0 || !isAgreed) return;
+  const handleConfirmRental = async () => { 
+    if (!product || !isAgreed) return;
+    
+    if (diffDays <= 0 || !endDate) {
+      alert("Vui lòng chọn đầy đủ ngày thuê và ngày trả");
+      return;
+    }
+    
     try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      if (!user) {
+        alert("Vui lòng đăng nhập trước khi thêm vào giỏ hàng");
+        navigate("/auth/login");
+        return;
+      }
+
+      const size = selectedVariant?.size || "M";
+      const color = selectedVariant?.color || selectedColor || product.colorGroup || product.colorFamily || "Đen";
+
+      const rentalDays = diffDays;
+      const finalEndDate = endDate;
+
+      console.log("📅 Thêm vào giỏ:", { 
+        startDate, 
+        endDate: finalEndDate, 
+        rentalDays,
+        productId: product._id 
+      });
+
       await addToCart(
+        user._id,
         product._id,
         1,
-        diffDays,
-        selectedVariant?.size,
-        selectedVariant?.color ||
-          selectedColor ||
-          product.colorGroup ||
-          product.colorFamily,
+        rentalDays,
+        deposit,
+        rentalPrice,
+        totalPayment,
+        size,
+        color,
+        startDate,
+        finalEndDate,
       );
+      
+      const rentalKey = `rental_${product._id}`;
+      localStorage.setItem(rentalKey, JSON.stringify({
+        startDate: startDate,
+        endDate: finalEndDate,
+        days: rentalDays,
+        size: size,
+        color: color
+      }));
+      
       navigate("/cart");
     } catch (error) {
       console.log("Lỗi thêm vào giỏ hàng:", error);
+      alert("Có lỗi xảy ra, vui lòng thử lại");
     }
   };
 
@@ -558,7 +599,14 @@ function DetailPage() {
                     type="date"
                     value={endDate}
                     min={startDate || today}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => {
+                      const newEnd = e.target.value;
+                      if (newEnd && new Date(newEnd) >= new Date(startDate)) {
+                        setEndDate(newEnd);
+                      } else {
+                        alert("Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+                      }
+                    }}
                     className="w-full border-b border-gray-100 py-3 outline-none focus:border-black transition-all text-xs font-light bg-transparent cursor-pointer"
                   />
                 </div>

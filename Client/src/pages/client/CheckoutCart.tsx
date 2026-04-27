@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { getCart } from "../../api/cartService";
 
-// Danh sách quận nội thành Hà Nội và phí ship (dựa trên khoảng cách thực tế từ shop ở Trịnh Văn Bô, Nam Từ Liêm)
 const HANOI_DISTRICTS = [
   { id: "namtuliem", name: "Quận Nam Từ Liêm", fee: 20000},
   { id: "bactuliem", name: "Quận Bắc Từ Liêm", fee: 25000},
@@ -19,33 +18,25 @@ const HANOI_DISTRICTS = [
   { id: "longbien", name: "Quận Long Biên", fee: 70000 },
 ];
 
-// Tính phí ship dựa trên quận
 const getShippingFee = (districtId: string): number => {
   const district = HANOI_DISTRICTS.find(d => d.id === districtId);
   return district?.fee || 35000;
 };
 
-// Lấy tên quận
 const getDistrictName = (districtId: string): string => {
   const district = HANOI_DISTRICTS.find(d => d.id === districtId);
   return district?.name || "";
 };
 
-// Lấy khoảng cách
-const getDistance = (districtId: string): string => {
-  const district = HANOI_DISTRICTS.find(d => d.id === districtId);
-  return district?.distance || "~7km";
-};
-
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [totalRental, setTotalRental] = useState(0);
   const [totalDeposit, setTotalDeposit] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
-  const [selectedDistance, setSelectedDistance] = useState("");
   const [total, setTotal] = useState(0);
   const [returnAddressSame, setReturnAddressSame] = useState(true);
   const [returnAddress, setReturnAddress] = useState({
@@ -68,21 +59,27 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
-    fetchCart();
-  }, []);
+    const state = location.state as any;
+    if (state?.selectedItems) {
+      console.log("📦 Nhận từ CartPage:", state.selectedItems);
+      setCartItems(state.selectedItems);
+      setTotalRental(state.totalRental || 0);
+      setTotalDeposit(state.totalDeposit || 0);
+      setSubtotal((state.totalRental || 0) + (state.totalDeposit || 0));
+      setTotal(state.total || 0);
+    } else {
+      fetchCart();
+    }
+  }, [location]);
 
-  // Cập nhật phí ship khi chọn quận
   useEffect(() => {
     if (formData.districtId) {
       setShippingFee(getShippingFee(formData.districtId));
-      setSelectedDistance(getDistance(formData.districtId));
     } else {
       setShippingFee(0);
-      setSelectedDistance("");
     }
   }, [formData.districtId]);
 
-  // Cập nhật tổng tiền
   useEffect(() => {
     setTotal(subtotal + shippingFee);
   }, [subtotal, shippingFee]);
@@ -243,7 +240,14 @@ export default function CheckoutPage() {
         size: item.size,
         color: item.color,
         days: item.days,
+        startDate: item.startDate,
+        endDate: item.endDate,
       }));
+
+      console.log("📤 Gửi lên server các item với ngày thuê:");
+      formattedItems.forEach(item => {
+        console.log(`  - ${item.name}: ${item.startDate} → ${item.endDate} (${item.days} ngày)`);
+      });
 
       const response = await axios.post(
         "http://localhost:3000/api/payment/create-payment-url",
@@ -296,7 +300,6 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-gray-50 pt-28 pb-12 px-4">
       <div className="max-w-6xl mx-auto">
-        {/* Banner thông báo vận chuyển */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
           <p className="text-sm text-blue-800">
             🚚 <strong>Thông báo vận chuyển:</strong> DressUp chỉ giao hàng trong 
@@ -308,10 +311,8 @@ export default function CheckoutPage() {
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Thông tin thanh toán</h1>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Form bên trái */}
           <div className="flex-1">
             <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 space-y-6">
-              {/* 1. Thông tin người nhận */}
               <section>
                 <h2 className="text-lg font-semibold text-gray-800 pb-2 border-b mb-4">
                   1. Thông tin người nhận
@@ -342,7 +343,6 @@ export default function CheckoutPage() {
                     className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   />
                   
-                  {/* Chọn quận */}
                   <select
                     name="districtId"
                     value={formData.districtId}
@@ -357,7 +357,6 @@ export default function CheckoutPage() {
                     ))}
                   </select>
                   
-                  {/* Địa chỉ cụ thể */}
                   <div className="md:col-span-2">
                     <input
                       type="text"
@@ -371,7 +370,6 @@ export default function CheckoutPage() {
                 </div>
               </section>
 
-              {/* 2. Địa chỉ trả đồ */}
               <section>
                 <h2 className="text-lg font-semibold text-gray-800 pb-2 border-b mb-4">
                   2. Địa chỉ trả đồ
@@ -440,7 +438,6 @@ export default function CheckoutPage() {
                 </div>
               </section>
 
-              {/* 3. Thông tin nhận hoàn cọc */}
               <section>
                 <h2 className="text-lg font-semibold text-gray-800 pb-2 border-b mb-4">
                   3. Thông tin nhận hoàn cọc
@@ -473,7 +470,6 @@ export default function CheckoutPage() {
                 </div>
               </section>
 
-              {/* 4. Ghi chú */}
               <section>
                 <h2 className="text-lg font-semibold text-gray-800 pb-2 border-b mb-4">
                   4. Ghi chú
@@ -498,7 +494,6 @@ export default function CheckoutPage() {
             </form>
           </div>
 
-          {/* Tóm tắt đơn hàng bên phải */}
           <div className="lg:w-80">
             <div className="bg-white rounded-xl shadow-sm p-5 sticky top-28">
               <h2 className="text-lg font-semibold text-gray-800 pb-2 border-b mb-4">
@@ -514,6 +509,11 @@ export default function CheckoutPage() {
                       <div className="text-xs text-gray-400">
                         {item.days} ngày | {item.size}
                       </div>
+                      {item.startDate && (
+                        <div className="text-xs text-gray-400">
+                          {new Date(item.startDate).toLocaleDateString('vi-VN')} → {new Date(item.endDate).toLocaleDateString('vi-VN')}
+                        </div>
+                      )}
                     </div>
                     <span className="text-gray-800 font-medium">
                       {((item.rentalPrice || 0) * (item.quantity || 1)).toLocaleString()}đ
@@ -533,9 +533,7 @@ export default function CheckoutPage() {
                 </div>
                 {shippingFee > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-gray-500">
-                      Phí ship
-                    </span>
+                    <span className="text-gray-500">Phí ship</span>
                     <span className="text-gray-800">{shippingFee.toLocaleString()}đ</span>
                   </div>
                 )}
