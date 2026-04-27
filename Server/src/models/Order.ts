@@ -44,6 +44,13 @@ export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;
   orderNumber: string;
   items: IOrderItem[];
+  customerInfo?: {
+    fullName: string;
+    email: string;
+    phone: string;
+    address: string;
+    note?: string;
+  };
   shippingAddress?: IShippingAddress;
   subtotal: number;
   discount: number;

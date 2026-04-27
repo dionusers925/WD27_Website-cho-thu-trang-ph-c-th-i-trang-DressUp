@@ -37,10 +37,26 @@ interface Order {
     status: string;
     updatedBy?: string;
     date: string;
+    notes?: string;
   }[];
   adminReturnMedia?: string[];
   penaltyNote?: string;
-  endDate?: string; 
+  endDate?: string;
+  shippingAddress?: {
+    receiverName?: string;
+    receiverPhone?: string;
+    name?: string;
+    phone?: string;
+    line1?: string;
+    address?: string;
+  };
+  customerInfo?: {
+    fullName: string;
+    email: string;
+    phone: string;
+    address: string;
+    note?: string;
+  };
 }
 
 export default function OrderHistory() {
@@ -449,16 +465,39 @@ export default function OrderHistory() {
                 );
               })()}
 
-              {/* Thông tin nhận hàng - Grid responsive */}
+
+              {/* Thông tin nhận hàng */}
               <div className="border-t pt-4">
                 <h3 className="font-semibold text-sm md:text-base mb-3 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                   Thông tin nhận hàng
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs md:text-sm">
-                  <p><span className="text-gray-500">Người nhận:</span> {selectedOrder.customerName || "Khách hàng"}</p>
-                  <p><span className="text-gray-500">SĐT:</span> {selectedOrder.customerPhone || "Chưa cập nhật"}</p>
-                  <p><span className="text-gray-500">Địa chỉ:</span> {selectedOrder.customerAddress || "Chưa cập nhật"}</p>
+                  {(() => {
+                    // Lấy từ customerInfo (đã lưu trong order)
+                    const customerName = (selectedOrder as any).customerInfo?.fullName ||
+                      selectedOrder.customerName ||
+                      selectedOrder.shippingAddress?.receiverName ||
+                      "Khách hàng";
+                    
+                    const customerPhone = (selectedOrder as any).customerInfo?.phone ||
+                      selectedOrder.customerPhone ||
+                      selectedOrder.shippingAddress?.receiverPhone ||
+                      "Chưa cập nhật";
+                    
+                    const customerAddress = (selectedOrder as any).customerInfo?.address ||
+                      selectedOrder.customerAddress ||
+                      selectedOrder.shippingAddress?.line1 ||
+                      "Chưa cập nhật";
+                    
+                    return (
+                      <>
+                        <p><span className="text-gray-500">Người nhận:</span> {customerName}</p>
+                        <p><span className="text-gray-500">SĐT:</span> {customerPhone}</p>
+                        <p><span className="text-gray-500">Địa chỉ:</span> {customerAddress}</p>
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 

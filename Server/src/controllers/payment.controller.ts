@@ -175,6 +175,7 @@ export const paymentSuccess = async (req: Request, res: Response) => {
       userId: new mongoose.Types.ObjectId(tempData.userId),
       orderNumber: `DH${Date.now()}`,
       items: formattedItems,
+      customerInfo: tempData.customerInfo,
       shippingAddress: {
         receiverName: tempData.customerInfo?.fullName || "",
         receiverPhone: tempData.customerInfo?.phone || "",
