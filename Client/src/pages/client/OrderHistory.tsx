@@ -55,10 +55,9 @@ export default function OrderHistory() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // State cho modal gia hạn 
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [selectedOrderForExtend, setSelectedOrderForExtend] = useState<Order | null>(null);
-  const [extendDays, setExtendDays] = useState(1);
+  const [extendDays, setExtendDays] = useState("");
   const [isExtending, setIsExtending] = useState(false);
 
   useEffect(() => {
@@ -88,7 +87,6 @@ export default function OrderHistory() {
     }
   };
 
-  // Hàm xử lý nhận đồ
   const handleReceiveOrder = async (orderId: string) => {
     if (!confirm("Bạn xác nhận đã nhận được đồ?")) return;
 
@@ -114,52 +112,49 @@ export default function OrderHistory() {
     }
   };
 
-  // Hàm xử lý trả đồ (mở modal)
   const handleReturnOrder = (orderId: string) => {
     setReturnOrderId(orderId);
     setReturnFiles([]);
   };
 
-  // Hàm xử lý gia hạn 
   const handleExtendOrder = async () => {
-  if (!selectedOrderForExtend) return;
-  if (!extendDays) {
-    alert("Vui lòng chọn ngày kết thúc mới");
-    return;
-  }
-  
-  setIsExtending(true);
-  try {
-    const user = JSON.parse(localStorage.getItem("user") || "null");
-    if (!user) {
-      alert("Vui lòng đăng nhập");
+    if (!selectedOrderForExtend) return;
+    if (!extendDays) {
+      alert("Vui lòng chọn ngày kết thúc mới");
       return;
     }
-
-    // Chuyển đổi ngày sang định dạng ISO
-    const formattedDate = new Date(extendDays).toISOString();
-    console.log("📅 Gửi ngày:", formattedDate);
-
-    const response = await axios.post(
-      `http://localhost:3000/orders/${selectedOrderForExtend._id}/extend`,
-      {
-        userId: user._id,
-        newEndDate: formattedDate,  // Gửi ISO string
+    
+    setIsExtending(true);
+    try {
+      const user = JSON.parse(localStorage.getItem("user") || "null");
+      if (!user) {
+        alert("Vui lòng đăng nhập");
+        return;
       }
-    );
 
-    if (response.data.success) {
-      alert(response.data.message);
-      setShowExtendModal(false);
-      fetchOrders();
+      const formattedDate = new Date(extendDays).toISOString();
+      console.log("📅 Gửi ngày:", formattedDate);
+
+      const response = await axios.post(
+        `http://localhost:3000/orders/${selectedOrderForExtend._id}/extend`,
+        {
+          userId: user._id,
+          newEndDate: formattedDate,
+        }
+      );
+
+      if (response.data.success) {
+        alert(response.data.message);
+        setShowExtendModal(false);
+        fetchOrders();
+      }
+    } catch (error: any) {
+      console.error("Lỗi gia hạn:", error);
+      alert(error.response?.data?.message || "Có lỗi xảy ra khi gia hạn");
+    } finally {
+      setIsExtending(false);
     }
-  } catch (error: any) {
-    console.error("Lỗi gia hạn:", error);
-    alert(error.response?.data?.message || "Có lỗi xảy ra khi gia hạn");
-  } finally {
-    setIsExtending(false);
-  }
-};
+  };
 
   const handleReturnFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -272,7 +267,6 @@ export default function OrderHistory() {
                 key={order._id}
                 className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition"
               >
-                {/* Header đơn hàng */}
                 <div className="p-4 border-b border-gray-100 bg-gray-50 flex flex-wrap justify-between items-center gap-2">
                   <div>
                     <span className="text-gray-500 text-sm">Mã đơn hàng</span>
@@ -287,7 +281,7 @@ export default function OrderHistory() {
                   <div>
                     <span className="text-gray-500 text-sm">Tổng tiền</span>
                     <p className="text-lg font-bold text-blue-600">
-                      {order.total.toLocaleString()}đ
+                      {(order.total || 0).toLocaleString()}đ
                     </p>
                   </div>
                   <div>
@@ -302,8 +296,7 @@ export default function OrderHistory() {
                     </p>
                   </div>
 
-                  {/* Thông báo mới từ cửa hàng - Ấn vào xem nhanh */}
-                   {order.status === 'returned' && (
+                  {order.status === 'returned' && (
                     <button 
                       onClick={(e) => { e.stopPropagation(); setViewingInspection(order); }}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-500 text-white rounded-lg text-[10px] font-black animate-pulse border border-orange-400 uppercase tracking-tighter hover:bg-orange-600 transition-all shadow-[0_0_15px_rgba(249,115,22,0.4)]"
@@ -313,17 +306,15 @@ export default function OrderHistory() {
                     </button>
                   )}
 
-                  {/* Nút đã nhận */}
                   {(order.status === "shipped" || order.status === "delivered") && (
                     <button
                       onClick={() => handleReceiveOrder(order._id)}
                       className="px-3 py-1.5 text-sm text-green-600 border border-green-300 rounded-lg hover:bg-green-50 transition"
                     >
-                       Đã nhận
+                      Đã nhận
                     </button>
                   )}
 
-                  {/* Nút trả đồ - hiển thị khi đang thuê */}
                   {(order.status === "delivered" || order.status === "renting") && (
                     <button
                       onClick={() => handleReturnOrder(order._id)}
@@ -333,12 +324,11 @@ export default function OrderHistory() {
                     </button>
                   )}
 
-                  {/* NÚT GIA HẠN */}
                   {order.status === "renting" && (
                     <button
                       onClick={() => {
                         setSelectedOrderForExtend(order);
-                        setExtendDays(1);
+                        setExtendDays("");
                         setShowExtendModal(true);
                       }}
                       className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition"
@@ -355,7 +345,6 @@ export default function OrderHistory() {
                   </button>
                 </div>
 
-                {/* Danh sách sản phẩm */}
                 <div className="p-4 space-y-3">
                   {order.items.slice(0, 2).map((item, idx) => (
                     <div key={idx} className="flex gap-4">
@@ -367,14 +356,14 @@ export default function OrderHistory() {
                       <div className="flex-1">
                         <h3 className="font-medium">{item.name || item.productId?.name}</h3>
                         <div className="flex gap-4 text-sm text-gray-500 mt-1">
-                          <span>Số lượng: {item.quantity}</span>
+                          <span>Số lượng: {item.quantity || 1}</span>
                           <span>Size: {item.size || "M"}</span>
                           <span>Màu: {item.color || "Đen"}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">{item.price.toLocaleString()}đ</p>
-                        <p className="text-sm text-gray-500">Tiền cọc: {item.deposit?.toLocaleString()}đ</p>
+                        <p className="font-medium">{(item.price || 0).toLocaleString()}đ</p>
+                        <p className="text-sm text-gray-500">Tiền cọc: {(item.deposit || 0).toLocaleString()}đ</p>
                       </div>
                     </div>
                   ))}
@@ -390,11 +379,10 @@ export default function OrderHistory() {
         </div>
       )}
 
-      {/* Modal chi tiết đơn hàng  */}
+      {/* Modal chi tiết đơn hàng */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-            {/* Header - cố định ở trên, thêm rounded-t-xl */}
             <div className="bg-white rounded-t-xl px-4 py-3 border-b flex justify-between items-center shrink-0">
               <h2 className="text-xl font-bold">Chi tiết đơn hàng</h2>
               <button
@@ -405,9 +393,7 @@ export default function OrderHistory() {
               </button>
             </div>
 
-            {/* Nội dung cuộn */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/20">
-              {/* PHẦN 1: HỒ SƠ KIỂM ĐỒ (Ưu tiên hiển thị lên đầu khi có thông báo) */}
               {(selectedOrder.penaltyNote || (selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0)) && (
                 <div className="bg-orange-50/80 border-2 border-orange-200 rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500 overflow-hidden relative">
                   <div className="absolute top-0 right-0 px-3 py-1 bg-orange-500 text-white text-[10px] font-black uppercase rounded-bl-xl shadow-sm">Minh chứng từ cửa hàng</div>
@@ -452,7 +438,6 @@ export default function OrderHistory() {
                 </div>
               )}
 
-              {/* PHẦN 2: THÔNG TIN ĐƠN HÀNG CƠ BẢN */}
               <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                 <div>
                   <p className="text-gray-500 text-sm">Mã đơn hàng</p>
@@ -481,7 +466,6 @@ export default function OrderHistory() {
                 <p><span className="text-gray-500">Địa chỉ:</span> {selectedOrder.customerAddress || "Chưa cập nhật"}</p>
               </div>
 
-              {/* Thông tin ngân hàng */}
               {(selectedOrder.bankName || selectedOrder.bankAccount || selectedOrder.bankHolder) && (
                 <div className="border-t pt-4">
                   <h3 className="font-semibold mb-3">Thông tin nhận hoàn cọc</h3>
@@ -504,14 +488,14 @@ export default function OrderHistory() {
                       <div className="flex-1">
                         <h4 className="font-medium">{item.name || item.productId?.name}</h4>
                         <div className="flex gap-3 text-sm text-gray-500">
-                          <span>Số lượng: {item.quantity}</span>
+                          <span>Số lượng: {item.quantity || 1}</span>
                           <span>Size: {item.size || "M"}</span>
                           <span>Màu: {item.color || "Đen"}</span>
                         </div>
-                        <p className="text-sm text-gray-500">Tiền cọc: {item.deposit?.toLocaleString()}đ</p>
+                        <p className="text-sm text-gray-500">Tiền cọc: {(item.deposit || 0).toLocaleString()}đ</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-blue-600">{item.price.toLocaleString()}đ</p>
+                        <p className="font-bold text-blue-600">{(item.price || 0).toLocaleString()}đ</p>
                       </div>
                     </div>
                   ))}
@@ -521,11 +505,10 @@ export default function OrderHistory() {
               <div className="border-t pt-4">
                 <div className="flex justify-between py-2 font-bold text-lg">
                   <span>Tổng cộng</span>
-                  <span className="text-blue-600">{selectedOrder.total.toLocaleString()}đ</span>
+                  <span className="text-blue-600">{(selectedOrder.total || 0).toLocaleString()}đ</span>
                 </div>
               </div>
 
-              {/* Hồ sơ khách trả đồ (Đang xử lý) - Minh chứng Admin */}
               {(selectedOrder.penaltyNote || (selectedOrder.adminReturnMedia && selectedOrder.adminReturnMedia.length > 0)) && (
                 <div className="border-t pt-4 bg-orange-50/50 -mx-4 px-4 pb-4">
                   <div className="flex items-center justify-between mb-3 border-b border-orange-100 pb-2">
@@ -572,7 +555,6 @@ export default function OrderHistory() {
                 </div>
               )}
 
-              {/* Lịch sử đơn hàng */}
               {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 && (
                 <div className="border-t pt-4">
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -595,7 +577,6 @@ export default function OrderHistory() {
                             </time>
                           </div>
 
-                          {/* Hiển thị đính kèm cho khách xem nếu là trạng thái 'returned' */}
                           {history.status === 'returned' && (
                             <div className="mt-2 bg-orange-50/50 border border-orange-100 rounded-lg p-2.5">
                               <div className="text-[10px] font-bold text-orange-600 uppercase mb-1.5 font-sans">Minh chứng từ cửa hàng:</div>
@@ -638,7 +619,7 @@ export default function OrderHistory() {
         </div>
       )}
 
-      {/* Modal Trả Đồ  */}
+      {/* Modal Trả Đồ */}
       {returnOrderId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-xl max-w-lg w-full flex flex-col overflow-hidden">
@@ -722,90 +703,87 @@ export default function OrderHistory() {
         </div>
       )}
 
-      
       {/* Modal Gia hạn / Rút ngắn */}
+      {showExtendModal && selectedOrderForExtend && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold">Thay đổi thời gian thuê</h2>
+              <button
+                onClick={() => setShowExtendModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 p-3 rounded-lg space-y-1">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Ngày bắt đầu:</span> 
+                  {selectedOrderForExtend.startDate 
+                    ? new Date(selectedOrderForExtend.startDate).toLocaleDateString("vi-VN") 
+                    : "Chưa có dữ liệu"}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Ngày kết thúc hiện tại:</span> 
+                  {selectedOrderForExtend.endDate 
+                    ? new Date(selectedOrderForExtend.endDate).toLocaleDateString("vi-VN") 
+                    : "Chưa có dữ liệu"}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Số ngày thuê:</span> 
+                  {selectedOrderForExtend.startDate && selectedOrderForExtend.endDate 
+                    ? Math.ceil((new Date(selectedOrderForExtend.endDate).getTime() - new Date(selectedOrderForExtend.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
+                    : "Đang tính"} ngày
+                </p>
+              </div>
 
-{showExtendModal && selectedOrderForExtend && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-    <div className="bg-white rounded-xl max-w-md w-full">
-      <div className="px-6 py-4 border-b flex justify-between items-center">
-        <h2 className="text-xl font-bold">Thay đổi thời gian thuê</h2>
-        <button
-          onClick={() => setShowExtendModal(false)}
-          className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-        >
-          ×
-        </button>
-      </div>
-      
-      <div className="p-6 space-y-4">
-        <div className="bg-gray-50 p-3 rounded-lg space-y-1">
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">Ngày bắt đầu:</span> 
-            {selectedOrderForExtend.startDate 
-              ? new Date(selectedOrderForExtend.startDate).toLocaleDateString("vi-VN") 
-              : "Chưa có dữ liệu"}
-          </p>
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">Ngày kết thúc hiện tại:</span> 
-            {selectedOrderForExtend.endDate 
-              ? new Date(selectedOrderForExtend.endDate).toLocaleDateString("vi-VN") 
-              : "Chưa có dữ liệu"}
-          </p>
-          <p className="text-sm text-gray-600">
-            <span className="font-medium">Số ngày thuê:</span> 
-            {selectedOrderForExtend.startDate && selectedOrderForExtend.endDate 
-              ? Math.ceil((new Date(selectedOrderForExtend.endDate).getTime() - new Date(selectedOrderForExtend.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
-              : "Đang tính"} ngày
-          </p>
+              <div>
+                <label className="block text-gray-700 font-medium mb-2">
+                  Chọn ngày kết thúc mới
+                </label>
+                <input
+                  type="date"
+                  value={extendDays}
+                  onChange={(e) => setExtendDays(e.target.value)}
+                  min={selectedOrderForExtend.startDate ? new Date(selectedOrderForExtend.startDate).toISOString().split("T")[0] : undefined}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                />
+              </div>
+
+              <div className="bg-yellow-50 p-3 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  💡 <strong>Lưu ý:</strong> 
+                  <br />- Chọn ngày lớn hơn hiện tại → <span className="text-green-600">Gia hạn (thanh toán thêm)</span>
+                  <br />- Chọn ngày nhỏ hơn hiện tại → <span className="text-orange-600">Rút ngắn (hoàn tiền)</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 border-t flex gap-3">
+              <button
+                onClick={() => setShowExtendModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleExtendOrder}
+                disabled={isExtending || !extendDays}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
+              >
+                {isExtending ? "Đang xử lý..." : "Xác nhận thay đổi"}
+              </button>
+            </div>
+          </div>
         </div>
+      )}
 
-        <div>
-          <label className="block text-gray-700 font-medium mb-2">
-            Chọn ngày kết thúc mới
-          </label>
-          <input
-            type="date"
-            value={extendDays}
-            onChange={(e: any) => setExtendDays(e.target.value)}
-            min={selectedOrderForExtend.startDate ? new Date(selectedOrderForExtend.startDate).toISOString().split("T")[0] : undefined}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          />
-        </div>
-
-        <div className="bg-yellow-50 p-3 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            💡 <strong>Lưu ý:</strong> 
-            <br />- Chọn ngày lớn hơn hiện tại → <span className="text-green-600">Gia hạn (thanh toán thêm)</span>
-            <br />- Chọn ngày nhỏ hơn hiện tại → <span className="text-orange-600">Rút ngắn (hoàn tiền)</span>
-          </p>
-        </div>
-      </div>
-
-      <div className="p-4 border-t flex gap-3">
-        <button
-          onClick={() => setShowExtendModal(false)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-        >
-          Hủy
-        </button>
-        <button
-          onClick={handleExtendOrder}
-          disabled={isExtending || !extendDays}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
-        >
-          {isExtending ? "Đang xử lý..." : "Xác nhận thay đổi"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-      {/* MODAL XEM NHANH HỒ SƠ KIỂM ĐỒ  */}
+      {/* MODAL XEM NHANH HỒ SƠ KIỂM ĐỒ */}
       {viewingInspection && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[70] p-4 animate-in fade-in duration-300">
           <div className={`bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border-2 transition-all ${['completed', 'fee_incurred'].includes(viewingInspection.status) ? "border-emerald-200 ring-4 ring-emerald-50" : "border-orange-200 ring-4 ring-orange-50"}`}>
-            {/* Header Mirroring Admin Style */}
             <div className={`text-[11px] font-black uppercase tracking-[0.2em] p-5 border-b flex justify-between items-center transition-colors ${['completed', 'fee_incurred'].includes(viewingInspection.status) ? "text-emerald-700 bg-emerald-50/30 border-emerald-100" : "text-orange-600 bg-orange-50/30 border-orange-100"}`}>
               <div className="flex items-center gap-2">
                 <span className="text-lg">{['completed', 'fee_incurred'].includes(viewingInspection.status) ? "✅" : "📷"}</span>
@@ -819,8 +797,7 @@ export default function OrderHistory() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              {/* PHẦN 1: GHI CHÚ KIỂM ĐỊNH */}
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
                   <svg className={`w-3 h-3 ${['completed', 'fee_incurred'].includes(viewingInspection.status) ? "text-emerald-500" : "text-orange-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -838,7 +815,6 @@ export default function OrderHistory() {
                 )}
               </div>
 
-              {/* PHẦN 2: HÌNH ẢNH / VIDEO MINH CHỨNG */}
               {viewingInspection.adminReturnMedia && viewingInspection.adminReturnMedia.length > 0 && (
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
@@ -875,7 +851,6 @@ export default function OrderHistory() {
               )}
             </div>
 
-            {/* Footer Mirroring Admin Action Tone */}
             <div className="p-5 border-t border-gray-100 bg-white flex justify-center shadow-[0_-5px_20px_rgba(0,0,0,0.02)]">
               <button 
                 onClick={() => setViewingInspection(null)}

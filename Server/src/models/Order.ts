@@ -1,185 +1,154 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface IOrderItemRental {
+  startDate: Date;
+  endDate: Date;
+  days: number;
+  pricePerDay: number;
+}
+
+export interface IOrderItemVariant {
+  size: string;
+  color: string;
+}
+
 export interface IOrderItem {
   productId: mongoose.Types.ObjectId;
-  name?: string;
-  size?: string;
-  color?: string;
-  deposit?: number;
+  name: string;
+  image?: string;
+  rental: IOrderItemRental;
+  variant: IOrderItemVariant;
+  deposit: number;
   quantity: number;
-  price: number;
+  lineTotal: number;
+}
+
+export interface IShippingAddress {
+  receiverName: string;
+  receiverPhone: string;
+  line1: string;
+  ward?: string;
+  district?: string;
+  province?: string;
+  country?: string;
+}
+
+export interface IStatusHistory {
+  status: string;
+  timestamp: Date;
+  changedBy: string;
+  notes?: string;
 }
 
 export interface IOrder extends Document {
   userId: mongoose.Types.ObjectId;
   orderNumber: string;
-
   items: IOrderItem[];
-
-  customerName?: string;
-  customerPhone?: string;
-  customerAddress?: string;
-  bankName?: string;
-  bankAccount?: string;
-  bankHolder?: string;
-  note?: string;
-
-  shippingAddress?: {
-    address?: string;
-    name?: string;
-    phone?: string;
-    city?: string;
-    receiverName?: string;
-    receiverPhone?: string;
-    line1?: string;
-    ward?: string;
-    district?: string;
-    province?: string;
-    country?: string;
-  };
-
-  startDate?: Date;
-  endDate?: Date;
-
-  rentalDays?: number;     
-  originalEndDate?: Date;    
-
+  shippingAddress?: IShippingAddress;
   subtotal: number;
+  discount: number;
+  shippingFee: number;
   serviceFee: number;
-
-  lateFee: number;
-  damageFee: number;
-  overdueDays?: number;
-  damageErrors?: string[];
-  lostItems?: string[];
-
+  couponDiscount: number;
+  totalDeposit: number;
   total: number;
-
   paymentMethod: string;
   paymentStatus: string;
-
-  status:
-  | "pending"
-  | "confirmed"
-  | "shipped"
-  | "delivered"
-  | "returning"
-  | "returned"
-  | "renting"
-  | "extended"
-  | "shortened"
-  | "fee_incurred"
-  | "completed"
-  | "cancelled";
-
-  vnpTransactionNo?: string;
-
-  statusHistory?: Array<{ status: string; updatedBy?: string; date: Date; note?: string }>;
-  paymentStatusHistory?: Array<{ status: string; updatedBy?: string; date: Date }>;
-
+  status: string;
+  statusHistory: IStatusHistory[];
+  notes?: string;
+  pickupDeadline?: Date;
+  lateFee: number;
+  depositRefunded?: number;
+  confirmedAt?: Date;
+  shippedAt?: Date;
+  deliveredAt?: Date;
+  actualReturnDate?: Date;
+  returnedAt?: Date;
+  inspectedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const orderItemSchema = new Schema<IOrderItem>({
-  productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-  name: String,
-  size: String,
-  color: String,
-  deposit: { type: Number, default: 0 },
-  quantity: { type: Number, default: 1 },
-  price: { type: Number, required: true },
+// Sub-schemas
+const orderItemRentalSchema = new Schema<IOrderItemRental>({
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  days: { type: Number, required: true },
+  pricePerDay: { type: Number, required: true }
 });
 
+const orderItemVariantSchema = new Schema<IOrderItemVariant>({
+  size: { type: String, required: true },
+  color: { type: String, required: true }
+});
+
+const orderItemSchema = new Schema<IOrderItem>({
+  productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+  name: { type: String, required: true },
+  image: { type: String },
+  rental: { type: orderItemRentalSchema, required: true },
+  variant: { type: orderItemVariantSchema, required: true },
+  deposit: { type: Number, required: true, default: 0 },
+  quantity: { type: Number, required: true, default: 1 },
+  lineTotal: { type: Number, required: true }
+});
+
+const shippingAddressSchema = new Schema<IShippingAddress>({
+  receiverName: { type: String, required: true },
+  receiverPhone: { type: String, required: true },
+  line1: { type: String, required: true },
+  ward: String,
+  district: String,
+  province: String,
+  country: String
+});
+
+const statusHistorySchema = new Schema<IStatusHistory>({
+  status: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+  changedBy: { type: String, required: true },
+  notes: String
+});
+
+// Main Order Schema
 const orderSchema: Schema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-
     orderNumber: { type: String, required: true, unique: true },
-
-    items: {
-      type: [orderItemSchema],
-      required: true,
-    },
-
-    customerName: String,
-    customerPhone: String,
-    customerAddress: String,
-    bankName: String,
-    bankAccount: String,
-    bankHolder: String,
-    note: String,
-
-    shippingAddress: {
-      receiverName: String,
-      receiverPhone: String,
-      line1: String,
-      ward: String,
-      district: String,
-      province: String,
-      country: String,
-    },
-
-    startDate: Date,
-    endDate: Date,
-    rentalDays: { type: Number, default: 0 },           
-    originalEndDate: { type: Date, default: null },   
-
-    subtotal: { type: Number, default: 0 },
+    
+    items: { type: [orderItemSchema], required: true },
+    
+    shippingAddress: { type: shippingAddressSchema },
+    
+    subtotal: { type: Number, required: true, default: 0 },
+    discount: { type: Number, default: 0 },
+    shippingFee: { type: Number, default: 0 },
     serviceFee: { type: Number, default: 0 },
-
-    lateFee: { type: Number, default: 0 },
-    damageFee: { type: Number, default: 0 },
-    overdueDays: { type: Number, default: 0 },
-    damageErrors: { type: [String], default: [] },
-    lostItems: { type: [String], default: [] },
-
+    couponDiscount: { type: Number, default: 0 },
+    totalDeposit: { type: Number, required: true, default: 0 },
     total: { type: Number, required: true },
-
+    
     paymentMethod: { type: String, default: "cod" },
     paymentStatus: { type: String, default: "pending" },
-
-    status: {
-      type: String,
-      status: {
-  type: String,
-      enum: [
-        "pending",
-        "confirmed",
-        "shipped",
-        "delivered",
-        "returning",
-        "returned",
-        "renting",
-        "extended",
-        "shortened",
-        "fee_incurred",
-        "completed",
-        "cancelled",
-      ],
-  default: "pending",
-},
-      default: "pending",
-    },
-
-    vnpTransactionNo: { type: String, default: "" },
-
-    statusHistory: [
-      {
-        status: String,
-        date: { type: Date, default: Date.now },
-        updatedBy: String,
-        note: String,     
-      },
-    ],
-
-    paymentStatusHistory: [
-      {
-        status: String,
-        date: { type: Date, default: Date.now },
-        updatedBy: String,
-      },
-    ],
+    
+    status: { type: String, default: "pending" },
+    
+    statusHistory: { type: [statusHistorySchema], default: [] },
+    
+    notes: { type: String },
+    
+    pickupDeadline: Date,
+    
+    lateFee: { type: Number, default: 0 },
+    depositRefunded: { type: Number },
+    
+    confirmedAt: Date,
+    shippedAt: Date,
+    deliveredAt: Date,
+    actualReturnDate: Date,
+    returnedAt: Date,
+    inspectedAt: Date
   },
   { timestamps: true }
 );

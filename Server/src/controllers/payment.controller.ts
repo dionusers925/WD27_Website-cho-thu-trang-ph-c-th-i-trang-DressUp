@@ -13,10 +13,13 @@ const calcRentalDays = (start: Date, end: Date) => {
 // Lưu tạm thông tin thanh toán
 const tempPayments: any = {};
 
-// 1. API tạo link thanh toán (KHÔNG tạo order)
+// 1. API tạo link thanh toán
 export const createPaymentUrl = async (req: Request, res: Response) => {
   try {
-    const { userId, total, subtotal, shippingFee, items, customerInfo, returnAddress, bankName, bankAccount, bankHolder, paymentMethod, startDate, endDate } = req.body;
+    const { 
+      userId, total, subtotal, shippingFee, items, customerInfo, 
+      returnAddress, bankName, bankAccount, bankHolder, paymentMethod 
+    } = req.body;
 
     if (!userId) {
       return res.status(400).json({ message: "Thiếu userId" });
@@ -32,7 +35,6 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
 
     const tempOrderNumber = `TMP${Date.now()}`;
 
-    // ✅ ĐÃ SỬA: Thêm startDate, endDate vào tempPayments
     tempPayments[tempOrderNumber] = {
       userId,
       total,
@@ -44,8 +46,6 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
       bankName,
       bankAccount,
       bankHolder,
-      startDate,   // 👈 THÊM
-      endDate,     // 👈 THÊM
       createdAt: new Date(),
       processed: false,
       paymentMethod: paymentMethod || "vnpay",
@@ -77,7 +77,7 @@ export const createPaymentUrl = async (req: Request, res: Response) => {
 // 2. API xử lý sau khi thanh toán thành công
 export const paymentSuccess = async (req: Request, res: Response) => {
   try {
-    const { vnp_TxnRef, vnp_ResponseCode, vnp_Amount, vnp_TransactionNo } = req.body;
+    const { vnp_TxnRef, vnp_ResponseCode, vnp_TransactionNo } = req.body;
 
     if (vnp_ResponseCode !== "00") {
       return res.status(400).json({ success: false, message: "Thanh toán thất bại" });
@@ -95,67 +95,97 @@ export const paymentSuccess = async (req: Request, res: Response) => {
 
     tempPayments[vnp_TxnRef].processed = true;
 
-    // ✅ ĐÃ SỬA: Thêm startDate, endDate, days vào từng item
+    // Format items theo đúng cấu trúc Order model mới
     const formattedItems = tempData.items.map((item: any) => {
       // Lấy ngày từ item (nếu có) hoặc từ tempData
-      const itemStartDate = item.startDate ? new Date(item.startDate) : tempData.startDate ? new Date(tempData.startDate) : new Date();
-      const itemEndDate = item.endDate ? new Date(item.endDate) : tempData.endDate ? new Date(tempData.endDate) : new Date();
+      const startDate = item.startDate ? new Date(item.startDate) : new Date();
+      const endDate = item.endDate ? new Date(item.endDate) : new Date();
+      const days = calcRentalDays(startDate, endDate);
+      const pricePerDay = item.price || item.rentalPrice || 0;
+      const lineTotal = pricePerDay * days * (item.quantity || 1);
       
       return {
-        productId: item.productId,
+        productId: new mongoose.Types.ObjectId(item.productId),
         name: item.name,
-        size: item.size,
-        color: item.color,
+        image: item.image || "",
+        rental: {
+          startDate: startDate,
+          endDate: endDate,
+          days: days,
+          pricePerDay: pricePerDay
+        },
+        variant: {
+          size: item.size || "M",
+          color: item.color || "Đen"
+        },
         deposit: item.deposit || 0,
-        quantity: item.quantity,
-        price: item.price,
-        startDate: itemStartDate,   // 👈 THÊM
-        endDate: itemEndDate,       // 👈 THÊM
-        days: calcRentalDays(itemStartDate, itemEndDate),  // 👈 THÊM
+        quantity: item.quantity || 1,
+        lineTotal: lineTotal
       };
     });
 
-    // Tạo order
+    // Tính toán lại các tổng
+    interface FormattedItem {
+  lineTotal: number;
+  deposit: number;
+  quantity: number;
+}
+
+const subtotal = formattedItems.reduce((sum: number, item: FormattedItem) => sum + item.lineTotal, 0);
+const totalDeposit = formattedItems.reduce((sum: number, item: FormattedItem) => sum + (item.deposit * item.quantity), 0);
+const total = subtotal + totalDeposit + (tempData.shippingFee || 0);
+
+
+    // Tạo order với cấu trúc mới
     const order = await Order.create({
-      userId: tempData.userId,
+      userId: new mongoose.Types.ObjectId(tempData.userId),
       orderNumber: `DH${Date.now()}`,
       items: formattedItems,
-      subtotal: tempData.total,
+      shippingAddress: {
+        receiverName: tempData.customerInfo?.fullName || "",
+        receiverPhone: tempData.customerInfo?.phone || "",
+        line1: tempData.customerInfo?.address || "",
+        ward: "",
+        district: "",
+        province: "Hà Nội",
+        country: "VN"
+      },
+      subtotal: subtotal,
+      discount: 0,
+      shippingFee: tempData.shippingFee || 0,
       serviceFee: 0,
-      total: tempData.total,
+      couponDiscount: 0,
+      totalDeposit: totalDeposit,
+      total: total,
       paymentMethod: tempData.paymentMethod || "vnpay",
       paymentStatus: "paid",
       status: "confirmed",
-      customerName: tempData.customerInfo?.fullName || "",
-      customerPhone: tempData.customerInfo?.phone || "",
-      customerAddress: tempData.customerInfo?.address || "",
-      bankName: tempData.bankName || "",
-      bankAccount: tempData.bankAccount || "",
-      bankHolder: tempData.bankHolder || "",
-      note: tempData.customerInfo?.note || "",
-      startDate: tempData.startDate ? new Date(tempData.startDate) : new Date(),
-      endDate: tempData.endDate ? new Date(tempData.endDate) : new Date(),
-      rentalDays: calcRentalDays(
-        tempData.startDate ? new Date(tempData.startDate) : new Date(),
-        tempData.endDate ? new Date(tempData.endDate) : new Date()
-      ),
-      vnpTransactionNo: vnp_TransactionNo,
-    });
+      statusHistory: [{
+        status: "confirmed",
+        timestamp: new Date(),
+        changedBy: tempData.userId,
+        notes: "Thanh toán VNPay thành công"
+      }],
+      notes: tempData.customerInfo?.note || "",
+      pickupDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      lateFee: 0,
+      vnpTransactionNo: vnp_TransactionNo
+    })as any ;
 
-    console.log("✅ ORDER CREATED với ngày thuê:", {
-      id: (order as any)._id,
-      orderNumber: (order as any).orderNumber,
+    console.log("✅ ORDER CREATED với cấu trúc mới:", {
+      id: order._id,
+      orderNumber: order.orderNumber,
       items: formattedItems.map((i: any) => ({
         name: i.name,
-        startDate: i.startDate,
-        endDate: i.endDate,
-        days: i.days
+        startDate: i.rental.startDate,
+        endDate: i.rental.endDate,
+        days: i.rental.days
       }))
     });
 
     // Xóa giỏ hàng sau khi tạo order thành công
     try {
-      await Cart.findOneAndDelete({ user: tempData.userId });
+      await Cart.findOneAndDelete({ user: new mongoose.Types.ObjectId(tempData.userId) });
       console.log("✅ Đã xóa giỏ hàng sau khi thanh toán");
     } catch (cartError) {
       console.error("Lỗi xóa giỏ hàng:", cartError);
@@ -170,7 +200,7 @@ export const paymentSuccess = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Lỗi xử lý thanh toán thành công:", error);
-    return res.status(500).json({ success: false, message: "Lỗi server" });
+    return res.status(500).json({ success: false, message: "Lỗi server: " + String(error) });
   }
 };
 
