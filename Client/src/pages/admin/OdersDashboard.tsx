@@ -72,10 +72,10 @@ const OrdersDashboard = () => {
       depositDefault,
       variants: Array.isArray(p?.variants)
         ? p.variants.map((v: any) => ({
-            size: String(v?.size ?? ""),
-            color: String(v?.color ?? ""),
-            _id: v?._id,
-          }))
+          size: String(v?.size ?? ""),
+          color: String(v?.color ?? ""),
+          _id: v?._id,
+        }))
         : [],
     };
   };
@@ -121,7 +121,7 @@ const OrdersDashboard = () => {
     total: 0,
     paymentMethod: "Tiền mặt",
     shippingMethod: "Nhận tại cửa hàng",
-    status: "delivered",
+    status: "renting",
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date().toISOString().split("T")[0],
     items: [] as OrderItem[],
@@ -249,7 +249,7 @@ const OrdersDashboard = () => {
         total: 0,
         paymentMethod: "Tiền mặt",
         shippingMethod: "Nhận tại cửa hàng",
-        status: "delivered",
+        status: "renting",
         startDate: new Date().toISOString().split("T")[0],
         endDate: new Date().toISOString().split("T")[0],
         items: [],
@@ -288,13 +288,13 @@ const OrdersDashboard = () => {
 
   const handlePhoneChange = (phone: string) => {
     let updatedOrder = { ...newOrder, customerPhone: phone, userId: "" };
-    
+
     if (hasAccount && phone.length >= 8) {
       const foundUser = users.find((u: any) => u.phone === phone);
       if (foundUser) {
         updatedOrder.userId = foundUser._id;
         updatedOrder.customerName = foundUser.name || foundUser.fullName || updatedOrder.customerName;
-        
+
         const userOrders = orders.filter((o: any) => o.userId?._id === foundUser._id || o.userId === foundUser._id || o.customerPhone === phone);
         if (userOrders.length > 0) {
           const lastOrder: any = userOrders[0];
@@ -394,16 +394,17 @@ const OrdersDashboard = () => {
                     )}`}
                   >
                     {order.status === 'pending' ? 'Chờ xử lý' :
-                     order.status === 'confirmed' ? 'Đã xác nhận' :
-                     order.status === 'shipped' ? 'Đang giao' :
-                     order.status === 'delivered' ? 'Đã giao' :
-                     order.status === 'renting' ? 'Đang thuê' :
-                     order.status === 'returning' ? 'Đang trả đồ' :
-                     order.status === 'picked_up' ? 'Đã lấy đơn' :
-                     order.status === 'returned' ? 'Đã nhận đồ' :
-                     order.status === 'fee_incurred' ? 'Phát sinh phí' :
-                     order.status === 'completed' ? 'Hoàn tất' :
-                     order.status === 'cancelled' ? 'Đã hủy' : (order.status || "pending")}
+                      order.status === 'confirmed' ? 'Đã xác nhận' :
+                        order.status === 'preparing' ? 'Đang chuẩn bị hàng' :
+                          order.status === 'shipped' ? 'Đang giao' :
+                            order.status === 'delivered' ? 'Đã giao' :
+                              order.status === 'renting' ? 'Đang thuê' :
+                                order.status === 'returning' ? 'Đang trả đồ' :
+                                  order.status === 'picked_up' ? 'Đã lấy đơn' :
+                                    order.status === 'returned' ? 'Đã nhận đồ' :
+                                      order.status === 'fee_incurred' ? 'Phát sinh phí' :
+                                        order.status === 'completed' ? 'Hoàn tất' :
+                                          order.status === 'cancelled' ? 'Đã hủy' : (order.status || "pending")}
                   </span>
                 </td>
                 <td className="p-4 text-sm">
@@ -500,11 +501,10 @@ const OrdersDashboard = () => {
                       type="tel"
                       required
                       placeholder="Nhập số điện thoại..."
-                      className={`w-full p-2 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${
-                        hasAccount && newOrder.userId
+                      className={`w-full p-2 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${hasAccount && newOrder.userId
                           ? "border-green-300 ring-1 ring-green-300 bg-green-50"
                           : "border-gray-200"
-                      }`}
+                        }`}
                       value={newOrder.customerPhone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
                     />
@@ -648,15 +648,15 @@ const OrdersDashboard = () => {
                                   const detail = detailRes.data as any;
                                   const rawVariants =
                                     Array.isArray(detail?.data?.variants) &&
-                                    detail.data.variants.length > 0
+                                      detail.data.variants.length > 0
                                       ? detail.data.variants
                                       : Array.isArray(detail?.data?.product?.variants) &&
                                         detail.data.product.variants.length > 0
-                                      ? detail.data.product.variants
-                                      : Array.isArray(detail?.variants) &&
-                                        detail.variants.length > 0
-                                      ? detail.variants
-                                      : [];
+                                        ? detail.data.product.variants
+                                        : Array.isArray(detail?.variants) &&
+                                          detail.variants.length > 0
+                                          ? detail.variants
+                                          : [];
 
                                   const mappedVariants =
                                     normalizeVariants(rawVariants);
@@ -914,24 +914,24 @@ const OrdersDashboard = () => {
                           {o.status === "pending"
                             ? "Chờ xử lý"
                             : o.status === "confirmed"
-                            ? "Đã xác nhận"
-                            : o.status === "shipped"
-                            ? "Đang giao"
-                            : o.status === "delivered"
-                            ? "Đã giao"
-                            : o.status === "renting"
-                            ? "Đang thuê"
-                            : o.status === "returning"
-                            ? "Đang trả đồ"
-                            : o.status === "returned"
-                            ? "Đã nhận đồ"
-                            : o.status === "fee_incurred"
-                            ? "Phát sinh phí"
-                            : o.status === "completed"
-                            ? "Hoàn tất"
-                            : o.status === "cancelled"
-                            ? "Đã hủy"
-                            : o.status || "pending"}
+                              ? "Đã xác nhận"
+                              : o.status === "shipped"
+                                ? "Đang giao"
+                                : o.status === "delivered"
+                                  ? "Đã giao"
+                                  : o.status === "renting"
+                                    ? "Đang thuê"
+                                    : o.status === "returning"
+                                      ? "Đang trả đồ"
+                                      : o.status === "returned"
+                                        ? "Đã nhận đồ"
+                                        : o.status === "fee_incurred"
+                                          ? "Phát sinh phí"
+                                          : o.status === "completed"
+                                            ? "Hoàn tất"
+                                            : o.status === "cancelled"
+                                              ? "Đã hủy"
+                                              : o.status || "pending"}
                         </span>
                       </div>
                     </div>
