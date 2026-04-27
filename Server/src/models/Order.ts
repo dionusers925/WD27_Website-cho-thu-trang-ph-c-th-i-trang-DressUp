@@ -107,7 +107,7 @@ const shippingAddressSchema = new Schema<IShippingAddress>({
 const statusHistorySchema = new Schema<IStatusHistory>({
   status: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
-  changedBy: { type: String, required: true },
+  changedBy: { type: String, default: "Hệ thống" },
   notes: String
 });
 

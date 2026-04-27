@@ -216,21 +216,23 @@ export default function OrderHistory() {
   };
 
   const getStatusText = (status: string) => {
-    const statusMap: Record<string, { text: string; color: string }> = {
-      pending: { text: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50" },
-      confirmed: { text: "Đã xác nhận", color: "text-blue-600 bg-blue-50" },
-      shipped: { text: "Đang giao", color: "text-purple-600 bg-purple-50" },
-      delivered: { text: "Đã giao", color: "text-green-600 bg-green-50" },
-      returning: { text: "Đang trả đồ", color: "text-orange-600 bg-orange-50" },
-      picked_up: { text: "Đã lấy đơn", color: "text-blue-600 bg-blue-50" },
-      returned: { text: "Đã trả đồ", color: "text-teal-600 bg-teal-50" },
-      renting: { text: "Đang thuê", color: "text-cyan-600 bg-cyan-50" },
-      fee_incurred: { text: "Phát sinh phí", color: "text-red-600 bg-red-50" },
-      completed: { text: "Hoàn thành", color: "text-green-600 bg-green-50" },
-      cancelled: { text: "Đã hủy", color: "text-gray-600 bg-gray-50" },
-    };
-    return statusMap[status] || { text: status, color: "text-gray-600 bg-gray-50" };
+  const statusMap: Record<string, { text: string; color: string }> = {
+    pending: { text: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50" },
+    confirmed: { text: "Đã xác nhận", color: "text-blue-600 bg-blue-50" },
+    shipped: { text: "Đang giao", color: "text-purple-600 bg-purple-50" },
+    delivered: { text: "Đã giao", color: "text-green-600 bg-green-50" },
+    returning: { text: "Đang trả đồ", color: "text-orange-600 bg-orange-50" },
+    picked_up: { text: "Đã lấy đơn", color: "text-blue-600 bg-blue-50" },
+    returned: { text: "Đã trả đồ", color: "text-teal-600 bg-teal-50" },
+    renting: { text: "Đang thuê", color: "text-cyan-600 bg-cyan-50" },
+    fee_incurred: { text: "Phát sinh phí", color: "text-red-600 bg-red-50" },
+    completed: { text: "Hoàn thành", color: "text-green-600 bg-green-50" },
+    cancelled: { text: "Đã hủy", color: "text-gray-600 bg-gray-50" },
+    "đã gia hạn": { text: "Đã gia hạn", color: "text-blue-600 bg-blue-50" },
+    "đã rút ngắn": { text: "Đã rút ngắn", color: "text-orange-600 bg-orange-50" },
   };
+  return statusMap[status] || { text: status, color: "text-gray-600 bg-gray-50" };
+};
 
   const getPaymentStatusText = (status: string) => {
     return status === "paid" ? "Đã thanh toán" : "Chưa thanh toán";

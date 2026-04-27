@@ -348,10 +348,10 @@ orderRouter.post("/:id/extend", async (req, res) => {
 
       // Thêm vào lịch sử
       if (!order.statusHistory) order.statusHistory = [];
-      const statusChange = daysChanged > 0 ? "extended" : "shortened";
+      const statusChange = daysChanged > 0 ? "đã gia hạn" : "đã rút ngắn";
       const message = daysChanged > 0 
-        ? `Gia hạn thêm ${daysChanged} ngày đến ${newEndDateObj.toLocaleDateString("vi-VN")}. Phụ thu: ${additionalTotal.toLocaleString()}đ`
-        : `Rút ngắn ${Math.abs(daysChanged)} ngày. Hoàn tiền: ${Math.abs(additionalTotal).toLocaleString()}đ`;
+      ? `Gia hạn thêm ${daysChanged} ngày đến ${newEndDateObj.toLocaleDateString("vi-VN")}. Phụ thu: ${additionalTotal.toLocaleString()}đ`
+      : `Rút ngắn ${Math.abs(daysChanged)} ngày. Hoàn tiền: ${Math.abs(additionalTotal).toLocaleString()}đ`;
 
       order.statusHistory.push({
         status: statusChange,
@@ -365,8 +365,8 @@ orderRouter.post("/:id/extend", async (req, res) => {
       res.json({
         success: true,
         message: daysChanged > 0 
-          ? `Đã gia hạn thêm ${daysChanged} ngày. Vui lòng thanh toán thêm ${additionalTotal.toLocaleString()}đ`
-          : `Đã rút ngắn ${Math.abs(daysChanged)} ngày. Số tiền hoàn: ${Math.abs(additionalTotal).toLocaleString()}đ sẽ được chuyển vào tài khoản của bạn`,
+          ? `Đã gia hạn thêm ${daysChanged} ngày. Vui lòng thanh toán thêm ${additionalTotal.toLocaleString("vi-VN")}đ`
+          : `Đã rút ngắn ${Math.abs(daysChanged)} ngày. Số tiền hoàn: ${Math.abs(additionalTotal).toLocaleString("vi-VN")}đ sẽ được chuyển vào tài khoản của bạn`,
         order,
         additionalPayment: daysChanged > 0 ? additionalTotal : 0,
         refundAmount: daysChanged < 0 ? Math.abs(additionalTotal) : 0,
