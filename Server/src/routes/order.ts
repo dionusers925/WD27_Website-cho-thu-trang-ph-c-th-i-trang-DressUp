@@ -4,9 +4,6 @@ import Order from "../models/Order";
 
 const orderRouter = express.Router();
 
-// Map tạm lưu yêu cầu gia hạn (chờ thanh toán)
-const extendRequests = new Map<string, any>();
-
 const calcRentalDays = (start: Date, end: Date) => {
   const diffTime = end.getTime() - start.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
@@ -23,7 +20,7 @@ const getProductIdentifier = (productId: any) =>
 const buildVariantKey = (productId: any, size: any, color: any) =>
   `${getProductIdentifier(productId)}::${normalizeValue(size)}::${normalizeValue(color)}`;
 
-// Danh sách trạng thái cho phép (từ nhánh cbe)
+// Danh sách trạng thái cho phép
 const allowedStatuses = [
   "pending",
   "confirmed",
@@ -244,7 +241,7 @@ orderRouter.post("/", async (req, res) => {
   }
 });
 
-// ========== CẬP NHẬT ĐƠN HÀNG (KẾT HỢP CẢ 2 BÊN) ==========
+// ========== CẬP NHẬT ĐƠN HÀNG ==========
 orderRouter.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -265,7 +262,6 @@ orderRouter.put("/:id", async (req, res) => {
 
     const updates: any = {};
 
-    // Các field cập nhật từ HEAD
     if (lateFee !== undefined) updates.lateFee = lateFee;
     if (damageFee !== undefined) updates.damageFee = damageFee;
     if (status !== undefined) updates.status = status;
@@ -276,16 +272,13 @@ orderRouter.put("/:id", async (req, res) => {
     if (returnMedia !== undefined) updates.returnMedia = returnMedia;
     if (adminReturnMedia !== undefined) updates.adminReturnMedia = adminReturnMedia;
     if (penaltyNote !== undefined) updates.penaltyNote = penaltyNote;
-
-    // Các field từ nhánh cbe
     if (deliveryProof !== undefined) updates.deliveryProof = deliveryProof;
     if (depositReturnProof !== undefined) updates.depositReturnProof = depositReturnProof;
 
-    // Tính toán phí trễ hạn (từ nhánh cbe)
+    // Tính toán phí trễ hạn
     let resolvedLateDays = updates.overdueDays ?? 0;
     let resolvedLateFee = updates.lateFee ?? 0;
     
-    // Auto calculate late fee nếu có overdueDays
     if (resolvedLateDays > 0 && resolvedLateFee === 0) {
       const rentalSubtotal = (currentOrder.items ?? []).reduce((sum: number, item: any) => {
         const price = Number(item.price ?? 0);
@@ -365,165 +358,6 @@ orderRouter.put("/:id", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Lỗi Server khi cập nhật" });
-  }
-});
-
-// ========== API GIA HẠN / RÚT NGẮN THUÊ ==========
-orderRouter.post("/:id/extend", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { userId, newEndDate } = req.body;
-
-    console.log("📥 Received extend request:", { id, userId, newEndDate });
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "ID đơn hàng không hợp lệ" });
-    }
-
-    if (!userId) {
-      return res.status(400).json({ message: "Thiếu userId" });
-    }
-
-    const order = await Order.findOne({ _id: id, userId: userId });
-    if (!order) {
-      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
-    }
-
-    const allowedStatusesForExtend = ["confirmed", "shipped", "delivered", "renting"];
-    if (!allowedStatusesForExtend.includes(order.status)) {
-      return res.status(400).json({
-        message: "Chỉ có thể thay đổi thời gian thuê khi đơn hàng đang trong quá trình thuê",
-      });
-    }
-
-    const firstItem = order.items[0];
-    if (!firstItem || !firstItem.rental) {
-      return res.status(400).json({ message: "Không tìm thấy thông tin ngày thuê" });
-    }
-
-    const currentStartDate = firstItem.rental.startDate;
-    const currentEndDate = firstItem.rental.endDate;
-    const newEndDateObj = new Date(newEndDate);
-    const oldRentalDays = firstItem.rental.days;
-
-    console.log("📅 Current rental:", {
-      startDate: currentStartDate,
-      endDate: currentEndDate,
-      days: oldRentalDays,
-    });
-    console.log("📅 New end date:", newEndDateObj);
-
-    if (isNaN(newEndDateObj.getTime())) {
-      return res.status(400).json({ message: "Ngày kết thúc không hợp lệ" });
-    }
-
-    if (newEndDateObj <= currentStartDate) {
-      return res.status(400).json({ 
-        message: `Ngày kết thúc phải sau ngày bắt đầu (${new Date(currentStartDate).toLocaleDateString("vi-VN")})` 
-      });
-    }
-
-    const diffTime = newEndDateObj.getTime() - new Date(currentStartDate).getTime();
-    const newRentalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    const daysChanged = newRentalDays - oldRentalDays;
-
-    if (daysChanged === 0) {
-      return res.status(400).json({ message: "Ngày kết thúc mới trùng với ngày hiện tại" });
-    }
-
-    // Tính số tiền cần thanh toán thêm
-    let additionalTotal = 0;
-    order.items.forEach((item: any) => {
-      const pricePerDay = item.rental.pricePerDay;
-      const additional = pricePerDay * daysChanged * item.quantity;
-      additionalTotal += additional;
-    });
-
-    // Lưu tạm yêu cầu gia hạn
-    const extendRequest = {
-      orderId: id,
-      userId,
-      newEndDate: newEndDateObj,
-      newRentalDays,
-      daysChanged,
-      additionalTotal,
-      createdAt: new Date()
-    };
-    
-    const requestId = `EXT${Date.now()}`;
-    extendRequests.set(requestId, extendRequest);
-
-    // Trả về thông tin để FE tạo thanh toán
-    return res.json({
-      success: true,
-      needPayment: daysChanged > 0,
-      requestId,
-      additionalPayment: additionalTotal,
-      daysChanged: Math.abs(daysChanged),
-      message: daysChanged > 0 
-        ? `Bạn muốn gia hạn thêm ${daysChanged} ngày với số tiền ${additionalTotal.toLocaleString()}đ. Vui lòng thanh toán để hoàn tất.`
-        : `Bạn muốn rút ngắn ${Math.abs(daysChanged)} ngày. Số tiền hoàn: ${Math.abs(additionalTotal).toLocaleString()}đ.`
-    });
-
-  } catch (error) {
-    console.error("Lỗi gia hạn:", error);
-    res.status(500).json({ message: "Lỗi server: " + String(error) });
-  }
-});
-
-// ========== API XÁC NHẬN GIA HẠN SAU THANH TOÁN ==========
-orderRouter.post("/confirm-extend", async (req, res) => {
-  try {
-    const { requestId, vnp_ResponseCode } = req.body;
-
-    if (vnp_ResponseCode !== "00") {
-      return res.status(400).json({ success: false, message: "Thanh toán thất bại" });
-    }
-
-    const extendRequest = extendRequests.get(requestId);
-    if (!extendRequest) {
-      return res.status(404).json({ success: false, message: "Yêu cầu không hợp lệ hoặc đã hết hạn" });
-    }
-
-    const order = await Order.findById(extendRequest.orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng" });
-    }
-
-    // Cập nhật order với thông tin gia hạn
-    order.items.forEach((item: any) => {
-      const additional = item.rental.pricePerDay * extendRequest.daysChanged * item.quantity;
-      item.lineTotal = (item.lineTotal || 0) + additional;
-      item.rental.endDate = extendRequest.newEndDate;
-      item.rental.days = extendRequest.newRentalDays;
-    });
-
-    order.total = (order.total || 0) + extendRequest.additionalTotal;
-    order.subtotal = (order.subtotal || 0) + extendRequest.additionalTotal;
-
-    if (!order.statusHistory) order.statusHistory = [];
-    const statusText = extendRequest.daysChanged > 0 ? "đã gia hạn" : "đã rút ngắn";
-    order.statusHistory.push({
-      status: statusText,
-      timestamp: new Date(),
-      changedBy: extendRequest.userId,
-      notes: `Gia hạn thêm ${Math.abs(extendRequest.daysChanged)} ngày. Thanh toán: ${extendRequest.additionalTotal.toLocaleString()}đ`
-    });
-
-    await order.save();
-
-    // Xóa request đã xử lý
-    extendRequests.delete(requestId);
-
-    res.json({ 
-      success: true, 
-      message: `Đã ${statusText} thành công!`,
-      order 
-    });
-
-  } catch (error) {
-    console.error("Lỗi xác nhận gia hạn:", error);
-    res.status(500).json({ success: false, message: "Lỗi server: " + String(error) });
   }
 });
 
