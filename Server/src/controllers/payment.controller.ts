@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import Order from "../models/Order";
 import Cart from "../models/Cart";
+import Product from "../models/Product";
+import Variant from "../models/variant.model";
 import { createVnpayUrl } from "../services/vnpay.service";
 
 const calcRentalDays = (start: Date, end: Date) => {
@@ -207,7 +209,7 @@ export const paymentSuccess = async (req: Request, res: Response) => {
       vnpTransactionNo: vnp_TransactionNo
     }) as any;
 
-    console.log("✅ ORDER CREATED với cấu trúc mới:", {
+    console.log("✅ ORDER CREATED:", {
       id: order._id,
       orderNumber: order.orderNumber,
       items: formattedItems.map((i: any) => ({
@@ -217,6 +219,35 @@ export const paymentSuccess = async (req: Request, res: Response) => {
         days: i.rental.days
       }))
     });
+
+    // ========== TRỪ STOCK (CHO MODEL VARIANT) ==========
+    for (const item of formattedItems) {
+      try {
+        // Tìm variant theo productId, size, color
+        const variant = await Variant.findOne({
+          productId: item.productId,
+          size: item.variant.size,
+          color: item.variant.color
+        });
+        
+        if (!variant) {
+          console.warn(`⚠️ Không tìm thấy biến thể: ${item.name} - Size: ${item.variant.size}, Color: ${item.variant.color}`);
+          continue;
+        }
+        
+        const oldStock = variant.stock || 0;
+        if (oldStock >= item.quantity) {
+          variant.stock = oldStock - item.quantity;
+          await variant.save();
+          console.log(`✅ Đã trừ stock: ${item.name} (${variant.size}/${variant.color}) - ${oldStock} → ${variant.stock}`);
+        } else {
+          console.error(`❌ Không đủ stock: ${item.name} (${variant.size}/${variant.color}) - chỉ còn ${oldStock}, cần ${item.quantity}`);
+        }
+      } catch (stockError) {
+        console.error(`❌ Lỗi trừ stock cho ${item.name}:`, stockError);
+      }
+    }
+    console.log("✅ Đã hoàn tất cập nhật tồn kho");
 
     // Xóa giỏ hàng sau khi tạo order thành công
     try {
