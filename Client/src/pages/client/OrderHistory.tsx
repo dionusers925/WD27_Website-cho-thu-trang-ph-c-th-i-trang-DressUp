@@ -71,11 +71,6 @@ export default function OrderHistory() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [showExtendModal, setShowExtendModal] = useState(false);
-  const [selectedOrderForExtend, setSelectedOrderForExtend] = useState<Order | null>(null);
-  const [extendDays, setExtendDays] = useState("");
-  const [isExtending, setIsExtending] = useState(false);
-
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -129,58 +124,6 @@ export default function OrderHistory() {
     setReturnOrderId(orderId);
     setReturnFiles([]);
   };
-
-  const handleExtendOrder = async () => {
-  if (!selectedOrderForExtend) return;
-  if (!extendDays) {
-    alert("Vui lòng chọn ngày kết thúc mới");
-    return;
-  }
-  
-  setIsExtending(true);
-  try {
-    const user = JSON.parse(localStorage.getItem("user") || "null");
-    if (!user) {
-      alert("Vui lòng đăng nhập");
-      return;
-    }
-
-    const formattedDate = new Date(extendDays).toISOString();
-
-    // Bước 1: Gửi yêu cầu gia hạn
-    const response = await axios.post(
-      `http://localhost:3000/orders/${selectedOrderForExtend._id}/extend`,
-      {
-        userId: user._id,
-        newEndDate: formattedDate,
-      }
-    );
-
-    if (response.data.success && response.data.needPayment) {
-      // Bước 2: Cần thanh toán thêm - tạo link VNPay
-      const paymentResponse = await axios.post(
-        "http://localhost:3000/api/payment/create-extend-payment-url",
-        {
-          requestId: response.data.requestId,
-          amount: response.data.additionalPayment,
-          userId: user._id,
-        }
-      );
-      
-      // Chuyển hướng sang VNPay
-      window.location.href = paymentResponse.data.paymentUrl;
-    } else {
-      alert(response.data.message);
-      setShowExtendModal(false);
-      fetchOrders();
-    }
-  } catch (error: any) {
-    console.error("Lỗi gia hạn:", error);
-    alert(error.response?.data?.message || "Có lỗi xảy ra khi gia hạn");
-  } finally {
-    setIsExtending(false);
-  }
-};
 
   const handleReturnFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -242,23 +185,21 @@ export default function OrderHistory() {
   };
 
   const getStatusText = (status: string) => {
-  const statusMap: Record<string, { text: string; color: string }> = {
-    pending: { text: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50" },
-    confirmed: { text: "Đã xác nhận", color: "text-blue-600 bg-blue-50" },
-    shipped: { text: "Đang giao", color: "text-purple-600 bg-purple-50" },
-    delivered: { text: "Đã giao", color: "text-green-600 bg-green-50" },
-    returning: { text: "Đang trả đồ", color: "text-orange-600 bg-orange-50" },
-    picked_up: { text: "Đã lấy đơn", color: "text-blue-600 bg-blue-50" },
-    returned: { text: "Đã trả đồ", color: "text-teal-600 bg-teal-50" },
-    renting: { text: "Đang thuê", color: "text-cyan-600 bg-cyan-50" },
-    fee_incurred: { text: "Phát sinh phí", color: "text-red-600 bg-red-50" },
-    completed: { text: "Hoàn thành", color: "text-green-600 bg-green-50" },
-    cancelled: { text: "Đã hủy", color: "text-gray-600 bg-gray-50" },
-    "đã gia hạn": { text: "Đã gia hạn", color: "text-blue-600 bg-blue-50" },
-    "đã rút ngắn": { text: "Đã rút ngắn", color: "text-orange-600 bg-orange-50" },
+    const statusMap: Record<string, { text: string; color: string }> = {
+      pending: { text: "Chờ xác nhận", color: "text-yellow-600 bg-yellow-50" },
+      confirmed: { text: "Đã xác nhận", color: "text-blue-600 bg-blue-50" },
+      shipped: { text: "Đang giao", color: "text-purple-600 bg-purple-50" },
+      delivered: { text: "Đã giao", color: "text-green-600 bg-green-50" },
+      returning: { text: "Đang trả đồ", color: "text-orange-600 bg-orange-50" },
+      picked_up: { text: "Đã lấy đơn", color: "text-blue-600 bg-blue-50" },
+      returned: { text: "Đã trả đồ", color: "text-teal-600 bg-teal-50" },
+      renting: { text: "Đang thuê", color: "text-cyan-600 bg-cyan-50" },
+      fee_incurred: { text: "Phát sinh phí", color: "text-red-600 bg-red-50" },
+      completed: { text: "Hoàn thành", color: "text-green-600 bg-green-50" },
+      cancelled: { text: "Đã hủy", color: "text-gray-600 bg-gray-50" },
+    };
+    return statusMap[status] || { text: status, color: "text-gray-600 bg-gray-50" };
   };
-  return statusMap[status] || { text: status, color: "text-gray-600 bg-gray-50" };
-};
 
   const getPaymentStatusText = (status: string) => {
     return status === "paid" ? "Đã thanh toán" : "Chưa thanh toán";
@@ -343,28 +284,12 @@ export default function OrderHistory() {
                     </button>
                   )}
 
-
-                  {/* Nút trả đồ - hiển thị khi đang thuê */}
-
                   {order.status === "renting" && (
                     <button
                       onClick={() => handleReturnOrder(order._id)}
                       className="px-3 py-1.5 text-sm text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50 transition"
                     >
                       Trả đồ
-                    </button>
-                  )}
-
-                  {order.status === "renting" && (
-                    <button
-                      onClick={() => {
-                        setSelectedOrderForExtend(order);
-                        setExtendDays("");
-                        setShowExtendModal(true);
-                      }}
-                      className="px-3 py-1.5 text-sm text-blue-600 border border-blue-300 rounded-lg hover:bg-blue-50 transition"
-                    >
-                      Gia hạn
                     </button>
                   )}
 
@@ -411,11 +336,9 @@ export default function OrderHistory() {
       )}
 
       {/* Modal chi tiết đơn hàng */}
-      
       {selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
           <div className="bg-white rounded-xl w-full max-w-4xl max-h-[95vh] md:max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-            {/* Header - cố định */}
             <div className="bg-white px-4 md:px-6 py-3 md:py-4 border-b flex justify-between items-center shrink-0 sticky top-0 z-10">
               <h2 className="text-lg md:text-xl font-bold">Chi tiết đơn hàng #{selectedOrder.orderNumber}</h2>
               <button
@@ -426,9 +349,7 @@ export default function OrderHistory() {
               </button>
             </div>
 
-            {/* Nội dung cuộn */}
             <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 bg-gray-50/20">
-              {/* Thông tin cơ bản - Grid responsive */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 bg-white p-3 md:p-4 rounded-xl border border-gray-100 shadow-sm">
                 <div>
                   <p className="text-gray-400 text-[10px] md:text-xs uppercase tracking-wider">Mã đơn</p>
@@ -450,7 +371,6 @@ export default function OrderHistory() {
                 </div>
               </div>
 
-              {/* Thông tin ngày thuê - Lấy từ item */}
               {(() => {
                 const firstItem = selectedOrder.items?.[0] as any;
                 const startDate = firstItem?.rental?.startDate;
@@ -468,8 +388,6 @@ export default function OrderHistory() {
                 );
               })()}
 
-
-              {/* Thông tin nhận hàng */}
               <div className="border-t pt-4">
                 <h3 className="font-semibold text-sm md:text-base mb-3 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -477,7 +395,6 @@ export default function OrderHistory() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs md:text-sm">
                   {(() => {
-                    // Lấy từ customerInfo (đã lưu trong order)
                     const customerName = (selectedOrder as any).customerInfo?.fullName ||
                       selectedOrder.customerName ||
                       selectedOrder.shippingAddress?.receiverName ||
@@ -504,7 +421,6 @@ export default function OrderHistory() {
                 </div>
               </div>
 
-              {/* Thông tin ngân hàng */}
               {(selectedOrder.bankName || selectedOrder.bankAccount || selectedOrder.bankHolder) && (
                 <div className="border-t pt-4">
                   <h3 className="font-semibold text-sm md:text-base mb-3 flex items-center gap-2">
@@ -519,7 +435,6 @@ export default function OrderHistory() {
                 </div>
               )}
 
-              {/* Danh sách sản phẩm - Cuộn ngang trên mobile */}
               <div className="border-t pt-4">
                 <h3 className="font-semibold text-sm md:text-base mb-3">Sản phẩm ({selectedOrder.items.length})</h3>
                 <div className="space-y-3 max-h-[300px] md:max-h-[400px] overflow-y-auto">
@@ -547,7 +462,6 @@ export default function OrderHistory() {
                 </div>
               </div>
 
-              {/* Tổng cộng */}
               <div className="border-t pt-4">
                 <div className="flex justify-between py-2 font-bold text-base md:text-lg">
                   <span>Tổng cộng</span>
@@ -555,7 +469,6 @@ export default function OrderHistory() {
                 </div>
               </div>
 
-              {/* Lịch sử đơn hàng - Cuộn ngang nếu cần */}
               {selectedOrder.statusHistory && selectedOrder.statusHistory.length > 0 && (
                 <div className="border-t pt-4">
                   <h3 className="font-semibold text-sm md:text-base mb-3 flex items-center gap-2">
@@ -669,86 +582,6 @@ export default function OrderHistory() {
           </div>
         </div>
       )}
-
-      {/* Modal Gia hạn / Rút ngắn */}
-{showExtendModal && selectedOrderForExtend && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-    <div className="bg-white rounded-xl max-w-md w-full">
-      <div className="px-6 py-4 border-b flex justify-between items-center">
-        <h2 className="text-xl font-bold">Thay đổi thời gian thuê</h2>
-        <button
-          onClick={() => setShowExtendModal(false)}
-          className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
-        >
-          ×
-        </button>
-      </div>
-      
-      <div className="p-6 space-y-4">
-        <div className="bg-gray-50 p-3 rounded-lg space-y-1">
-          {(() => {
-            const firstItem = selectedOrderForExtend.items?.[0] as any;
-            const startDate = firstItem?.rental?.startDate || selectedOrderForExtend.startDate;
-            const endDate = firstItem?.rental?.endDate || selectedOrderForExtend.endDate;
-            const days = firstItem?.rental?.days || 1;
-            
-            return (
-              <>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Ngày bắt đầu:</span> 
-                  {startDate ? new Date(startDate).toLocaleDateString("vi-VN") : "Chưa có dữ liệu"}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Ngày kết thúc hiện tại:</span> 
-                  {endDate ? new Date(endDate).toLocaleDateString("vi-VN") : "Chưa có dữ liệu"}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Số ngày thuê:</span> {days} ngày
-                </p>
-              </>
-            );
-          })()}
-        </div>
-
-        <div>
-          <label className="block text-gray-700 font-medium mb-2">
-            Chọn ngày kết thúc mới
-          </label>
-          <input
-            type="date"
-            value={extendDays}
-            onChange={(e) => setExtendDays(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-          />
-        </div>
-
-        <div className="bg-yellow-50 p-3 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            💡 <strong>Lưu ý:</strong> 
-            <br />- Gia hạn sẽ phát sinh thêm phí
-            <br />- Vui lòng thanh toán để hoàn tất
-          </p>
-        </div>
-      </div>
-
-      <div className="p-4 border-t flex gap-3">
-        <button
-          onClick={() => setShowExtendModal(false)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-        >
-          Hủy
-        </button>
-        <button
-          onClick={handleExtendOrder}
-          disabled={isExtending || !extendDays}
-          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
-        >
-          {isExtending ? "Đang xử lý..." : "Xác nhận thay đổi"}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
 
       {/* MODAL XEM NHANH HỒ SƠ KIỂM ĐỒ */}
       {viewingInspection && (
