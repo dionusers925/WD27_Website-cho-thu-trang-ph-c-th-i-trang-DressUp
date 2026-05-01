@@ -14,7 +14,6 @@ const calcRentalDays = (start: Date, end: Date) => {
 
 // Lưu tạm thông tin thanh toán
 const tempPayments: any = {};
-const tempExtendPayments: any = {}; 
 
 // 1. API tạo link thanh toán
 export const createPaymentUrl = async (req: Request, res: Response) => {
@@ -84,40 +83,6 @@ export const paymentSuccess = async (req: Request, res: Response) => {
 
     if (vnp_ResponseCode !== "00") {
       return res.status(400).json({ success: false, message: "Thanh toán thất bại" });
-    }
-
-    // Kiểm tra xem có phải thanh toán gia hạn không
-    if (vnp_TxnRef.startsWith("EXT")) {
-      const extendData = tempExtendPayments[vnp_TxnRef];
-      if (!extendData) {
-        return res.status(404).json({ success: false, message: "Không tìm thấy thông tin thanh toán gia hạn" });
-      }
-
-      if (extendData.processed) {
-        return res.json({ success: true, message: "Đã xử lý", alreadyProcessed: true });
-      }
-
-      tempExtendPayments[vnp_TxnRef].processed = true;
-
-      // Gọi API xác nhận gia hạn
-      const confirmResponse = await fetch(`http://localhost:3000/orders/confirm-extend`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requestId: extendData.requestId,
-          vnp_ResponseCode: "00"
-        })
-      });
-
-      const result = await confirmResponse.json();
-      
-      delete tempExtendPayments[vnp_TxnRef];
-
-      return res.json({
-        success: true,
-        message: result.message || "Gia hạn thành công",
-        order: result.order
-      });
     }
 
     // Thanh toán đơn hàng thông thường
@@ -267,47 +232,6 @@ export const paymentSuccess = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Lỗi xử lý thanh toán thành công:", error);
     return res.status(500).json({ success: false, message: "Lỗi server: " + String(error) });
-  }
-};
-
-// ==================== API TẠO LINK THANH TOÁN CHO GIA HẠN ====================
-export const createExtendPaymentUrl = async (req: Request, res: Response) => {
-  try {
-    const { requestId, amount, userId } = req.body;
-
-    if (!requestId || !amount || !userId) {
-      return res.status(400).json({ message: "Thiếu thông tin" });
-    }
-
-    const tempOrderNumber = `EXT${Date.now()}`;
-    
-    // Lưu tạm thông tin gia hạn
-    tempExtendPayments[tempOrderNumber] = {
-      type: "extend",
-      requestId,
-      userId,
-      amount,
-      createdAt: new Date(),
-      processed: false
-    };
-
-    const fakeOrder = {
-      _id: tempOrderNumber,
-      orderNumber: tempOrderNumber,
-      total: amount
-    };
-
-    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || '127.0.0.1';
-    const paymentUrl = createVnpayUrl(amount, fakeOrder, clientIp);
-
-    return res.json({
-      message: "Tạo link thanh toán thành công",
-      paymentUrl,
-      tempOrderNumber
-    });
-  } catch (error: any) {
-    console.error("Lỗi tạo payment URL gia hạn:", error);
-    return res.status(500).json({ message: error.message || "Lỗi server" });
   }
 };
 
