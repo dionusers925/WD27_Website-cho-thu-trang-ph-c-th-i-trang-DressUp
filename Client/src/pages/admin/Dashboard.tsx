@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import { 
-  TrendingUp, 
-  ShoppingBag, 
-  Users, 
-  Package, 
+import {
+  TrendingUp,
+  ShoppingBag,
+  Users,
+  Package,
   ArrowUpRight,
   DollarSign,
   Activity
@@ -43,7 +43,7 @@ const Dashboard = () => {
         const orders: Order[] = ordersRes.data || [];
         const users = usersRes.data || [];
         const productsData = productsRes.data;
-        
+
         let products = [];
         if (Array.isArray(productsData)) {
           products = productsData;
@@ -54,7 +54,7 @@ const Dashboard = () => {
         }
 
         const totalRevenue = orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0);
-        
+
         setStats({
           totalRevenue,
           pendingOrders: orders.filter(order => order.status === "pending").length,
@@ -89,7 +89,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-center h-full min-h-[500px]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-gray-500 font-medium">Đang tải dữ liệu Dashboard...</p>
+          <p className="text-gray-500 font-medium">Đang tải dữ liệu Dashboard....</p>
         </div>
       </div>
     );
@@ -222,7 +222,7 @@ const Dashboard = () => {
               <option>Trong năm</option>
             </select>
           </div>
-          
+
           <div className="flex-1 min-h-[300px] flex items-end gap-2 sm:gap-4 lg:gap-6 pt-10">
             {/* Generating pseudo-bars to simulate a chart */}
             {[40, 70, 45, 90, 65, 85, 100].map((height, i) => (
@@ -231,7 +231,7 @@ const Dashboard = () => {
                 <div className="opacity-0 group-hover:opacity-100 absolute -top-10 bg-slate-800 text-white text-xs font-bold py-1 px-2 rounded transition-opacity pointer-events-none whitespace-nowrap z-20">
                   {((height * 100000) * 1.5).toLocaleString()} ₫
                 </div>
-                <div 
+                <div
                   className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-xl transition-all duration-500 hover:opacity-80"
                   style={{ height: `${height}%` }}
                 ></div>
