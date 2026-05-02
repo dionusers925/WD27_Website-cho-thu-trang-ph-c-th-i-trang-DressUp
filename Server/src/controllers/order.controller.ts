@@ -59,6 +59,49 @@ export const updateOrder = async (req: Request, res: Response) => {
       };
     }
 
+    const orderToUpdate = await Order.findById(id);
+    if (!orderToUpdate) {
+      return res.status(404).json({ message: "Cập nhật thất bại, không tìm thấy đơn hàng" });
+    }
+
+    // Logic: hoàn tất thủ tục nhận đồ sau 16:00 -> tự động dời ngày thuê sang hôm sau
+    if (status && (status === "renting" || status === "picked_up") && orderToUpdate.status !== "renting" && orderToUpdate.status !== "picked_up") {
+      const now = new Date();
+      if (now.getHours() >= 16) {
+        let itemsModified = false;
+        const updatedItems = orderToUpdate.items.map((item: any) => {
+          if (item.rental && item.rental.startDate) {
+            const start = new Date(item.rental.startDate);
+            // Nếu ngày bắt đầu là hôm nay hoặc trong quá khứ
+            if (
+              start.getFullYear() === now.getFullYear() &&
+              start.getMonth() === now.getMonth() &&
+              start.getDate() <= now.getDate()
+            ) {
+              const newStart = new Date(now);
+              newStart.setDate(newStart.getDate() + 1);
+              newStart.setHours(0, 0, 0, 0);
+
+              const daysShifted = Math.ceil((newStart.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+              item.rental.startDate = newStart;
+              if (item.rental.endDate) {
+                const newEnd = new Date(item.rental.endDate);
+                newEnd.setDate(newEnd.getDate() + daysShifted);
+                item.rental.endDate = newEnd;
+              }
+              itemsModified = true;
+            }
+          }
+          return item;
+        });
+
+        if (itemsModified) {
+          updateData.items = updatedItems;
+        }
+      }
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
       updateData,

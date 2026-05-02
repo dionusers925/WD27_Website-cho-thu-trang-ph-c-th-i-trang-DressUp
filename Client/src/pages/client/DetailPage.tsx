@@ -80,7 +80,15 @@ function DetailPage() {
     () => new Date().toISOString().split("T")[0],
     [],
   );
-  const [startDate, setStartDate] = useState(today);
+  const minStartDate = useMemo(() => {
+    const now = new Date();
+    if (now.getHours() >= 16) {
+      now.setDate(now.getDate() + 1);
+    }
+    return now.toISOString().split("T")[0];
+  }, []);
+
+  const [startDate, setStartDate] = useState(minStartDate);
   const [endDate, setEndDate] = useState("");
   const [isAgreed, setIsAgreed] = useState(false);
 
@@ -586,7 +594,7 @@ function DetailPage() {
                   <input
                     type="date"
                     value={startDate}
-                    min={today}
+                    min={minStartDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     className="w-full border-b border-gray-100 py-3 outline-none focus:border-black transition-all text-xs font-light bg-transparent cursor-pointer"
                   />
