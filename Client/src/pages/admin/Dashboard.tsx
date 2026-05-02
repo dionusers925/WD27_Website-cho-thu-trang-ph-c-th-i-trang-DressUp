@@ -24,7 +24,7 @@ interface Order {
 const Dashboard = () => {
   const [stats, setStats] = useState({
     totalRevenue: 0,
-    totalOrders: 0,
+    pendingOrders: 0,
     totalUsers: 0,
     totalProducts: 0,
   });
@@ -57,7 +57,7 @@ const Dashboard = () => {
         
         setStats({
           totalRevenue,
-          totalOrders: orders.length,
+          pendingOrders: orders.filter(order => order.status === "pending").length,
           totalUsers: users.length,
           totalProducts: products.length,
         });
@@ -149,11 +149,11 @@ const Dashboard = () => {
               <ShoppingBag size={24} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Tổng đơn hàng</p>
+              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Đơn chờ xử lý</p>
             </div>
           </div>
           <div className="relative z-10">
-            <h3 className="text-3xl font-bold text-slate-800">{stats.totalOrders}</h3>
+            <h3 className="text-3xl font-bold text-slate-800">{stats.pendingOrders}</h3>
             <div className="flex items-center gap-1 mt-2 text-sm text-indigo-600 font-medium hover:text-indigo-700">
               <Link to="/admin/order" className="flex items-center gap-1">
                 Xem chi tiết <ArrowUpRight size={16} />
