@@ -10,7 +10,7 @@ function PolicyPage() {
         <h1 className="text-5xl font-serif italic text-gray-900 mb-16 text-center">
           Hướng dẫn thuê trang phục tại DressUp
         </h1>
-        
+
 
         <div className="space-y-16">
           {/* MỤC 1: QUY TRÌNH ĐẶT THUÊ */}
@@ -59,6 +59,9 @@ function PolicyPage() {
               <p>
                 • Khách hàng vui lòng trả đồ đúng hạn. Phí trễ hạn sẽ được tính
                 dựa trên đơn giá thuê hàng ngày.
+              </p>
+              <p>
+                • Chính sách nhận đồ muộn: Nhằm đảm bảo quý khách có trọn vẹn thời gian sử dụng trang phục, các đơn hàng hoàn tất thủ tục nhận đồ sau 16:00 sẽ được hệ thống tự động tính ngày bắt đầu thuê là ngày kế tiếp.
               </p>
               <p>
                 • **Lưu ý:** DressUp sẽ chịu trách nhiệm làm sạch chuyên dụng
