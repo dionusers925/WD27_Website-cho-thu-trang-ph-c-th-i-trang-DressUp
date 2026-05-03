@@ -1022,7 +1022,7 @@ const OrderDetail = () => {
             penaltyNoteState) && (
               <div className={`bg-white rounded-xl p-5 border-2 shadow-md transition-all ${status === "returned" ? "border-orange-200 ring-2 ring-orange-50" : "border-emerald-100"}`}>
                 <div className={`text-[11px] font-bold uppercase tracking-wider mb-4 border-b pb-2 flex justify-between items-center ${status === "returned" ? "text-orange-600 border-orange-100" : "text-emerald-600 border-emerald-100"}`}>
-                  <span>{status === "returned" ? "📷 Hồ sơ khách trả đồ (Đang xử lý)" : " Hồ sơ kiểm đồ đã lưu"}</span>
+                  <span>{status === "returned" ? " Hồ sơ khách trả đồ (Đang xử lý)" : " Hồ sơ kiểm đồ đã lưu"}</span>
                   {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
                 </div>
 
