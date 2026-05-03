@@ -527,10 +527,10 @@ const OrderDetail = () => {
           onClick={handleUpdateOrder}
           disabled={isUpdating || (isLocked && paymentStatus === order.paymentStatus)}
           className={`px-6 py-2 text-white rounded-lg font-bold text-sm transition-all ${isLocked && paymentStatus === order.paymentStatus
-              ? "bg-gray-400 cursor-not-allowed"
-              : (status !== order.status || paymentStatus !== order.paymentStatus)
-                ? "bg-orange-500 hover:bg-orange-600 animate-pulse shadow-lg shadow-orange-200"
-                : "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
+            ? "bg-gray-400 cursor-not-allowed"
+            : (status !== order.status || paymentStatus !== order.paymentStatus)
+              ? "bg-orange-500 hover:bg-orange-600 animate-pulse shadow-lg shadow-orange-200"
+              : "bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
             }`}
           title={isLocked && paymentStatus === order.paymentStatus ? "Đơn hàng đã chốt và thanh toán hoàn tất, không thể chỉnh sửa" : ""}
         >
@@ -727,7 +727,7 @@ const OrderDetail = () => {
                   })}
                 </div>
                 <div className="mt-2 text-xs font-bold text-orange-600 italic text-center">
-                  ⚠ Khách hàng đã tải lên {order.returnMedia.length} hình ảnh/video bằng chứng
+                  Khách hàng đã tải lên {order.returnMedia.length} hình ảnh/video bằng chứng
                 </div>
               </div>
             )}
@@ -741,42 +741,42 @@ const OrderDetail = () => {
                   Sản phẩm ({items.length})
                 </div>
                 {(() => {
-  // Lấy ngày từ item đầu tiên (cấu trúc mới: item.rental)
-  const firstItem = items[0];
-  let startDate = order?.startDate;
-  let endDate = order?.endDate;
-  let days = rentalDays;
-  
-  if (firstItem) {
-    // Cấu trúc mới: item.rental
-    if ((firstItem as any).rental) {
-      startDate = (firstItem as any).rental.startDate;
-      endDate = (firstItem as any).rental.endDate;
-      days = (firstItem as any).rental.days;
-    }
-    // Cấu trúc cũ: item.startDate
-    else if (firstItem.startDate) {
-      startDate = firstItem.startDate;
-      endDate = firstItem.endDate;
-      days = firstItem.days || rentalDays;
-    }
-  }
-  
-  if (!startDate || !endDate) {
-    return (
-      <div className="text-xs text-gray-500 mt-1.5 font-medium">
-        Thời gian thuê: -- <span className="mx-2 text-gray-300">|</span> -- ngày
-      </div>
-    );
-  }
-  
-  return (
-    <div className="text-xs text-gray-500 mt-1.5 font-medium">
-      Thời gian thuê: {formatDate(startDate as string)} - {formatDate(endDate as string)} 
-      <span className="mx-2 text-gray-300">|</span> {days} ngày
-    </div>
-  );
-})()}
+                  // Lấy ngày từ item đầu tiên (cấu trúc mới: item.rental)
+                  const firstItem = items[0];
+                  let startDate = order?.startDate;
+                  let endDate = order?.endDate;
+                  let days = rentalDays;
+
+                  if (firstItem) {
+                    // Cấu trúc mới: item.rental
+                    if ((firstItem as any).rental) {
+                      startDate = (firstItem as any).rental.startDate;
+                      endDate = (firstItem as any).rental.endDate;
+                      days = (firstItem as any).rental.days;
+                    }
+                    // Cấu trúc cũ: item.startDate
+                    else if (firstItem.startDate) {
+                      startDate = firstItem.startDate;
+                      endDate = firstItem.endDate;
+                      days = firstItem.days || rentalDays;
+                    }
+                  }
+
+                  if (!startDate || !endDate) {
+                    return (
+                      <div className="text-xs text-gray-500 mt-1.5 font-medium">
+                        Thời gian thuê: -- <span className="mx-2 text-gray-300">|</span> -- ngày
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="text-xs text-gray-500 mt-1.5 font-medium">
+                      Thời gian thuê: {formatDate(startDate as string)} - {formatDate(endDate as string)}
+                      <span className="mx-2 text-gray-300">|</span> {days} ngày
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -894,8 +894,8 @@ const OrderDetail = () => {
                                         history.status === 'returned' ? 'Đã nhận đồ' :
                                           history.status === 'fee_incurred' ? 'Phát sinh phí' :
                                             history.status === 'completed' ? 'Hoàn tất' :
-                                              history.status === 'laundry' ? '🧺 Chờ về kho (Giặt là & Sửa chữa)' :
-                                                history.status === 'in_warehouse' ? '📥 Đã về kho' :
+                                              history.status === 'laundry' ? ' Chờ về kho (Giặt là & Sửa chữa)' :
+                                                history.status === 'in_warehouse' ? ' Đã về kho' :
                                                   history.status === 'cancelled' ? 'Đã hủy' : history.status}
                         </span>
                         <time className="text-xs font-semibold text-gray-400">{formatDateTime(history.date)}</time>
@@ -913,7 +913,7 @@ const OrderDetail = () => {
                             : isCustomer
                               ? 'bg-green-100 text-green-700 border-green-200'
                               : 'bg-blue-100 text-blue-700 border-blue-200';
-                        const icon = isSystem ? '🤖' : isShipper ? '🚚' : isCustomer ? '👤' : '🛡️';
+                        const icon = isSystem ? '' : isShipper ? '' : isCustomer ? '' : '';
                         return (
                           <div className="flex items-center gap-1.5 mb-2">
                             <span className="text-[10px] font-semibold text-gray-400 uppercase">Bởi:</span>
@@ -1022,7 +1022,7 @@ const OrderDetail = () => {
             penaltyNoteState) && (
               <div className={`bg-white rounded-xl p-5 border-2 shadow-md transition-all ${status === "returned" ? "border-orange-200 ring-2 ring-orange-50" : "border-emerald-100"}`}>
                 <div className={`text-[11px] font-bold uppercase tracking-wider mb-4 border-b pb-2 flex justify-between items-center ${status === "returned" ? "text-orange-600 border-orange-100" : "text-emerald-600 border-emerald-100"}`}>
-                  <span>{status === "returned" ? "📷 Hồ sơ khách trả đồ (Đang xử lý)" : "✅ Hồ sơ kiểm đồ đã lưu"}</span>
+                  <span>{status === "returned" ? "📷 Hồ sơ khách trả đồ (Đang xử lý)" : " Hồ sơ kiểm đồ đã lưu"}</span>
                   {isUploadingMedia && <span className="animate-pulse text-[10px]">Đang tải...</span>}
                 </div>
 
@@ -1209,7 +1209,7 @@ const OrderDetail = () => {
                     { id: 'tear_minor', label: 'Rách/xước nhỏ', fee: 50000 },
                     { id: 'tear_major', label: 'Rách lớn/Hỏng khóa', fee: 100000 },
                     { id: 'burn', label: 'Cháy/Thủng', fee: 200000 },
-                    { id: 'lost_item', label: 'Mất đồ/Phụ kiện', fee: 300000 },
+                    { id: 'lost_item', label: 'Phụ kiện', fee: 300000 },
                   ].map(error => {
                     const isDisabled = lostItemIds.length > 0 || (error.id !== 'lost_item' && selectedErrors.includes('lost_item')) || status !== 'fee_incurred';
                     return (
@@ -1338,7 +1338,7 @@ const OrderDetail = () => {
                       onClick={() => depositReturnInputRef.current?.click()}
                       className="cursor-pointer border-2 border-dashed border-teal-300 rounded-xl p-5 text-center bg-white/60 hover:bg-teal-50 hover:border-teal-500 transition-all group"
                     >
-                      <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">💸</div>
+                      <div className="text-3xl mb-2 group-hover:scale-110 transition-transform"></div>
                       <div className="text-[11px] font-black text-teal-700 uppercase tracking-wider">Tải ảnh minh chứng chuyển cọc</div>
                       <div className="text-[10px] text-gray-400 mt-1">Ảnh bill chuyển khoản, biên lai,...</div>
                       <input
@@ -1376,7 +1376,7 @@ const OrderDetail = () => {
                       </>
                     ) : (
                       <>
-                        <span className="text-xl">🧺</span>
+                        <span className="text-xl"></span>
                         <span>Giặt là &amp; Sửa chữa — Chờ về kho</span>
                       </>
                     )}
@@ -1392,7 +1392,7 @@ const OrderDetail = () => {
             {order.status === "laundry" && (
               <div className="mx-4 my-3 bg-violet-50 border border-violet-200 rounded-xl p-4 flex flex-col gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center shrink-0 text-xl">🧺</div>
+                  <div className="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center shrink-0 text-xl"></div>
                   <div className="flex-1">
                     <div className="text-[11px] font-black text-violet-700 uppercase tracking-wider mb-1">
                       Đang giặt là &amp; sửa chữa — Chờ về kho
@@ -1408,7 +1408,7 @@ const OrderDetail = () => {
                     disabled={isUpdating}
                     className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-fuchsia-500 to-fuchsia-600 hover:from-fuchsia-600 hover:to-fuchsia-700 text-white rounded-lg font-bold text-sm shadow-md shadow-fuchsia-200 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {isUpdating ? "Đang xử lý..." : "📥 Xác nhận Đã Về Kho"}
+                    {isUpdating ? "Đang xử lý..." : "Xác nhận Đã Về Kho"}
                   </button>
                 )}
               </div>
@@ -1417,7 +1417,7 @@ const OrderDetail = () => {
             {/* TRẠNG THÁI IN_WAREHOUSE - Đã về kho */}
             {order.status === "in_warehouse" && (
               <div className="mx-4 my-3 bg-fuchsia-50 border border-fuchsia-200 rounded-xl p-4 flex items-start gap-3">
-                <div className="w-9 h-9 bg-fuchsia-100 rounded-full flex items-center justify-center shrink-0 text-xl">📥</div>
+                <div className="w-9 h-9 bg-fuchsia-100 rounded-full flex items-center justify-center shrink-0 text-xl"></div>
                 <div className="flex-1">
                   <div className="text-[11px] font-black text-fuchsia-700 uppercase tracking-wider mb-1">
                     Đã về kho an toàn
