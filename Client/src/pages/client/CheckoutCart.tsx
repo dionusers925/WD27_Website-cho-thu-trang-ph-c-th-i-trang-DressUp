@@ -18,6 +18,29 @@ const HANOI_DISTRICTS = [
   { id: "longbien", name: "Quận Long Biên", fee: 70000 },
 ];
 
+const VIETNAM_BANKS = [
+  "Agribank - Ngân hàng Nông nghiệp và PTNT",
+  "Vietcombank - Ngân hàng TMCP Ngoại thương",
+  "VietinBank - Ngân hàng TMCP Công thương",
+  "BIDV - Ngân hàng Đầu tư và Phát triển",
+  "Techcombank - Ngân hàng TMCP Kỹ thương",
+  "MB Bank - Ngân hàng TMCP Quân đội",
+  "VPBank - Ngân hàng TMCP Việt Nam Thịnh vượng",
+  "ACB - Ngân hàng TMCP Á Châu",
+  "TPBank - Ngân hàng TMCP Tiên Phong",
+  "SHB - Ngân hàng TMCP Sài Gòn - Hà Nội",
+  "HDBank - Ngân hàng TMCP Phát triển TP.HCM",
+  "OCB - Ngân hàng TMCP Phương Đông",
+  "MSB - Ngân hàng TMCP Hàng Hải",
+  "SeABank - Ngân hàng TMCP Đông Nam Á",
+  "VIB - Ngân hàng TMCP Quốc tế",
+  "Sacombank - Ngân hàng TMCP Sài Gòn Thương Tín",
+  "Eximbank - Ngân hàng TMCP Xuất Nhập khẩu",
+  "LienVietPostBank - Ngân hàng TMCP Bưu điện Liên Việt",
+  "Nam A Bank - Ngân hàng TMCP Nam Á",
+  "NCB - Ngân hàng TMCP Quốc Dân",
+];
+
 const getShippingFee = (districtId: string): number => {
   const district = HANOI_DISTRICTS.find(d => d.id === districtId);
   return district?.fee || 35000;
@@ -176,8 +199,8 @@ export default function CheckoutPage() {
       }
     }
 
-    if (!formData.bankName.trim()) {
-      alert("Vui lòng nhập tên ngân hàng để nhận hoàn cọc");
+    if (!formData.bankName) {
+      alert("Vui lòng chọn ngân hàng để nhận hoàn cọc");
       return false;
     }
     if (!formData.bankAccount.trim()) {
@@ -443,14 +466,17 @@ export default function CheckoutPage() {
                   3. Thông tin nhận hoàn cọc
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
+                  <select
                     name="bankName"
                     value={formData.bankName}
                     onChange={handleInputChange}
-                    placeholder="Tên ngân hàng *"
-                    className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  />
+                    className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                  >
+                    <option value="">-- Chọn ngân hàng * --</option>
+                    {VIETNAM_BANKS.map((bank) => (
+                      <option key={bank} value={bank}>{bank}</option>
+                    ))}
+                  </select>
                   <input
                     type="text"
                     name="bankAccount"
