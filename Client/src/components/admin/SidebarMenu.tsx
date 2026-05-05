@@ -1,14 +1,17 @@
 import {
   DashboardOutlined,
-  ProductOutlined,
-  MessageOutlined,
   FundOutlined,
+  MessageOutlined,
+  ProductOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Menu } from "antd";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type MenuItem = Required<MenuProps>["items"][number];
+
+const dashboardKeys = ["", "total-revenue", "revenue"];
 
 const SidebarMenu = () => {
   const navigate = useNavigate();
@@ -44,11 +47,11 @@ const SidebarMenu = () => {
       label: "Quản lý danh mục",
       icon: <ProductOutlined />,
     },
-    // {
-    //   key: "attributes",
-    //   label: "Quản lý thuộc tính",
-    //   icon: <TagsOutlined />,
-    // },
+    {
+      key: "attributes",
+      label: "Quản lý thuộc tính",
+      icon: <TagsOutlined />,
+    },
     {
       key: "products",
       label: "Quản lý sản phẩm",
@@ -66,19 +69,23 @@ const SidebarMenu = () => {
     },
   ];
 
-  const handleClick = ({ key }: any) => {
+  const handleClick = ({ key }: { key: string }) => {
     if (key === "") {
-      navigate(`/admin`);
-    } else {
-      navigate(`/admin/${key}`);
+      navigate("/admin");
+      return;
     }
+
+    navigate(`/admin/${key}`);
   };
 
   const currentPath = location.pathname.replace("/admin", "").replace(/^\//, "");
+  const selectedKey = dashboardKeys.includes(currentPath)
+    ? currentPath
+    : currentPath.split("/")[0];
 
   return (
     <Menu
-      defaultSelectedKeys={[currentPath]}
+      selectedKeys={[selectedKey]}
       defaultOpenKeys={["dashboard-group"]}
       mode="inline"
       theme="dark"

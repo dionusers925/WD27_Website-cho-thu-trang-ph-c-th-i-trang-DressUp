@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Order from "../models/Order";
 import Variant from "../models/variant.model";
+import VariantStockHistory from "../models/variantStockHistory.model";
 
 export const getOrderById = async (req: Request, res: Response) => {
   try {

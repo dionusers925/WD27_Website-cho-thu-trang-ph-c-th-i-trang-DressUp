@@ -1,6 +1,8 @@
 import express from "express";
 import mongoose from "mongoose";
 import Order from "../models/Order";
+import Variant from "../models/variant.model";
+import VariantStockHistory from "../models/variantStockHistory.model";
 
 const orderRouter = express.Router();
 
@@ -42,6 +44,16 @@ const allowedStatuses = [
 ];
 
 const allowedPaymentStatuses = ["pending", "paid", "completed", "success"];
+const stockReturnPaymentStatuses = new Set([
+  "paid",
+  "success",
+  "completed",
+  "deposit_returned",
+]);
+
+const isStockReturnReady = (orderStatus: any, paymentStatus: any) =>
+  String(orderStatus ?? "").trim() === "completed" &&
+  stockReturnPaymentStatuses.has(String(paymentStatus ?? "").trim());
 
 // ========== API LẤY DANH SÁCH ĐƠN HÀNG ==========
 orderRouter.get("/", async (_req, res) => {
@@ -106,7 +118,7 @@ orderRouter.post("/:id/return", async (req, res) => {
     if (!order.statusHistory) order.statusHistory = [];
     order.statusHistory.push({
       status: "returning",
-      timestamp: new Date(),
+      date: new Date(),
       changedBy: "Khách hàng",
       notes: "Khách hàng yêu cầu trả đồ",
     });
@@ -322,6 +334,12 @@ orderRouter.put("/:id", async (req, res) => {
     }, 0);
 
     const targetStatus = updates.status ?? currentOrder.status;
+    const targetPaymentStatus = updates.paymentStatus ?? currentOrder.paymentStatus;
+    const targetStockReturnReady = isStockReturnReady(
+      targetStatus,
+      targetPaymentStatus
+    );
+
     const nextTotal = targetStatus === "completed" 
       ? rentalSubtotal + feeTotal 
       : rentalSubtotal + depositTotal + feeTotal;
@@ -361,7 +379,86 @@ orderRouter.put("/:id", async (req, res) => {
       updatedOrder = await Order.findById(id);
     }
 
-    res.json(updatedOrder);
+    let stockReturnQueuedCount = 0;
+    let stockReturnPendingCount = 0;
+
+    if (targetStockReturnReady && updatedOrder) {
+      const existingHistories = await VariantStockHistory.find({
+        orderId: updatedOrder._id,
+        action: "returned",
+      }).select("variantId productId size color processed");
+
+      stockReturnPendingCount = existingHistories.filter(
+        (history: any) => !history?.processed
+      ).length;
+
+      const existingKeys = new Set(
+        existingHistories.map((history: any) =>
+          history?.variantId
+            ? `variant:${String(history.variantId)}`
+            : buildVariantKey(history?.productId, history?.size, history?.color)
+        )
+      );
+
+      const historyDocs: any[] = [];
+
+      for (const item of updatedOrder.items ?? []) {
+        const variant = await Variant.findOne({
+          productId: item.productId,
+          size: item.variant?.size,
+          color: item.variant?.color,
+        });
+
+        if (!variant) {
+          continue;
+        }
+
+        const historyKey = `variant:${String(variant._id)}`;
+        if (existingKeys.has(historyKey)) {
+          continue;
+        }
+
+        const currentStock = Number(variant.stock ?? 0);
+        const quantity = Number(item.quantity ?? 1) || 1;
+
+        historyDocs.push({
+          productId: variant.productId,
+          variantId: variant._id,
+          orderId: updatedOrder._id,
+          sku: String(variant.sku ?? "").trim(),
+          size: String(variant.size ?? "").trim(),
+          color: String(variant.color ?? "").trim(),
+          quantity,
+          oldStock: currentStock,
+          newStock: currentStock,
+          change: 0,
+          action: "returned",
+          processed: false,
+          note: `Order: ${updatedOrder.orderNumber}`,
+        });
+
+        existingKeys.add(historyKey);
+      }
+
+      if (historyDocs.length > 0) {
+        await VariantStockHistory.insertMany(historyDocs);
+        stockReturnQueuedCount = historyDocs.length;
+        stockReturnPendingCount += historyDocs.length;
+      }
+    }
+
+    const responsePayload =
+      typeof (updatedOrder as any)?.toObject === "function"
+        ? (updatedOrder as any).toObject()
+        : updatedOrder;
+
+    res.json({
+      ...responsePayload,
+      stockReturnQueued: stockReturnQueuedCount > 0,
+      stockReturnQueuedCount,
+      stockReturnAvailable: targetStockReturnReady && stockReturnPendingCount > 0,
+      stockReturnPendingCount,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Lỗi Server khi cập nhật" });

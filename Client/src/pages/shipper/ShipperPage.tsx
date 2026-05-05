@@ -55,7 +55,6 @@ const statusMeta: Record<string, { label: string; color: string; bg: string; ico
   returned: { label: "Đã nhận về", color: "#14b8a6", bg: "rgba(20,184,166,0.12)", icon: "✔️" },
 };
 
-const nextStatus: Record<string, string> = { preparing: "shipped", shipped: "delivered" };
 
 /* ─── Component ────────────────────────────────── */
 export default function ShipperPage() {

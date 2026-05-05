@@ -87,13 +87,16 @@ export interface IOrder extends Document {
   statusHistory?: Array<{
     status: string;
     updatedBy?: string;
-    date: Date;
+    date?: Date;
+    timestamp?: Date;
+    changedBy?: string;
+    notes?: string;
   }>;
 
   paymentStatusHistory?: Array<{
     status: string;
     updatedBy?: string;
-    date: Date;
+    date?: Date;
   }>;
 
   // business fields từ HEAD
@@ -206,6 +209,9 @@ const orderSchema: Schema = new Schema(
         status: String,
         date: { type: Date, default: Date.now },
         updatedBy: String,
+        timestamp: Date,
+        changedBy: String,
+        notes: String,
       },
     ],
 

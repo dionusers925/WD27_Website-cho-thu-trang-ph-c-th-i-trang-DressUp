@@ -168,15 +168,15 @@ const getAvailableStatuses = (currentStatus?: string) => {
 const getAvailablePaymentStatuses = (currentStatus?: string) => {
   switch (currentStatus) {
     case "pending":
-      return ["pending", "deposit_returned", "success"];
+      return ["pending", "paid", "deposit_returned", "success"];
     case "paid":
     case "success":
     case "completed":
-      return ["success"];
+      return ["paid", "success"];
     case "deposit_returned":
-      return ["deposit_returned", "success"];
+      return ["paid", "deposit_returned", "success"];
     default:
-      return ["pending", "deposit_returned", "success"];
+      return ["pending", "paid", "deposit_returned", "success"];
   }
 };
 
@@ -340,6 +340,21 @@ const OrderDetail = () => {
       }
 
       const res = await axios.put(`http://localhost:3000/orders/${id}`, payload);
+      const updatedOrder = res.data as Order & {
+        stockReturnQueued?: boolean;
+        stockReturnQueuedCount?: number;
+        stockReturnAvailable?: boolean;
+        stockReturnPendingCount?: number;
+      };
+      setOrder(updatedOrder);
+      setAdminFiles([]);
+      setDepositReturnFile(null);
+
+      if (updatedOrder.stockReturnAvailable) {
+        alert("Đơn hàng đã hoàn tất. Hệ thống sẽ chuyển sang Biến động tồn kho để bạn xử lý hàng trả.");
+        navigate("/admin/stock-history");
+        return;
+      }
       setOrder(res.data); // Cập nhật lại UI sau khi lưu thành công
       setAdminFiles([]); // Clear local files after upload
       alert("Cập nhật đơn hàng thành công!");
@@ -378,6 +393,10 @@ const OrderDetail = () => {
       reader.readAsDataURL(file);
     }
     e.target.value = "";
+  };
+
+  const openStockHistory = () => {
+    navigate("/admin/stock-history");
   };
 
   const handleLaundry = async () => {
@@ -534,7 +553,7 @@ const OrderDetail = () => {
         {/* Nút lưu tích hợp cả phí và trạng thái */}
         <button
           onClick={handleUpdateOrder}
-          disabled={isUpdating || (isLocked && paymentStatus === order.paymentStatus)}
+          disabled={isUpdating || isUploadingDepositProof || (isLocked && paymentStatus === order.paymentStatus)}
           className={`px-6 py-2 text-white rounded-lg font-bold text-sm transition-all ${isLocked && paymentStatus === order.paymentStatus
             ? "bg-gray-400 cursor-not-allowed"
             : (status !== order.status || paymentStatus !== order.paymentStatus)
@@ -1372,6 +1391,13 @@ const OrderDetail = () => {
                   <div className="text-[10px] font-black text-violet-700 uppercase tracking-widest mb-3 flex items-center gap-2">
                     <span></span> Bước tiếp theo sau hoàn tất
                   </div>
+                  <button
+                    onClick={openStockHistory}
+                    className="mb-3 w-full flex items-center justify-center gap-3 py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-bold text-sm shadow-md shadow-emerald-200 transition-all active:scale-[0.98]"
+                  >
+                    <span className="text-xl"></span>
+                    <span>Sang xử lý biến động tồn kho</span>
+                  </button>
                   <button
                     onClick={handleLaundry}
                     disabled={isUpdating}
