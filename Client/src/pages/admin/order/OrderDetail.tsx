@@ -1370,7 +1370,7 @@ const OrderDetail = () => {
               <div className="mx-4 my-3">
                 <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-xl p-4">
                   <div className="text-[10px] font-black text-violet-700 uppercase tracking-widest mb-3 flex items-center gap-2">
-                    <span>🧺</span> Bước tiếp theo sau hoàn tất
+                    <span></span> Bước tiếp theo sau hoàn tất
                   </div>
                   <button
                     onClick={handleLaundry}
