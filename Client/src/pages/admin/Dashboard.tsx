@@ -69,11 +69,13 @@ const Dashboard = () => {
           totalProducts: products.length,
         });
 
-        // Compute top 10 customers
+        // Compute top 10 customers (exclude walk-in / anonymous orders)
         const customerMap = new Map<string, TopCustomer>();
         orders.forEach((order) => {
-          const key = order.userId?._id || order.userId?.name || order.customerName || "Khách tại quầy";
-          const name = order.customerName || order.userId?.name || "Khách tại quầy";
+          const name = (order.customerName || order.userId?.name || "").trim();
+          // Bỏ qua khách tại quầy (tên trống hoặc là "Khách tại quầy")
+          if (!name || name === "Khách tại quầy") return;
+          const key = order.userId?._id || name;
           const existing = customerMap.get(key);
           if (existing) {
             existing.orderCount += 1;
