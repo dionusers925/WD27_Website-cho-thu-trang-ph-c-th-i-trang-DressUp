@@ -8,7 +8,9 @@ import {
   Package,
   ArrowUpRight,
   DollarSign,
-  Activity
+  Activity,
+  Trophy,
+  Users
 } from "lucide-react";
 
 interface Order {
@@ -17,8 +19,15 @@ interface Order {
   status: string;
   createdAt: string;
   customerName?: string;
-  userId?: { name: string };
+  userId?: { _id?: string; name: string };
   paymentMethod: string;
+}
+
+interface TopCustomer {
+  key: string;
+  name: string;
+  orderCount: number;
+  totalSpent: number;
 }
 
 const Dashboard = () => {
@@ -28,7 +37,7 @@ const Dashboard = () => {
     rentingOrders: 0,
     totalProducts: 0,
   });
-  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,8 +69,23 @@ const Dashboard = () => {
           totalProducts: products.length,
         });
 
-        // Set recent orders (last 5)
-        setRecentOrders(orders.slice(0, 5));
+        // Compute top 10 customers
+        const customerMap = new Map<string, TopCustomer>();
+        orders.forEach((order) => {
+          const key = order.userId?._id || order.userId?.name || order.customerName || "Khách tại quầy";
+          const name = order.customerName || order.userId?.name || "Khách tại quầy";
+          const existing = customerMap.get(key);
+          if (existing) {
+            existing.orderCount += 1;
+            existing.totalSpent += Number(order.total) || 0;
+          } else {
+            customerMap.set(key, { key, name, orderCount: 1, totalSpent: Number(order.total) || 0 });
+          }
+        });
+        const sorted = Array.from(customerMap.values())
+          .sort((a, b) => b.orderCount - a.orderCount || b.totalSpent - a.totalSpent)
+          .slice(0, 10);
+        setTopCustomers(sorted);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -72,14 +96,11 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const getStatusBadge = (status: string) => {
-    const styles: Record<string, string> = {
-      completed: "bg-emerald-100 text-emerald-700 border-emerald-200",
-      pending: "bg-amber-100 text-amber-700 border-amber-200",
-      cancelled: "bg-rose-100 text-rose-700 border-rose-200",
-      delivered: "bg-blue-100 text-blue-700 border-blue-200",
-    };
-    return styles[status] || "bg-gray-100 text-gray-700 border-gray-200";
+  const medalStyle = (rank: number) => {
+    if (rank === 1) return { bg: "bg-amber-100", text: "text-amber-600", label: "#" };
+    if (rank === 2) return { bg: "bg-slate-100", text: "text-slate-500", label: "#" };
+    if (rank === 3) return { bg: "bg-orange-100", text: "text-orange-500", label: "#" };
+    return { bg: "bg-blue-50", text: "text-blue-500", label: "#" };
   };
 
   if (loading) {
@@ -242,50 +263,54 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Recent Orders List */}
+        {/* Top 10 Customers */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col">
           <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-slate-800">Đơn hàng mới</h2>
-            <Link to="/admin/order" className="text-blue-600 hover:text-blue-700 text-sm font-semibold">
-              Xem tất cả
-            </Link>
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Trophy size={18} className="text-amber-500" />
+              Top 10 Khách hàng
+            </h2>
+            <span className="text-xs text-slate-400 font-medium">Theo số đơn</span>
           </div>
-          <div className="p-4 flex-1">
-            {recentOrders.length > 0 ? (
-              <div className="space-y-4">
-                {recentOrders.map((order) => (
-                  <div key={order._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm">
-                        {order.customerName ? order.customerName.charAt(0).toUpperCase() : order.userId?.name?.charAt(0).toUpperCase() || "K"}
+          <div className="p-4 flex-1 overflow-y-auto max-h-[420px] custom-scrollbar">
+            {topCustomers.length > 0 ? (
+              <div className="space-y-2">
+                {topCustomers.map((customer, idx) => {
+                  const rank = idx + 1;
+                  const medal = medalStyle(rank);
+                  return (
+                    <div key={customer.key} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full ${medal.bg} ${medal.text} flex items-center justify-center font-extrabold text-sm flex-shrink-0`}>
+                          {rank <= 3 ? (
+                            <Trophy size={14} />
+                          ) : (
+                            <span>{rank}</span>
+                          )}
+                        </div>
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {customer.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800 leading-tight">{customer.name}</p>
+                          <p className="text-[11px] text-slate-400">{customer.orderCount} đơn hàng</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">
-                          {order.customerName || order.userId?.name || "Khách tại quầy"}
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          Mã: <span className="font-mono">{order._id.substring(order._id.length - 6).toUpperCase()}</span>
-                        </p>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-bold text-slate-800">{customer.totalSpent.toLocaleString()} ₫</p>
+                        <p className="text-[10px] text-slate-400">Tổng chi tiêu</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-slate-800">
-                        {(order.total || 0).toLocaleString()} ₫
-                      </p>
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border mt-1 ${getStatusBadge(order.status)}`}>
-                        {order.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center py-10">
                 <div className="bg-slate-100 p-4 rounded-full mb-3">
-                  <ShoppingBag className="text-slate-400" size={24} />
+                  <Users className="text-slate-400" size={24} />
                 </div>
-                <p className="text-slate-600 font-medium">Chưa có đơn hàng nào</p>
-                <p className="text-sm text-slate-400">Các đơn hàng mới sẽ xuất hiện ở đây.</p>
+                <p className="text-slate-600 font-medium">Chưa có dữ liệu khách hàng</p>
+                <p className="text-sm text-slate-400">Dữ liệu sẽ xuất hiện khi có đơn hàng.</p>
               </div>
             )}
           </div>
