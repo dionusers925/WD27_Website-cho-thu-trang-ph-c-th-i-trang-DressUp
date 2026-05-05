@@ -20,10 +20,10 @@ export const getOrderById = async (req: Request, res: Response) => {
 export const updateOrder = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { 
-      lateFee, damageFee, status, paymentStatus, updatedBy, 
-      returnMedia, adminReturnMedia, penaltyNote, damageErrors, 
-      lostItems, overdueDays 
+    const {
+      lateFee, damageFee, status, paymentStatus, updatedBy,
+      returnMedia, adminReturnMedia, penaltyNote, damageErrors,
+      lostItems, overdueDays
     } = req.body;
 
     const updateData: any = {};
@@ -113,25 +113,57 @@ export const updateOrder = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Cập nhật thất bại, không tìm thấy đơn hàng" });
     }
 
-    // ========== CỘNG LẠI STOCK KHI VỀ KHO ==========
+    // ========== CỘNG LẠI STOCK KHI VỀ KHO (chỉ các sản phẩm không bị mất) ==========
     if (status && status === "in_warehouse" && orderToUpdate.status !== "in_warehouse") {
-      for (const item of updatedOrder.items as any[]) {
+      const lostItemIds: string[] = (updatedOrder as any).lostItems || [];
+
+      for (let idx = 0; idx < updatedOrder.items.length; idx++) {
+        const item: any = updatedOrder.items[idx];
+        const itemKey = item._id ? item._id.toString() : `idx_${idx}`;
+
+        // Bỏ qua sản phẩm bị mất
+        if (lostItemIds.includes(itemKey)) {
+          console.log(`⚠️ Bỏ qua cộng stock cho "${item.name}" vì đã đánh dấu MẤT.`);
+          continue;
+        }
+
         try {
           const variant = await Variant.findOne({
             productId: item.productId,
             size: item.variant?.size,
             color: item.variant?.color
           });
-          
+
           if (variant) {
-            variant.stock = (variant.stock || 0) + (item.quantity || 1);
+            const oldStock = variant.stock || 0;
+            const qty = item.quantity || 1;
+            const newStock = oldStock + qty;
+            variant.stock = newStock;
+            if (variant.reservedStock && variant.reservedStock >= qty) {
+              variant.reservedStock -= qty;
+            }
             await variant.save();
-            console.log(`✅ Đã cộng lại stock: ${item.name} (${variant.size}/${variant.color}) - +${item.quantity || 1} → ${variant.stock}`);
+
+            // Ghi lịch sử kho để hiện lên ProductDetail
+            await VariantStockHistory.create({
+              productId: variant.productId,
+              variantId: variant._id,
+              sku: String(variant.sku ?? "").trim(),
+              size: String(variant.size ?? "").trim(),
+              color: String(variant.color ?? "").trim(),
+              oldStock,
+              newStock,
+              change: qty,
+              action: "returned",
+              note: `Hoàn trả về kho từ đơn ${updatedOrder.orderNumber}`
+            });
+
+            console.log(`✅ Đã cộng stock: ${item.name} (${variant.size}/${variant.color}) +${qty} → ${newStock}`);
           } else {
-             console.warn(`⚠️ Không tìm thấy biến thể để cộng lại stock: ${item.name} - Size: ${item.variant?.size}, Color: ${item.variant?.color}`);
+            console.warn(`⚠️ Không tìm thấy biến thể: ${item.name} - Size: ${item.variant?.size}, Color: ${item.variant?.color}`);
           }
         } catch (stockError) {
-          console.error(`❌ Lỗi cộng lại stock cho ${item.name}:`, stockError);
+          console.error(`❌ Lỗi cộng stock cho ${item.name}:`, stockError);
         }
       }
     }
@@ -223,8 +255,8 @@ export const extendOrder = async (req: Request, res: Response) => {
 
     await order.save();
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: `Đã gia hạn thành công! Thêm ${extensionDays} ngày. Vui lòng thanh toán thêm ${additionalTotal.toLocaleString()}đ`,
       order,
       additionalPayment: additionalTotal
@@ -239,7 +271,7 @@ export const extendOrder = async (req: Request, res: Response) => {
 export const getMyOrders = async (req: Request, res: Response) => {
   try {
     const { userId } = req.query;
-    
+
     if (!userId) {
       return res.status(400).json({ message: "Thiếu userId" });
     }

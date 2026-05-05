@@ -60,20 +60,20 @@ export interface IOrder extends Document {
   paymentStatus: string;
 
   status:
-    | "pending"
-    | "confirmed"
-    | "preparing"
-    | "shipped"
-    | "delivered"
-    | "renting"
-    | "returning"
-    | "picked_up"
-    | "returned"
-    | "fee_incurred"
-    | "completed"
-    | "laundry"
-    | "in_warehouse"
-    | "cancelled";
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "shipped"
+  | "delivered"
+  | "renting"
+  | "returning"
+  | "picked_up"
+  | "returned"
+  | "fee_incurred"
+  | "completed"
+  | "laundry"
+  | "in_warehouse"
+  | "cancelled";
 
   // media & proof
   deliveryProof?: string;
@@ -100,6 +100,11 @@ export interface IOrder extends Document {
   notes?: string;
   pickupDeadline?: Date;
   lateFee: number;
+  damageFee?: number;
+  damageErrors?: string[];
+  lostItems?: string[];
+  overdueDays?: number;
+  penaltyNote?: string;
   depositRefunded?: number;
 
   confirmedAt?: Date;
@@ -216,6 +221,11 @@ const orderSchema: Schema = new Schema(
     notes: String,
     pickupDeadline: Date,
     lateFee: { type: Number, default: 0 },
+    damageFee: { type: Number, default: 0 },
+    damageErrors: { type: [String], default: [] },
+    lostItems: { type: [String], default: [] },
+    overdueDays: Number,
+    penaltyNote: String,
     depositRefunded: Number,
 
     confirmedAt: Date,

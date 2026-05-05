@@ -248,7 +248,9 @@ const OrderDetail = () => {
                 const rDays = calcRentalDays(data.startDate, data.endDate);
                 const itemsList = Array.isArray(data.items) ? data.items : [];
                 const rSub = itemsList.reduce((sum: number, item: any) => {
-                  return sum + Number(item.price ?? 0) * Number(item.quantity ?? 1) * rDays;
+                  const price = Number(item.rental?.pricePerDay ?? item.price ?? 0);
+                  const days = Number(item.rental?.days ?? rDays);
+                  return sum + price * Number(item.quantity ?? 1) * days;
                 }, 0);
                 const rentPerDay = rSub / rDays;
                 initialLateFee = Math.round(rentPerDay * d);
@@ -406,6 +408,7 @@ const OrderDetail = () => {
       const res = await axios.put(`http://localhost:3000/orders/${id}`, {
         status: "in_warehouse",
         updatedBy,
+        lostItems: lostItemIds,
       });
       setOrder(res.data);
       setStatus("in_warehouse");
@@ -426,13 +429,19 @@ const OrderDetail = () => {
   );
 
   const rentalSubtotal = useMemo(
-    () =>
-      items.reduce((sum, item) => {
-        const price = Number(item.price ?? 0);
+    () => {
+      if (order?.subtotal) return order.subtotal;
+      return items.reduce((sum, item) => {
+        const lineTotal = Number((item as any).lineTotal || 0);
+        if (lineTotal > 0) return sum + lineTotal;
+
+        const price = Number(item.rental?.pricePerDay ?? item.price ?? 0);
         const quantity = Number(item.quantity ?? 1);
-        return sum + price * quantity * rentalDays;
-      }, 0),
-    [items, rentalDays]
+        const days = Number(item.rental?.days ?? rentalDays);
+        return sum + price * quantity * days;
+      }, 0);
+    },
+    [order?.subtotal, items, rentalDays]
   );
 
   const depositTotal = useMemo(
@@ -791,7 +800,9 @@ const OrderDetail = () => {
                   const quantity = Number(item.quantity ?? 1);
                   const price = Number(item.rental?.pricePerDay ?? item.price ?? 0);
                   const deposit = Number(item.deposit ?? 0);
-                  const itemTotal = (price * rentalDays + deposit) * quantity;
+                  const itemDays = Number(item.rental?.days ?? rentalDays);
+                  const itemRentalFee = Number((item as any).lineTotal || (price * quantity * itemDays));
+                  const itemTotal = itemRentalFee + deposit * quantity;
                   const itemKey = getItemKey(item, idx);
                   const isLost = lostItemIds.includes(itemKey);
 
