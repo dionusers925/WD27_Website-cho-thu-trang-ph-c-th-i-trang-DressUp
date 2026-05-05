@@ -31,6 +31,7 @@ import AuthLayout from "./layouts/AuthLayout";
 import RegisterPage from "./layouts/RegisterPage";
 import LoginPage from "./layouts/LoginPage";
 import ProtectedRoute from "./layouts/ProtectedRoute";
+import ShipperProtectedRoute from "./layouts/ShipperProtectedRoute";
 
 import PaymentResult from "./pages/client/PaymentResult";
 import ShipperPage from "./pages/shipper/ShipperPage";
@@ -48,7 +49,10 @@ function App() {
     // SHIPPER
     {
       path: "/ship",
-      Component: ShipperPage,
+      Component: ShipperProtectedRoute,
+      children: [
+        { index: true, Component: ShipperPage },
+      ]
     },
 
     // ADMIN

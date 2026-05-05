@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 /* ─── Types ────────────────────────────────────── */
@@ -58,6 +59,7 @@ const nextStatus: Record<string, string> = { preparing: "shipped", shipped: "del
 
 /* ─── Component ────────────────────────────────── */
 export default function ShipperPage() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
@@ -73,6 +75,12 @@ export default function ShipperPage() {
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3500);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/auth/login");
   };
 
   const fetchOrders = async () => {
@@ -232,9 +240,14 @@ export default function ShipperPage() {
             <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>Cổng giao hàng nội bộ</div>
           </div>
         </div>
-        <button onClick={fetchOrders} style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 16px", color: "#94a3b8", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-          🔄 Làm mới
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={fetchOrders} style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 16px", color: "#94a3b8", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            🔄 Làm mới
+          </button>
+          <button onClick={handleLogout} style={{ background: "rgba(220,38,38,0.15)", border: "1px solid rgba(220,38,38,0.3)", borderRadius: 10, padding: "8px 16px", color: "#ef4444", fontSize: 13, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            🚪 Đăng xuất
+          </button>
+        </div>
       </div>
 
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "24px 16px" }}>
