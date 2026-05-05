@@ -404,7 +404,9 @@ const OrdersDashboard = () => {
                                     order.status === 'returned' ? 'Đã nhận đồ' :
                                       order.status === 'fee_incurred' ? 'Phát sinh phí' :
                                         order.status === 'completed' ? 'Hoàn tất' :
-                                          order.status === 'cancelled' ? 'Đã hủy' : (order.status || "pending")}
+                                          order.status === 'lauldry' ? 'Chờ về kho' :
+                                            order.status === 'in_warehouse' ? 'Đã về kho' :
+                                              order.status === 'cancelled' ? 'Đã hủy' : (order.status || "pending")}
                   </span>
                 </td>
                 <td className="p-4 text-sm">
@@ -502,8 +504,8 @@ const OrdersDashboard = () => {
                       required
                       placeholder="Nhập số điện thoại..."
                       className={`w-full p-2 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 ${hasAccount && newOrder.userId
-                          ? "border-green-300 ring-1 ring-green-300 bg-green-50"
-                          : "border-gray-200"
+                        ? "border-green-300 ring-1 ring-green-300 bg-green-50"
+                        : "border-gray-200"
                         }`}
                       value={newOrder.customerPhone}
                       onChange={(e) => handlePhoneChange(e.target.value)}
