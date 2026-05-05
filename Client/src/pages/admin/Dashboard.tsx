@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import {
   TrendingUp,
   ShoppingBag,
-  Users,
+  ClipboardList,
   Package,
   ArrowUpRight,
   DollarSign,
@@ -25,7 +25,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     totalRevenue: 0,
     pendingOrders: 0,
-    totalUsers: 0,
+    rentingOrders: 0,
     totalProducts: 0,
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -34,14 +34,12 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [ordersRes, usersRes, productsRes] = await Promise.all([
+        const [ordersRes, productsRes] = await Promise.all([
           axios.get("http://localhost:3000/orders"),
-          axios.get("http://localhost:3000/users").catch(() => ({ data: [] })),
           axios.get("http://localhost:3000/api/products").catch(() => ({ data: [] })),
         ]);
 
         const orders: Order[] = ordersRes.data || [];
-        const users = usersRes.data || [];
         const productsData = productsRes.data;
 
         let products = [];
@@ -58,7 +56,7 @@ const Dashboard = () => {
         setStats({
           totalRevenue,
           pendingOrders: orders.filter(order => order.status === "pending").length,
-          totalUsers: users.length,
+          rentingOrders: orders.filter(order => order.status === "renting").length,
           totalProducts: products.length,
         });
 
@@ -162,24 +160,25 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Users Card */}
+        {/* Renting Orders Card */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Users size={80} className="text-amber-600" />
+            <ClipboardList size={80} className="text-amber-600" />
           </div>
           <div className="flex items-center gap-4 mb-4 relative z-10">
             <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-              <Users size={24} />
+              <ClipboardList size={24} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Khách hàng</p>
+              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Đơn đang thuê</p>
             </div>
           </div>
           <div className="relative z-10">
-            <h3 className="text-3xl font-bold text-slate-800">{stats.totalUsers}</h3>
-            <div className="flex items-center gap-1 mt-2 text-sm text-emerald-600 font-medium">
-              <ArrowUpRight size={16} />
-              <span>Đang hoạt động</span>
+            <h3 className="text-3xl font-bold text-slate-800">{stats.rentingOrders}</h3>
+            <div className="flex items-center gap-1 mt-2 text-sm text-amber-600 font-medium hover:text-amber-700">
+              <Link to="/admin/order" className="flex items-center gap-1">
+                Xem chi tiết <ArrowUpRight size={16} />
+              </Link>
             </div>
           </div>
         </div>
