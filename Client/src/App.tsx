@@ -17,6 +17,7 @@ import ReviewsDashboard from "./pages/admin/ReviewsDashboard";
 import StockHistoryDashboard from "./pages/admin/stock/StockHistoryDashboard";
 import ProductRevenueDashboard from "./pages/admin/ProductRevenueDashboard";
 import TotalRevenueDashboard from "./pages/admin/TotalRevenueDashboard";
+import BannerDashboard from "./pages/admin/BannerDashboard";
 
 import HomePage from "./pages/client/HomePage";
 import DetailPage from "./pages/client/DetailPage";
@@ -89,6 +90,9 @@ function App() {
 
             // REVIEWS
             { path: "reviews", Component: ReviewsDashboard },
+
+            // BANNERS
+            { path: "banners", Component: BannerDashboard },
           ],
         },
       ],

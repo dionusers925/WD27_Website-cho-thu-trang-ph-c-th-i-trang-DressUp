@@ -26,6 +26,7 @@ import paymentRoutes from "../routes/payment.routes";
 import attributeRouter from "../routes/attributes";
 import uploadRouter from "../routes/upload";
 import stockHistoryRouter from "../routes/stockHistory";
+import bannerRouter from "../routes/banner";
 
 
 
@@ -101,6 +102,7 @@ app.use(uploadRouter);
 app.use("/api", costumeRoutes);
 app.use("/api", cartRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/banners", bannerRouter);
 
 app.listen(3000, () => {
   console.log("Server running on port 3000");

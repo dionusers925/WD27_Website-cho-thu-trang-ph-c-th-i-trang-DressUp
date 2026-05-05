@@ -4,6 +4,7 @@ import {
   MessageOutlined,
   ProductOutlined,
   TagsOutlined,
+  PictureOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Menu } from "antd";
@@ -66,6 +67,11 @@ const SidebarMenu = () => {
       key: "reviews",
       label: "Quản lý đánh giá",
       icon: <MessageOutlined />,
+    },
+    {
+      key: "banners",
+      label: "Quản lý Banner",
+      icon: <PictureOutlined />,
     },
   ];
 

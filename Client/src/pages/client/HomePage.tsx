@@ -8,24 +8,33 @@ interface ICategory {
   _id: string;
   name: string;
 }
+interface IBanner {
+  _id: string;
+  title: string;
+  imageUrl: string;
+  link: string;
+  isActive: boolean;
+  sortOrder: number;
+}
 /* ================= CONFIG ================= */
 const API_URL = "http://localhost:3000";
 /* ================= COMPONENT ================= */
 function HomePage() {
   const [costumes, setCostumes] = useState<ICostume[]>([]);
   const [categories, setCategories] = useState<ICategory[]>([]);
+  const [banners, setBanners] = useState<IBanner[]>([]);
+  const [bannerIdx, setBannerIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   /* ================= FETCH DATA ================= */
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const productsRes = await axios
-          .get(`${API_URL}/api/products`)
-          .catch(() => axios.get(`${API_URL}/products`));
-        const categoriesRes = await axios
-          .get(`${API_URL}/categories`)
-          .catch(() => ({ data: [] }));
+        const [productsRes, categoriesRes, bannersRes] = await Promise.all([
+          axios.get(`${API_URL}/api/products`).catch(() => axios.get(`${API_URL}/products`)),
+          axios.get(`${API_URL}/categories`).catch(() => ({ data: [] })),
+          axios.get(`${API_URL}/api/banners`).catch(() => ({ data: [] })),
+        ]);
         const payload = productsRes.data;
         const items = Array.isArray(payload)
           ? payload
@@ -39,6 +48,10 @@ function HomePage() {
         );
         setCostumes(visibleItems);
         setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data : []);
+        const activeBanners = Array.isArray(bannersRes.data)
+          ? bannersRes.data.filter((b: IBanner) => b.isActive)
+          : [];
+        setBanners(activeBanners);
       } catch (err) {
         console.error("Lỗi API:", err);
       } finally {
@@ -48,6 +61,15 @@ function HomePage() {
     fetchData();
     window.scrollTo(0, 0);
   }, []);
+
+  // Auto-slide banner
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const timer = setInterval(() => {
+      setBannerIdx((prev) => (prev + 1) % banners.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [banners.length]);
   /* ================= SCROLL CATEGORY ================= */
   const luxuryFont = { fontFamily: "Playfair Display, serif" };
   const isDown = useRef(false);
@@ -71,8 +93,36 @@ const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
 };
   return (
     <div className="bg-[#FDFBF9] text-[#2C2C2C] font-sans selection:bg-black selection:text-white">
-      {/* ================= HERO ================= */}
+      {/* ================= HERO / BANNER SLIDESHOW ================= */}
       <section className="relative h-screen flex items-center overflow-hidden">
+        {/* Banner images */}
+        {banners.length > 0 ? (
+          banners.map((banner, idx) => {
+            const content = (
+              <img
+                key={banner._id}
+                src={banner.imageUrl}
+                alt={banner.title}
+                className={`absolute right-0 top-0 w-full md:w-2/3 h-full object-cover transition-opacity duration-1000 ${
+                  idx === bannerIdx ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            );
+            return banner.link ? (
+              <a key={banner._id} href={banner.link} target="_blank" rel="noreferrer" className="contents">
+                {content}
+              </a>
+            ) : content;
+          })
+        ) : (
+          <img
+            src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070"
+            className="absolute right-0 top-0 w-full md:w-2/3 h-full object-cover"
+            alt="Hero Fashion"
+          />
+        )}
+
+        {/* Text overlay */}
         <div className="z-10 bg-white/95 p-10 md:p-16 max-w-xl shadow-2xl animate-fadeIn ml-6 md:ml-20">
           <span className="text-[10px] tracking-[0.4em] uppercase text-gray-400 mb-6 block font-bold">
             Premium Rental
@@ -88,11 +138,23 @@ const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
             sáng trong mọi sự kiện quan trọng.
           </p>
         </div>
-        <img
-          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070"
-          className="absolute right-0 top-0 w-full md:w-2/3 h-full object-cover"
-          alt="Hero Fashion"
-        />
+
+        {/* Dot navigation */}
+        {banners.length > 1 && (
+          <div className="absolute bottom-6 right-8 flex gap-2 z-20">
+            {banners.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setBannerIdx(idx)}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  idx === bannerIdx
+                    ? "bg-white w-6 shadow-md"
+                    : "bg-white/50 hover:bg-white/80"
+                }`}
+              />
+            ))}
+          </div>
+        )}
       </section>
       {/* ================= CATALOG ================= */}
       <section id="catalog" className="py-32 bg-white px-6">
