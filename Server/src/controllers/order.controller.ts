@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Order from "../models/Order";
+import Variant from "../models/variant.model";
 
 export const getOrderById = async (req: Request, res: Response) => {
   try {
@@ -110,6 +111,29 @@ export const updateOrder = async (req: Request, res: Response) => {
 
     if (!updatedOrder) {
       return res.status(404).json({ message: "Cập nhật thất bại, không tìm thấy đơn hàng" });
+    }
+
+    // ========== CỘNG LẠI STOCK KHI VỀ KHO ==========
+    if (status && status === "in_warehouse" && orderToUpdate.status !== "in_warehouse") {
+      for (const item of updatedOrder.items as any[]) {
+        try {
+          const variant = await Variant.findOne({
+            productId: item.productId,
+            size: item.variant?.size,
+            color: item.variant?.color
+          });
+          
+          if (variant) {
+            variant.stock = (variant.stock || 0) + (item.quantity || 1);
+            await variant.save();
+            console.log(`✅ Đã cộng lại stock: ${item.name} (${variant.size}/${variant.color}) - +${item.quantity || 1} → ${variant.stock}`);
+          } else {
+             console.warn(`⚠️ Không tìm thấy biến thể để cộng lại stock: ${item.name} - Size: ${item.variant?.size}, Color: ${item.variant?.color}`);
+          }
+        } catch (stockError) {
+          console.error(`❌ Lỗi cộng lại stock cho ${item.name}:`, stockError);
+        }
+      }
     }
 
     res.status(200).json(updatedOrder);

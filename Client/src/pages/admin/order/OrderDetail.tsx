@@ -789,7 +789,7 @@ const OrderDetail = () => {
                     typeof item.productId === "object" ? item.productId : null;
                   const name = product?.name || item.name || "Sản phẩm";
                   const quantity = Number(item.quantity ?? 1);
-                  const price = Number(item.price ?? 0);
+                  const price = Number(item.rental?.pricePerDay ?? item.price ?? 0);
                   const deposit = Number(item.deposit ?? 0);
                   const itemTotal = (price * rentalDays + deposit) * quantity;
                   const itemKey = getItemKey(item, idx);
