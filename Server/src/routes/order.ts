@@ -52,7 +52,7 @@ const stockReturnPaymentStatuses = new Set([
 ]);
 
 const isStockReturnReady = (orderStatus: any, paymentStatus: any) =>
-  String(orderStatus ?? "").trim() === "completed" &&
+  String(orderStatus ?? "").trim() === "in_warehouse" &&
   stockReturnPaymentStatuses.has(String(paymentStatus ?? "").trim());
 
 // ========== API LẤY DANH SÁCH ĐƠN HÀNG ==========

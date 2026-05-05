@@ -1392,13 +1392,6 @@ const OrderDetail = () => {
                     <span></span> Bước tiếp theo sau hoàn tất
                   </div>
                   <button
-                    onClick={openStockHistory}
-                    className="mb-3 w-full flex items-center justify-center gap-3 py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-bold text-sm shadow-md shadow-emerald-200 transition-all active:scale-[0.98]"
-                  >
-                    <span className="text-xl"></span>
-                    <span>Sang xử lý biến động tồn kho</span>
-                  </button>
-                  <button
                     onClick={handleLaundry}
                     disabled={isUpdating}
                     className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md shadow-violet-200 transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
@@ -1420,6 +1413,27 @@ const OrderDetail = () => {
                   </button>
                   <div className="mt-2 text-[10px] text-violet-500 text-center">
                     Chuyển đơn sang trạng thái xử lý sau thuê (giặt là, vá sửa, kiểm tra kho)
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* NÚT HÀNH ĐỘNG: Biến động tồn kho sau khi đã về kho */}
+            {order.status === "in_warehouse" && status === "in_warehouse" && (
+              <div className="mx-4 my-3">
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4">
+                  <div className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span></span> Bước tiếp theo sau khi về kho
+                  </div>
+                  <button
+                    onClick={openStockHistory}
+                    className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl font-bold text-sm shadow-md shadow-emerald-200 transition-all active:scale-[0.98]"
+                  >
+                    <span className="text-xl"></span>
+                    <span>Sang xử lý biến động tồn kho</span>
+                  </button>
+                  <div className="mt-2 text-[10px] text-emerald-500 text-center">
+                    Sau khi trạng thái đã về kho, vui lòng chuyển sang Biến động tồn kho để xử lý nhập kho.
                   </div>
                 </div>
               </div>
